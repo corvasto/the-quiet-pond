@@ -6,83 +6,91 @@ See [controls.md](controls.md) for keyboard and touch input, and [configuration.
 
 ## Movement and viewing
 
-Use WASD, arrow keys, or the analog joystick to move relative to the view. Ground travel follows the requested direction independently of the ant's visual turn, with acceleration, braking, and normalized diagonals. The joystick supports 360-degree movement and proportional speed outside its deadzone. Contact validation and safe landing rules remain in place.
+WASD, arrows, or the analog joystick move relative to the view. Ground travel uses acceleration/braking, normalized diagonals, and body turning independent of direction; joystick speed scales outside its deadzone. Contact and safe-landing checks remain active.
 
-The elevated camera starts farther back for a wider view and gently turns behind sustained travel. It preserves zoom and pitch; dragging or zooming pauses assistance for 2.5 seconds. Drag to look around, use the wheel or a pinch to adjust distance, and press C or the camera reset button to restore behind-ant framing. Pause, Settings, About, focus loss, and view changes release held input.
+The elevated camera starts wide and gently aligns behind sustained travel while preserving pitch/zoom. Drag or zoom pauses assist for 2.5 seconds; drag to look, wheel/pinch to zoom, and C/reset to return behind the ant. Pause, Settings, About, focus loss, and view changes release input.
 
 ## Current loop
 
-1. The game starts in Ant view with the first of two three-seed batches.
-2. Guide the ant with `W`, `A`, `S`, and `D` to any active seed. Each batch mixes collision-validated ground seeds with actual climbable rock-top and companion-tree branch anchors. Use `Space` to climb to elevated seeds. If a requested elevated anchor is unavailable, that seed falls back to ground instead of blocking progress.
+1. Start in Ant view with the first of two seed batches.
+2. Move to an active seed with `WASD`; each batch mixes collision-validated ground seeds with climbable rock tops and companion-tree branches. Use `Space` to climb. If an elevated anchor is unavailable, the seed falls back to validated ground.
 3. Enter a seed's collection radius to pick it up automatically.
 4. Carry it to the authored burrow entrance and enter the deposit radius.
 5. Deposit all three active seeds to reveal the next batch, then repeat until all six are home.
 6. Return to the burrow for the leaf offering, carry it to the pond, and enter the offering radius.
-7. Complete optional checklist discoveries at the shelter, lamp, reader, radio, frog, cockroach, cat, fireflies, and lollipop at any pace.
+7. Discover the shelter, lamp, reader, radio, frog, cockroach, cat, fireflies, and lollipop at any pace.
 
-The pause dialog contains resume/restart actions and three persistent local save slots. Settings contains English and Indonesian selection, soft feedback chimes, an optional realtime FPS diagnostic, Graphics quality, and access to About. Language selection updates UI prompts and radio announcements. The diagnostic shows actual rendered FPS at the bottom-right and turns red with a quality suggestion when performance is low. Checklist objectives are gentle and non-punitive; ignoring a weather or time objective does not cause damage or game over. After the final checklist objective, one completion caption is shown for 10 seconds. A completed lollipop remains eaten when its save is reloaded.
+Pause offers resume/restart and three persistent local slots. Settings has English/Indonesian, soft chimes, optional live FPS diagnostics, Graphics quality, and About. Language updates UI and radio; the bottom-right diagnostic reports rendered FPS and turns red with a quality suggestion when low. Checklist goals are optional; missed weather/time goals cause no damage or game over. The final caption lasts 10 seconds, and an eaten lollipop stays eaten after reload.
 
-Use `P` or `Escape` to pause and `F` for fullscreen. Press `M` or choose `Explore` to enter a free orbit camera with the same pan and zoom behavior as the main diorama. While climb debug is enabled, hold `Shift` and left-drag in Explore to relocate the ant quickly. The burrow receives an Explore-only marker after the seed is collected.
+Press `P`/`Escape` to pause and `F` for fullscreen. `M`/Explore opens a free orbit camera with diorama pan/zoom. With climb debug enabled, `Shift`+left-drag in Explore relocates the ant; the burrow gets an Explore-only marker after seed pickup.
 
 ## Object roaming
 
-Use `W`, `A`, `S`, and `D` only for movement. Approach the hero ash or either companion tree, a ground or shoreline rock, the seated person, the radio, the corner lamp, or the tent from any direction. Pond rocks remain eligible down to `rock.minimumUsableRadius`, including rocks only slightly wider than the ant. When the ant's head enters the configured `activationDistance` around a valid low contact, the prompt names the target. Press `Space` to climb. Pressing a movement key, including strafing into an object with `D`, never triggers climbing by itself.
+Climbable targets are the hero ash, companion trees, ground/shoreline rocks, seated reader, radio, corner lamp, and tent. Rocks remain eligible down to `rock.minimumUsableRadius`, even barely wider than the ant. `Space` climbs when the ant's head is within `activationDistance` of a valid low contact; the prompt names the target. Movement or strafing never climbs by itself.
 
-Entry is a hard cut from the ant's approximate head position to a verified low side contact. There is no interpolated climb arc that can pass through the ground. Each side ray begins a short distance behind the head and travels inward. Tree rays use several low heights and nearby approach angles because the procedural roots extend much farther than the trunk. Tree candidate detection uses a lower-wood triangle footprint built once at scene startup, so a visible root tip can activate the route without requiring the ant to approach the middle of the tree. Contacts never sample higher than `maximumEntryHeight` and are rejected when farther from the head than `maximumEntryCutDistance`. This prevents a nearby person from selecting a high book and prevents a distant rock from selecting its top. If a safe low contact is not found, `Space` leaves the ant on the ground.
+Entry snaps from the approximate head position to a verified low side contact, avoiding an interpolated arc through terrain. Side rays start just behind the head and point inward. Tree detection samples several low heights/angles and uses a startup-built lower-wood triangle footprint, allowing visible roots to activate climbing. Reject contacts above `maximumEntryHeight` or farther than `maximumEntryCutDistance`; this prevents selecting a high book/person or distant rock top. If no safe low contact exists, the ant stays grounded.
 
-After entry, `W`, `A`, `S`, and `D` provide free local roaming. Each proposed step must find a close contact in the target's allowed surface set and, for an instanced rock, the same rock instance. Tree roots guide forward movement toward the trunk only while the ant is low and outside the trunk radius. If a curved root loses its local forward contact, a small direction fan follows the exposed root inward. If the generated root mesh ends just short of the trunk, a bounded first-hit probe may bridge only to a closer exposed trunk contact. Tree entry returns the first fully valid low contact, reducing repeated pre-climb raycasts without changing its root coverage. Tree, reader, radio, lamp, and tent contacts are recast from the candidate normal toward only the same source mesh. A nearby outside hit can correct an inward sample to the near shell, while a large correction is rejected as an interior shortcut. Testing each mesh separately matters for the composite radio route because a rock hit must never validate a radio face. Reader contacts retain a small maximum contact-to-contact distance, preventing a probe from cutting across the body to a distant triangle. The lamp treats the sloped lower base as vertical traversal and uses a short inward ledge probe to join the central pole. Its upper route accepts exterior downward-facing triangles on the lamp housing, so the ant follows the underside instead of entering the model, can continue around the housing, and can reverse back down. The radio route is centered on the visible model's world bounds. A procedural support rock joins that route only when its footprint is actually near those bounds, and that accepted support is excluded from neighboring-rock rejection. When descending from the radio, a dedicated downward probe searches for an upward-facing support-rock contact outside the radio's lower footprint. Tent movement treats its sloped fabric as uphill traversal and uses a small direction fan to continue around the modeled entrance opening. Rock routes use wider probes, a larger crest snap range, and an extra forward-down probe so sharp transitions can continue onto the top. When rock footprints overlap, the controller casts down to the neighboring rock and rejects the proposed contact only when the neighboring mesh is actually above it. This blocks hidden lower surfaces without suppressing a valid top contact. A rejected step stops both movement and the walk animation. Press `Space` at any time to search outward from the ant's current side and land on the nearest ground position accepted by the ordinary collision system. The original entry point is used only if no current-side landing can be found. Existing ground collision checks resume after landing.
+On objects, WASD roams locally. Each step must find a nearby contact on an allowed surface and, for rocks, the same instance. Tree, reader, radio, lamp, and tent contacts are recast from the candidate normal toward that source mesh only. Nearby outside hits may correct inward samples to the near shell; large corrections are rejected as shortcuts. A rock cannot validate a radio face. Reader contacts also enforce a short maximum gap to prevent crossing the body to a distant triangle.
 
-Ground movement uses startup footprints for the trees, lamp base, and tent. Each move sweeps intermediate samples instead of checking only the destination, which prevents narrow geometry from being skipped between frames. A recovery validator also searches the closest valid outside point if an ant position is ever found inside collision geometry. Its search distance expands for a large tent instead of assuming every blocker is tree-sized. Debug Explore relocation bypasses only the travel sweep, not destination validity, so its existing direct placement behavior remains available. The tent's configured `lift` is zero, grounding the normalized GLB base at its terrain anchor.
+Surface-specific routes:
 
-The seated person is much heavier than the other props. Its source model is about 655,000 triangles, so repeated gameplay raycasts against the original GLB cause severe frame drops. At scene build time, `model-surface-proxy.js` clusters nearby vertices in three dimensions, rebuilds the original indexed faces, and removes duplicate, collapsed, and tiny triangles. With the current settings, the actual asset produced about 6,221 vertices and 12,899 triangles in the offline verification. This follows the person, chair, and book surfaces instead of extruding vertical columns from the ground. Ground collision rasterizes only proxy triangles connected to the lower configured height, so legs and chair edges remain solid while elevated book and arm geometry do not block the ant from far away. Reader candidate distance derives from the model's actual bounds, and its proxy uses a forward-down transition probe. The visible GLB is unchanged and is never replaced in the rendered scene.
+- **Trees:** While the ant is low and outside the trunk radius, roots guide it toward the trunk. A direction fan follows curved roots; a bounded first-hit probe bridges a short root-to-trunk gap. Entry returns the first fully valid low contact, reducing repeated raycasts without reducing root coverage.
+- **Lamp:** The sloped base counts as vertical traversal; a short inward ledge probe joins the pole. The upper route follows exterior downward-facing housing triangles, including around and back down the underside.
+- **Radio:** The route follows visible model bounds. A support rock joins only when its footprint is near those bounds and is then excluded from neighboring-rock rejection. A dedicated downward probe finds upward-facing support beyond the radio's lower footprint when descending.
+- **Tent:** Sloped fabric counts as uphill; a direction fan follows the modeled entrance opening.
+- **Rocks:** Wider probes, larger crest snap, and a forward-down probe handle sharp top transitions. For overlapping rocks, reject contact only when the neighboring mesh is above it, blocking hidden lower surfaces while preserving valid tops.
+
+A rejected step stops movement and walk animation. `Space` searches outward from the current side for the nearest ground accepted by normal collision checks; the entry point is fallback only. Ground collision resumes after landing.
+
+Ground collision uses startup footprints for trees, lamp base, and tent, with swept samples to catch narrow geometry. Recovery searches the nearest valid outside point and expands for the larger tent. Explore relocation skips only the travel sweep, not destination validation. Tent `lift` is zero, grounding the normalized GLB at its terrain anchor.
+
+The seated reader's source model has about 655,000 triangles, making direct gameplay raycasts costly. At startup, `model-surface-proxy.js` clusters 3D-near vertices, rebuilds indexed faces, and removes duplicate, collapsed, or tiny triangles. The verified proxy has about 6,221 vertices and 12,899 triangles. It follows person/chair/book surfaces rather than extruded ground columns. Ground collision rasterizes only proxy triangles connected to the configured lower height, keeping legs/chair edges solid without distant book/arm blockage. Candidate distance uses model bounds; the proxy uses a forward-down transition probe. The rendered GLB is unchanged.
 
 ## Climb debug overlay
 
-Overlay availability is controlled by the top-level `POND_GAME.debug` settings. Normal play starts with the overlay disabled. Because `allowToggle` is enabled, press `G` to toggle it without rebuilding the scene.
+Top-level `POND_GAME.debug` controls the overlay. It starts off; with `allowToggle`, press `G` to toggle without rebuilding.
 
-While debug is enabled, a top-left readout reports the ant's world-space `x`, `y`, and `z` coordinates to three decimal places. It samples at 10 Hz, reuses one vector, and changes the DOM only when the formatted coordinates change. The value remains correct during ground movement, climbing, flight, Explore, and debug relocation, making it suitable for copying positions into asset descriptors. The readout stops completely when debug is disabled.
+When enabled, a top-left readout shows world `x/y/z` to three decimals at 10 Hz. It reuses a vector and updates the DOM only on value changes; coordinates remain accurate during ground travel, climbing, flight, Explore, and relocation for asset descriptors. It stops when debug is off.
 
-Debug Explore relocation is available only while this overlay is enabled. Entering Explore while on an object suspends traversal and leaves the ant mounted. Debug relocation is available on the ground. Hold `Shift` and left-drag over the terrain to move the ant continuously, or use `Shift` and click for one relocation. The pointer ray targets the real terrain mesh. If a tree, rock, or seated-person collider blocks the exact point, the relocation searches outward and chooses the closest valid ground it can find. Water points use the current pond surface and retain ant ripples. Ordinary Explore drag, right-drag pan, and wheel zoom remain unchanged when `Shift` is not held.
+Relocation requires the overlay and a grounded ant. Explore suspends traversal but leaves an object-mounted ant mounted. `Shift`+left-drag moves continuously; `Shift`+click relocates once. The ray targets actual terrain; if a tree, rock, or reader blocks it, search outward for nearest valid ground. Water uses the current pond surface and preserves ripples. Without Shift, normal orbit, right-drag pan, and wheel zoom remain unchanged.
 
-While debug is enabled, press `Y` to toggle flight mode. Flight uses `WASD` at the configured 10x normal ant speed, `Space` to rise, and `Ctrl` to descend. The wireframe overlay is hidden during flight and restored when flight ends. Flight is intended for inspection and temporarily bypasses ground collision; disabling flight returns the ant to the nearest valid ground position when necessary. Change `DEBUG_CONFIG.flightSpeedMultiplier` in `js/config/world.js` to tune the speed.
+Press `Y` for debug flight: WASD at configured 10x ant speed, Space up, Ctrl down. Flight hides the wireframe (restored afterward) and bypasses ground collision for inspection; when disabled, the ant returns to nearest valid ground if needed. Tune `DEBUG_CONFIG.flightSpeedMultiplier` in `js/config/world.js`.
 
-- Green wireframe mask: potential surfaces supplied to the climb controller at startup.
-- Yellow sphere and ring: approximate ant head and activation distance.
-- Green segments: accepted low entry probes.
-- Red segments: missed, unsafe, overly distant, or neighboring-rock entry probes.
-- Cyan sphere: selected entry contact inside the debug overlay. The smaller pulsing cyan-blue gameplay marker remains available when debug is off.
-- Purple segments: selected surface normal and tangent.
-- Cyan line: the ant's actual trail while roaming on an object.
+| Overlay | Meaning |
+| --- | --- |
+| Green wireframe | Potential climb surfaces supplied at startup |
+| Yellow sphere/ring | Approximate ant head and activation distance |
+| Green segments | Accepted low-entry probes |
+| Red segments | Missed, unsafe, distant, or neighboring-rock probes |
+| Cyan sphere | Selected entry contact; smaller pulsing blue marker remains in normal play |
+| Purple segments | Selected surface normal/tangent |
+| Cyan line | Actual path traveled on an object |
 
-The cyan trail is the route already traveled. It is not a predicted path because the controller evaluates local mesh contact one movement step at a time.
-
-The green mask shows potential climb surface, not a guaranteed global route. Local continuity, neighboring geometry, and landing validity can still reject a step. The mask is built only from enabled climb targets. Pond water is deliberately excluded, and ordinary water support and ripple behavior remain active.
-
-The controller follows nearby mesh contacts rather than building a global navigation mesh. Small disconnected decorations, holes, and unreachable faces remain blocked intentionally.
+The cyan trail shows traveled, not predicted, path: contacts are evaluated one step at a time. The green mask shows enabled potential surfaces, not guaranteed routes; continuity, neighboring geometry, or landing checks can reject steps. Water is excluded from climbing but keeps normal support/ripples. There is no global navmesh, so disconnected decorations, holes, and unreachable faces stay blocked.
 
 ## About and attributions
 
-The localized About dialog is opened from Settings and includes a short source summary for Sketchfab GLB models, the YouTube Audio Library in YouTube Studio, Google AI Studio generated voices, and original work for The Quiet Pond. Its card scrolls as one surface on short viewports and resets to the heading whenever it opens. Closing About returns to Settings. This summary does not replace any individual model creator or license attribution required by a downloaded asset.
+Settings opens the localized About dialog. It summarizes Sketchfab GLBs, YouTube Audio Library music, Google AI Studio voices, and original work. The card scrolls on short screens, resets to its heading on open, and returns to Settings when closed. This summary does not replace individual asset credits/licenses.
 
 ## Module boundaries
 
-- `index.html` contains the game overlay, checklist, actions, touch controls, pause/save panel, Settings and About dialogs, loading state, and error message.
-- `js/main.js` routes browser input, save slots, language selection, service-worker registration, and HUD updates.
-- `js/game/game-session.js` starts the shared scene and joins the game modules.
-- `js/config/game.js` composes focused content, radio, world, and climbing configuration from `js/config/`.
-- `js/content/assets.js`, `messages.js`, and `objectives.js` define compile-once content metadata.
-- `js/game/seed-to-burrow.js` owns seed discovery, carrying, offering pickup, offering carrying, and completion phases.
-- `js/game/ant-climbing.js` handles hard-cut entry, contact validation, directional surface movement, and safe landing.
-- `js/core/app.js` defines `PondApp`. Focused `js/core/app-*.js` modules implement world runtime capabilities.
+| Files | Responsibility |
+| --- | --- |
+| `index.html` | Overlay, checklist, actions, touch controls, pause/save, Settings/About, loading/errors |
+| `js/main.js` | Browser input, saves, language, service worker, HUD |
+| `js/game/game-session.js` | Shared scene startup and game-module wiring |
+| `js/config/game.js` | Composes content, radio, world, and climbing settings |
+| `js/content/assets.js`, `messages.js`, `objectives.js` | Compile-once content metadata |
+| `js/game/seed-to-burrow.js` | Seed/offer phases and completion |
+| `js/game/ant-climbing.js` | Entry, contact, surface motion, safe landing |
+| `js/core/app.js`, `app-*.js` | `PondApp` and world capabilities |
 
-`PondGameSession` creates `PondApp` in game mode with three data-only ground reservations, an expanded but habitat-bounded walk radius, the game start hour, and optional Ant-view follow-camera settings. Explore uses the world overview. The session supplies configuration as data; the world runtime does not import gameplay controllers.
+In game mode, `PondGameSession` supplies three data-only ground reservations, a habitat-bounded expanded walk radius, start hour, and optional Ant-view camera settings. Explore uses the overview. Runtime receives settings as data and never imports gameplay controllers.
 
 ## Tuning
 
-Configure movement, camera, time, and weather in `js/config/world.js`; seeds and interactions in `js/config/content.js`; and traversal in `js/config/climbing.js`. `js/config/game.js` composes these values for the session and controllers.
-
-Traversal tuning controls allowed surfaces, probe distances, contact continuity, speed, and landing search limits. Keep occupancy and contact validation enabled. Test trees, rocks, reader, radio, lamp, and tent after changing geometry or traversal settings. See [configuration.md](configuration.md) and [verification.md](verification.md).
+Tune movement/camera/time/weather in `js/config/world.js`, seeds/interactions in `content.js`, and traversal in `climbing.js`; `game.js` composes these values. Traversal settings cover surfaces, probes, contact continuity, speed, and landing limits. Keep occupancy/contact validation enabled; retest trees, rocks, reader, radio, lamp, and tent after changes. See [configuration.md](configuration.md) and [verification.md](verification.md).
 
 ## Carry behavior
 
-The current ant animation is the already verified walk range. The asset does not have a separately verified carrying loop, so the seed remains a visual prop while the existing walk clip continues.
+The verified ant walk range plays while carrying; no carrying loop is verified, so the seed remains a visual prop.

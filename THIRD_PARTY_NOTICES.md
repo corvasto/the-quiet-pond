@@ -1,8 +1,7 @@
 # Third-party notices
 
-The project software license in [LICENSE](LICENSE) does not relicense these
-third-party assets. Each item remains subject to the license shown below.
-Model titles and creator names are reproduced from the supplied GLB metadata.
+The [project license](LICENSE) does not relicense third-party assets. Each
+remains under its listed terms; model titles and creators come from GLB metadata.
 
 ## 3D models
 
@@ -23,16 +22,12 @@ Model titles and creator names are reproduced from the supplied GLB metadata.
 ## Other components and media
 
 - Three.js is distributed under the MIT License. See [vendor/three/LICENSE](vendor/three/LICENSE).
-- Music is sourced from the YouTube Audio Library in YouTube Studio. Refer to the library's terms for the applicable track terms.
-- Voice lines were generated with Google AI Studio. The game's original voice lines and any applicable service terms are separate from the project software license.
+- Music comes from the YouTube Audio Library in YouTube Studio; track terms may vary.
+- Voice lines were generated with Google AI Studio. They and applicable service terms are separate from the software license.
 
 ## Attribution
 
-The About dialog provides compact in-game credits and links for the 3D models.
-For CC BY assets, see the linked license for attribution, change-notice, and
-other conditions. The frog is CC BY-NC-SA, which includes noncommercial and
-ShareAlike conditions. The two Sketchfab Standard assets are governed by
-Sketchfab's license terms linked above. Those terms allow commercial uses but
-prohibit making the assets available as standalone files. Because this project
-contains the original GLB files in its public source tree, verify that this
-distribution is permitted under the applicable terms or replace those assets.
+About links to model sources and licenses. Follow CC BY credit/change-notice
+terms. The frog is CC BY-NC-SA (noncommercial, ShareAlike). Sketchfab Standard
+allows commercial use but prohibits standalone file access. Since the project
+includes the original GLBs, verify distribution terms or replace those assets.

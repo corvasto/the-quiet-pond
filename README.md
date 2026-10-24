@@ -1,25 +1,12 @@
 # The Quiet Pond
 
-A cozy exploration game about an ant and the small, living world around a pond. Find seeds, carry them home, climb through the scenery, and discover the pond's daily routines at your own pace.
+A cozy ant exploration game about a living pond. Find seeds, climb through the scenery, and discover its daily routines.
 
-The world is generated with Three.js and includes changing weather, a day/night cycle, radio music, English and Indonesian text, touch controls, three save slots, and offline play.
+Three.js powers a procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
 
 The Quiet Pond is a hobby project I’m making with my kids, with help from OpenAI Codex for coding and development.
 
-Try here  
-<p align="center">
-  <a href="https://corvasto.github.io/the-quiet-pond" style="
-    display: inline-block;
-    font-size: 18px;
-    font-weight: bold;
-    text-decoration: none;
-    color: black;
-    background-color: #deffde;
-    padding: 10px 20px;
-    border-radius: 12px;
-    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-  ">https://corvasto.github.io/the-quiet-pond</a>
-</p>
+[Play The Quiet Pond](https://corvasto.github.io/the-quiet-pond/)
 
 ## Screenshots
 
@@ -29,18 +16,16 @@ Try here
 
 ## Play
 
-Serve the project folder with a static HTTP server, then open `index.html` or the folder root. Browser modules, models, and audio require HTTP; opening the file directly will not work.
-
-Three.js 0.184.0 and its required add-ons are included under `vendor/three/`. No package installation or CDN is required to play.
+Serve the project folder over HTTP, then open `index.html` or the folder root. Modules, models, and audio do not work from `file://`. Three.js 0.184.0 and its add-ons are bundled in `vendor/`; no install or CDN is needed.
 
 ## Install on a phone
 
-Open the deployed HTTPS site in your phone's browser while online:
+Open the HTTPS site while online:
 
 - **Android with Chrome:** Open the three-dot menu and tap **Install app** or **Install and create shortcut**, then confirm.
 - **iPhone with Safari:** Tap **Share > Add to Home Screen**. If offered, turn on **Open as Web App**, then tap **Add**.
 
-Open the game once online and let it finish loading so the service worker can cache the app for offline play. Browser menus and install options can vary by device and browser. See Google's guide to [installing web apps on Android](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en) and Apple's guide to [adding a website to the iPhone Home Screen](https://support.apple.com/guide/iphone/bookmark-a-website-on-iphone-iph42ab2f3a7/ios).
+Load the game once online and let it finish caching for offline play. Menus vary by browser. See Google's [Android install guide](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en) and Apple's [iPhone Home Screen guide](https://support.apple.com/guide/iphone/bookmark-a-website-on-iphone-iph42ab2f3a7/ios).
 
 ## Controls
 
@@ -56,21 +41,11 @@ Open the game once online and let it finish loading so the service worker can ca
 | P or Escape | Pause or resume |
 | F | Fullscreen |
 
-On touch screens, use the larger joystick to move. Hold A on the left to run; tap B above and to the right for the climb/get-down action. The controls sit above the bottom edge with extra clearance in portrait and landscape. Joystick distance controls walking speed. Movement follows the current view: up travels away from the camera, down toward it, and left/right across the view. Rotating the camera updates this mapping immediately, including on walkable climbing surfaces. Automatic camera turning stays off when using the joystick; positional camera follow remains active.
-
-The default camera is elevated and pulled back for a wider view. Sustained movement gently turns the camera behind your direction of travel while preserving zoom and pitch. Dragging or zooming pauses assistance for 2.5 seconds; stopping movement stops automatic turning.
-
-Holding a keyboard movement direction keeps travel steady while the camera assists. Release or change keyboard direction to steer relative to the current view. The touch joystick always uses the current view. Automatic turning is disabled for joystick input, climbing, and debug flight.
-
-See [controls](docs/controls.md) for input details and [gameplay](docs/gameplay.md) for traversal and objectives.
+Touch uses a camera-relative joystick, A to run, and B to climb/get down. See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for inputs, camera behavior, traversal, and objectives.
 
 ## Explore the pond
 
-Bring six seeds home in two batches of three, then carry a leaf offering to the pond. The checklist also tracks discoveries at the shelter, lamp, reader, radio, frog, cat, fireflies, and lollipop.
-
-Progress saves automatically to the selected slot. Pause to manage three save slots or start a new game. Saves and language preferences are stored in the browser and belong to the site's origin.
-
-The checklist has 11 objectives, including meeting a wandering cockroach. Stay within 0.6 world units of it for 1.2 seconds to complete the objective.
+Collect six seeds in two batches, deliver a leaf offering, and explore 11 optional discoveries. Progress saves to one of three local slots; saves and language preferences are tied to the site's origin. See [gameplay](docs/gameplay.md).
 
 ## Project structure
 
@@ -93,38 +68,16 @@ scripts/            Project validation and headless tests
 docs/               Architecture, tuning, content, and verification guides
 ```
 
-## Configuration
+## Configuration and architecture
 
-All settings live in `js/config/`.
-
-| File | Purpose |
-| --- | --- |
-| `app.js` | Application identity, version, and cache prefix |
-| `quality.js` | Rendering profiles and device selection |
-| `scene.js` | Procedural world, environment, and Explore view |
-| `world.js` | Player movement, follow camera, time, weather, and debug |
-| `content.js` | Seeds, burrow, offering, and objective tuning |
-| `climbing.js` | Surface contact, traversal, and landing rules |
-| `radio.js` | Music, announcements, and audio timing |
-| `game.js` | Composed gameplay settings |
-| `index.js` | Scene settings and compiled model configuration |
-
-Use `index.html?q=full`, `?q=mid`, or `?q=low` to select a profile at startup. Every profile uses High Quality world generation. Full renders at the available frame rate; mid and low target about 20 FPS with reduced rendering cost and decorative density.
-
-In Settings, choose Graphics quality (Auto, Low, Mid, or Full), then Apply and reload. Progress is saved before reloading and the preference is remembered in browser storage. Auto chooses Mid on mobile and Full elsewhere. An explicit `q` URL overrides the saved preference; applying a menu choice updates that URL override. Settings also contains Language, soft feedback chimes, an optional realtime FPS diagnostic, and About. Pause remains focused on resuming, restarting, and save-slot management.
-
-Dialog actions use comfortable touch targets. Focus outlines follow keyboard input, and hover highlights are limited to hover-capable pointers to avoid lingering highlights on phones.
-
-Debug is disabled by default, including its keyboard toggle. Open `index.html?debug=1` to enable diagnostics, flight, relocation, and radio test controls. Combine switches with `index.html?q=mid&debug=1`. Remove `debug` or use `debug=0` and reload to disable it.
-
-See [configuration](docs/configuration.md), [architecture](docs/architecture.md), [content framework](docs/content-framework.md), and [scene customization](docs/scene-customization.md).
+Settings and quality profiles live in `js/config/`; use `index.html?q=full`, `?q=mid`, or `?q=low` to choose a startup profile. All use High Quality world generation; Full is uncapped, while Mid/Low target about 20 FPS. Settings offers Auto/Low/Mid/Full, language, chimes, FPS diagnostics, and About. Auto selects Mid on mobile and Full elsewhere; a valid URL `q` overrides the saved preference. Apply and reload saves progress. Debug tools require `?debug=1` and can be combined with quality (for example `?q=mid&debug=1`). See [configuration](docs/configuration.md), [architecture](docs/architecture.md), [content framework](docs/content-framework.md), and [scene customization](docs/scene-customization.md).
 
 ## Development and verification
 
 Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement and offline-shell tests. These commands do not start a server.
 
-Rendering, touch interaction, collision feel, performance, installation, and offline behavior also need browser/device verification. Use the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
+Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
 
 ## Credits
 
-The About dialog includes expandable credits for the 3D models. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the full model source and license list, and [LICENSE](LICENSE) for the project software license. The software license does not replace the separate terms for bundled assets. Three.js is distributed under its own license in `vendor/three/LICENSE`.
+About has expandable model credits. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists asset sources and terms; [LICENSE](LICENSE) covers original project software only. Third-party assets retain their own licenses. Three.js has its own license in `vendor/three/LICENSE`.

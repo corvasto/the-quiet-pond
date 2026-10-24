@@ -1,34 +1,38 @@
 # Installation, saves, and offline play
 
-`index.html` is the installable game entry. Serve the project over HTTPS or localhost to use service workers.
+`index.html` is the installable entry. Service workers require HTTPS or localhost.
 
 ## Release metadata
 
-`APP_VERSION` in `js/config/app.js` owns the release version. `js/main.js` displays it and registers `service-worker.js?v=<APP_VERSION>`. The worker's `RELEASE_VERSION`, package version, and lockfile version must match.
+`js/config/app.js` owns `APP_VERSION`; `js/main.js` displays it and registers `service-worker.js?v=<APP_VERSION>`. Keep the worker's `RELEASE_VERSION`, `package.json`, and lockfile versions aligned.
 
 ## Cache rules
 
-The cache prefix is `the-quiet-pond-v`. Activation removes older releases with that prefix while preserving other applications' caches. Requests must belong to the worker's origin and scope. Reads use the current version's cache.
+Cache prefix: `the-quiet-pond-v`. Activation removes only older matching releases, preserving other apps' caches. Requests must match worker origin/scope; reads use the current version's cache.
 
-`APP_SHELL` includes `index.html`, CSS, manifest, icon, every reachable runtime module, local Three.js dependencies, models, and audio used by any profile. Add paths whenever a runtime dependency changes.
+`APP_SHELL` lists `index.html`, CSS, manifest, icon, every runtime import, local Three.js dependency, model, and audio file used by any profile. Add entries for new runtime dependencies.
 
-Only folder-root and `index.html` document navigation is handled. Offline navigation falls back to cached `index.html`, including query URLs such as `?q=mid`. Other document requests pass through.
+Only root and `index.html` document navigation is handled. Offline requests, including `?q=mid`, fall back to cached `index.html`; other document requests pass through.
 
 ## Browser storage
 
-Progress is stored in `the-quiet-pond-saves-v1`; `the-quiet-pond-active-save-slot-v1` selects the active slot. Language is stored in `the-quiet-pond-language`, quality in `the-quiet-pond-quality`, and the optional FPS display preference in `the-quiet-pond-performance-diagnostic`.
+| Data | Browser key |
+| --- | --- |
+| Saves | `the-quiet-pond-saves-v1` |
+| Active slot | `the-quiet-pond-active-save-slot-v1` |
+| Language | `the-quiet-pond-language` |
+| Quality | `the-quiet-pond-quality` |
+| FPS diagnostic | `the-quiet-pond-performance-diagnostic` |
 
-The game reads and writes its own keys. Save format version 1 holds player position, world time, seed/ offering progress, and checklist state. Existing valid saves remain available across application updates.
+The game accesses only its own keys. Save format v1 stores player position, world time, seed/offering progress, and checklist state. Valid saves persist across app updates.
 
-Storage belongs to the site's origin: scheme, host, and port. Another origin has separate saves. Clearing browser site data removes locally stored progress.
+Storage is origin-specific (scheme, host, port); another origin has separate saves. Clearing site data deletes local progress.
 
 ## Update and device verification
 
-1. Align release versions and update cache paths.
-2. Run `npm run check` and `npm test`.
-3. Load the game online and reload until About shows the current version.
-4. Confirm the current worker controls the page, then install where supported.
-5. Create a save, close the installed app, disconnect the network, and reopen it.
-6. Check reload, models, movement, climbing, radio, a seed transition, and saving.
+1. Align release versions and cache paths; run `npm run check` and `npm test`.
+2. Load online and reload until About shows the current version; confirm the current worker controls the page.
+3. Install where supported, create a save, close the app, disconnect, and reopen it.
+4. Check reload, models, movement, climbing, radio, a seed transition, and saving.
 
-Headless tests verify shell paths and request handling with simulated APIs. Real installation, storage capacity, audio decoding, and offline use require browser/device checks.
+Headless tests cover shell paths and simulated requests. Verify installation, storage capacity, audio decoding, and offline use in a real browser/device.

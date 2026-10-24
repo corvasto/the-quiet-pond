@@ -1,17 +1,17 @@
 # Content framework
 
-The Quiet Pond uses plain JavaScript registries that are compiled once during startup. This keeps content easy to extend without adding schema work to the render loop or introducing another runtime dependency.
+Content uses plain JavaScript registries compiled once at startup, avoiding render-loop schema work and extra dependencies.
 
 ## Main files
 
-- `js/content/assets.js` owns imported 3D asset definitions.
-- `js/content/messages.js` owns content-first localization entries and compiles language catalogs once at startup.
-- `js/content/objectives.js` owns checklist metadata and evaluator names.
-- `js/config/quality.js` owns the `full`, `mid`, and `low` render profiles.
-- `js/config/` owns focused game tuning. `js/config/game.js` composes it into `POND_GAME`.
-- `js/config/index.js` provides scene settings and compiles model configuration.
+- `js/content/assets.js`: imported 3D models.
+- `js/content/messages.js`: localization entries and language catalogs.
+- `js/content/objectives.js`: checklist metadata and evaluators.
+- `js/config/quality.js`: `full`, `mid`, and `low` render profiles.
+- `js/config/`: focused game tuning; `game.js` composes `POND_GAME`.
+- `js/config/index.js`: scene settings and compiled model configuration.
 
-The registries are ordinary JavaScript instead of JSON. This allows module-relative asset URLs, comments, frozen values, and small build-time helpers without another file request.
+JavaScript registries support module-relative asset URLs, comments, frozen values, and small helpers without extra file requests.
 
 ## Add a 3D asset
 
@@ -44,54 +44,51 @@ acorn: defineAsset({
 }),
 ```
 
-Fields have these meanings:
+| Field | Meaning |
+| --- | --- |
+| `file` | GLB path relative to `assets/models/` |
+| `size.width` | Final horizontal width in scene units |
+| `orientation.yawDegrees` / `yawOffsetDegrees` | Authored heading / forward-axis correction |
+| `orientation.rotationDegrees` | X/Y/Z import correction, including laying down or rolling |
+| `placement.strategy` | Adapter that owns placement |
+| `placement.position`, `anchor`, `relativeTo` | Authored location; specialized adapters interpret anchors, not a generic resolver |
+| `placement.offset` | Authored X/Y/Z offset from the selected anchor |
+| `placement.pondAngle`, `pondInset` | Point on the generated pond profile |
+| `placement.lift` | Persistent support-surface contact correction |
+| `placement.clearingRadius` | Ground/vegetation clearance where supported |
+| `placement.count` | Deterministic scatter count; omit for one fixed/specialized actor |
+| `animation.clip`, `frames` | Clip by index/name; one range for automatic `fixed-ground` playback |
+| `animation.clips`, `speeds`, `ranges` | Named actor states, speeds, and reusable frame ranges |
+| `framesPerSecond` | Explicit frame-range timing |
+| `requires` | Boolean quality feature gate declared by every profile |
+| `runtime` | Role-specific tuning compiled into the flat runtime view |
+| `modes` | Modes that include/request the descriptor; defaults to supported `game` mode |
+| `requiredModes` | Subset of `modes` where missing/invalid GLB stops startup; defaults empty. Other load failures are reported and skipped. |
 
-- `file` is relative to `assets/models/`.
-- `size.width` is the final horizontal width in scene units.
-- `orientation.yawDegrees` is the authored world heading.
-- `orientation.yawOffsetDegrees` corrects the model's forward axis.
-- `orientation.rotationDegrees` supports X, Y, and Z correction for an imported model that needs to lie down or roll.
-- `placement.strategy` documents which placement adapter owns the instance.
-- `placement.position`, `anchor`, or `relativeTo` identifies its authored location source. Specialized adapters interpret `anchor` and `relativeTo`; they are not automatic generic resolvers.
-- `placement.offset` applies an authored X, Y, and Z offset from the selected anchor.
-- `placement.pondAngle` and `placement.pondInset` select a point from a generated pond profile.
-- `placement.lift` is the persistent surface-contact correction.
-- `placement.clearingRadius` reserves ground and vegetation clearance where that placement strategy supports it.
-- `placement.count` enables deterministic scattered instances. Omit it for a single fixed or specialized actor.
-- `animation.clip` selects one clip by index or name. `animation.frames` selects one range for automatic `fixed-ground` playback.
-- `animation.clips` and `animation.speeds` name several states for a focused actor adapter.
-- `animation.ranges` declares reusable frame ranges, while `framesPerSecond` makes their timing explicit.
-- `requires` names a Boolean quality-profile feature gate. Every profile must declare that gate.
-- `runtime` carries role-specific tuning that is compiled into the flat runtime view.
-- `modes` lists every runtime where the descriptor is included and its GLB is requested. It defaults to `game`; the runtime and validator support game mode.
-- `requiredModes` is a subset of `modes` where a missing or invalid GLB must stop startup. A mode listed only in `modes` treats that load failure as optional, reports it, and continues without the asset. It defaults to an empty list, which is appropriate for purely decorative assets.
-
-In the example, game mode loads and requires the acorn. Keep every `requiredModes` entry in `modes`; the project validator rejects a required mode where the asset is not loaded.
-
-Definitions compile into the runtime `SCENE_PROPS` shape. Generators and runtime code therefore do not perform registry lookups per frame.
+The example requires the acorn in game mode. The validator enforces `requiredModes` as a subset of `modes`. Definitions compile to `SCENE_PROPS`, avoiding per-frame registry lookups.
 
 ## Placement strategies
 
-The current content uses these strategy names:
+| Strategy | Placement |
+| --- | --- |
+| `ground-offset` | Offset from hero-tree area |
+| `pond-rock` | Authored radio-rock anchor |
+| `tree-anchor` | Branch/perch anchor |
+| `pond-edge` | Pond-profile point |
+| `habitat-corner` | Corner lamp |
+| `relative-ground` | Ground point relative to another asset |
+| `scattered-ground` | Seeded placement before rocks/vegetation |
+| `ground-wanderer` | Actor chooses terrain destinations |
+| `fixed-ground` | One static/looping asset at authored X/Z |
+| `game-anchor` | Position reserved by game configuration |
 
-- `ground-offset` for an offset from the hero tree area.
-- `pond-rock` for the authored radio rock anchor.
-- `tree-anchor` for a branch or perch anchor.
-- `pond-edge` for a point derived from the pond profile.
-- `habitat-corner` for the corner lamp.
-- `relative-ground` for a ground point relative to another authored asset.
-- `scattered-ground` for seeded placement generated before rocks and vegetation.
-- `ground-wanderer` for a controlled actor that chooses terrain destinations.
-- `fixed-ground` for a single static or looping animated asset at an authored X and Z position.
-- `game-anchor` for a position reserved by game configuration.
+Radio/reader proxies, lamp light, tent blocker, ant controller, cat animation, and cockroach walker keep focused adapters because their lifecycles differ. `fixed-ground` handles one simple asset and optional looping clip/range; `scattered-ground` handles repeated static assets. Give unique actors with lights, gameplay, movement, collision proxies, or multiple states a named adapter, not another world-builder branch.
 
-Specialized actors still use focused placement methods because the radio proxy, reader proxy, lamp light, tent blocker, ant controller, cat animation, and cockroach walker have distinct lifecycles. `fixed-ground` is handled automatically for a single simple asset, including one optional looping clip or frame range. `scattered-ground` is handled automatically for static repeated assets. A unique actor with lights, gameplay behavior, movement, collision proxies, or multiple animation states should get a small named adapter instead of another unrelated branch in the world builder.
-
-Ground clearings must be compiled before `createGround()`. Visible instances are placed after the ground, trees, pond, and rock anchors exist. Reversing that order changes deterministic placement and collision behavior.
+Compile clearings before `createGround()` so vegetation respects them. Place visible instances after ground, trees, pond, and rock anchors exist; changing this order affects deterministic placement and collisions.
 
 ## Animation clips and frame ranges
 
-Animation recipes live beside the asset definition and are compiled once. The ant demonstrates named frame ranges:
+Animation recipes live beside asset definitions and compile once. The ant uses named frame ranges:
 
 ```js
 animation: {
@@ -107,13 +104,13 @@ animation: {
 },
 ```
 
-`js/props/model-animation.js` resolves a clip by index or name, clones ordinary clips, removes configured root-motion tracks, and creates frame subclips. Do this during startup, not while rendering. Use explicit degrees for authored orientation and explicit frames per second for frame ranges.
+`js/props/model-animation.js` resolves clip index/name, clones ordinary clips, removes configured root-motion tracks, and creates subclips at startup. Use degrees for orientation and explicit FPS for ranges.
 
-A simple `fixed-ground` asset automatically loops `animation.clip`, or the optional single `animation.frames` range. Named `clips`, `speeds`, and `ranges` are for focused actors with several states, such as idle, walk, and interaction.
+Simple `fixed-ground` assets loop `animation.clip` or one optional `animation.frames` range. Named `clips`, `speeds`, and `ranges` serve multi-state actors such as idle/walk/interaction.
 
 ## Localized text
 
-Author each stable key once in `MESSAGE_DEFINITIONS`, with every supported language beside it.
+Define each stable key and all supported languages in `MESSAGE_DEFINITIONS`:
 
 ```js
 'objective.acorn': defineMessage({
@@ -122,13 +119,11 @@ Author each stable key once in `MESSAGE_DEFINITIONS`, with every supported langu
 }),
 ```
 
-Add the language code to `SUPPORTED_LANGUAGES`, then add that property to every message definition. Module initialization reports a missing translation immediately. The definitions compile once into the language-first `MESSAGE_CATALOG`, so `translateMessage(key, language, parameters)` keeps direct object lookup and supports placeholders such as `{version}`. `js/ui/localization.js` formats dynamic landmarks and UI labels using the same catalog.
+Add new language codes to `SUPPORTED_LANGUAGES` and every definition; startup reports missing translations. Definitions compile once into language-first `MESSAGE_CATALOG` for direct `translateMessage(key, language, parameters)` lookup and placeholders such as `{version}`. `js/ui/localization.js` uses the same catalog for dynamic landmarks and UI labels.
 
-Use `data-i18n="ui.example"` for element text and `data-i18n-aria-label="ui.example.aria"` for accessible labels in `index.html`. Dynamic browser code should call `translate()` or `translateMessage()` with the stable key and parameters. The validator checks every localization key referenced by game markup.
+Use `data-i18n` for text and `data-i18n-aria-label` for accessible labels in `index.html`; browser code calls `translate()` or `translateMessage()` with stable keys/parameters. Validation checks markup keys.
 
-Discovery speech and the final checklist caption also use stable `interaction.*` keys. `js/config/content.js` stores those keys, not separate language objects, so every localized line stays in one catalog and locale parity remains testable.
-
-Add the key to every supported language. Keep `Resume` and `Restart` in English as an intentional game UI exception.
+Discovery speech and the final checklist caption use `interaction.*` keys stored in `js/config/content.js`, not per-language objects, keeping locale parity testable. Add each key to every supported language. `Resume` and `Restart` intentionally remain English.
 
 ## Add an objective
 
@@ -144,18 +139,18 @@ defineObjective({
 }),
 ```
 
-The existing evaluators are:
+| Evaluator | Checks |
+| --- | --- |
+| `proximity2d` | Ground-plane distance |
+| `proximity3d` | Elevated-target distance |
+| `shelter` | Tent/burrow shelter bounds |
+| `pondSurface` | Valid water-surface point |
 
-- `proximity2d` for ground-plane distance.
-- `proximity3d` for elevated targets.
-- `shelter` for tent or burrow shelter bounds.
-- `pondSurface` for a valid point on the water surface.
+Availability is `always`, `raining`, `night`, or `fireflyWindow`. Add matching radius/time tuning to `OBJECTIVE_TUNING` in `js/config/content.js`.
 
-Availability can be `always`, `raining`, `night`, or `fireflyWindow`. Add the matching radius or time tuning under `OBJECTIVE_TUNING` in `js/config/content.js`.
+Unique checks may add a small `PondGameObjectives` evaluator branch. Completion effects (animation/removal) stay in explicit runtime handlers.
 
-An objective with unique behavior may add a small evaluator branch in `PondGameObjectives`. Completion side effects such as an animation or object removal remain explicit runtime handlers.
-
-The cockroach meeting uses `proximity3d` and `cockroachMeetRadius` (0.6 world units) with the shared 1.2-second linger time. The controller refreshes its target through `getCockroachWorldPosition()` using a reusable vector before evaluating objectives. The existing close-range reaction animation keeps its separate `cockroachRadius`. The cockroach asset is required for gameplay because checklist completion depends on it. Saves store objective IDs, so older saves gain the new task as incomplete. Snapshot signatures reserve completion bits based on the current managed objective count.
+Cockroach meeting uses `proximity3d`, `cockroachMeetRadius` (0.6 units), and the shared 1.2-second linger. The controller refreshes the target with `getCockroachWorldPosition()` and a reusable vector; close-range reaction uses separate `cockroachRadius`. The required cockroach asset supports this objective. Saves store IDs, so old saves gain it as incomplete; snapshot signatures size completion bits to the managed objective count.
 
 ## Performance rules
 

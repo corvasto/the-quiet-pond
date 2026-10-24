@@ -1,14 +1,14 @@
 # Game configuration and performance
 
-Reload after changing code-level settings. Quality is chosen once at startup; the generated world is not rebuilt during ordinary play.
+Reload code-level changes. Quality is selected at startup; the world is not rebuilt during play.
 
 ## Quality profiles
 
-`js/config/quality.js` owns `QUALITY_PRESETS`. Use the Settings menu's Graphics quality selector and Apply and reload, or open `index.html?q=full`, `?q=mid`, or `?q=low`. The option labels identify the expected cadence and rendering tradeoff: Full is uncapped with the best visuals, Mid targets about 20 FPS with balanced rendering, and Low targets about 20 FPS with the lightest workload. Selection precedence is valid URL `q`, saved `the-quiet-pond-quality` preference, then device default. Auto chooses mid for mobile and full otherwise. Applying a menu choice saves the active slot before reloading, stores the preference, and updates `q` (removes it for Auto), preserving other URL parameters. If browser storage fails, the app shows an error and stays in the current game.
+`js/config/quality.js` owns `QUALITY_PRESETS`. Choose Graphics quality in Settings and Apply and reload, or use `index.html?q=full`, `?q=mid`, or `?q=low`. Full is uncapped and highest quality; Mid targets 20 FPS with balanced cost; Low targets 20 FPS with the lightest workload. Selection order: valid URL `q`, saved `the-quiet-pond-quality`, then device default. Auto selects Mid on mobile and Full elsewhere. Applying saves the active slot and preference, updates/removes `q` while preserving other URL parameters, then reloads. Storage failure shows an error and keeps the current game.
 
 ## Debug URL switch
 
-`js/config/world.js` owns `DEBUG_CONFIG`. Debug and its G toggle are disabled by default. Only `?debug=1` enables diagnostics at startup, the toggle, Explore relocation, objective markers, and radio test controls. Missing, empty, zero, and other values leave debug disabled. The switch is not stored. Use `?q=mid&debug=1` to combine quality and debug; remove the switch and reload for normal play. Checklist completion shortcuts remain unset.
+`js/config/world.js` owns `DEBUG_CONFIG`. Debug and G are off by default; only `?debug=1` enables startup diagnostics, G toggle, Explore relocation, objective markers, and radio tests. Missing, empty, zero, or other values disable it. The switch is not saved. Combine with quality as `?q=mid&debug=1`; remove it and reload for normal play. Checklist completion shortcuts remain unset.
 
 | Value | Full | Mid | Low |
 | --- | --- | --- | --- |
@@ -20,29 +20,27 @@ Reload after changing code-level settings. Quality is chosen once at startup; th
 | Background ants | Enabled | Enabled | Disabled |
 | Decorative model flowers | Enabled | Enabled | Disabled |
 
-All retain antialiasing, the cat, rain, reflection, ripples, shadows, leaf wind, and fireflies. Mid/low reduce decorative density and refresh costly effects less often. Full remains the visual reference. Mid and low limit rendering to about 20 FPS; player motion uses frame-independent smoothing within the bounded simulation step.
+All profiles retain antialiasing, cat, rain, reflection, ripples, shadows, leaf wind, and fireflies. Mid/Low reduce decoration and refresh costly effects less often; Full is the visual reference. Capped profiles target 20 FPS while motion remains frame-independent within a bounded simulation step.
 
-The optional Performance diagnostic in Settings measures rendered frames in 0.75-second windows and is stored under `the-quiet-pond-performance-diagnostic`. Its frame callback is subscribed only while the setting is enabled, so the sampler performs no per-frame work while hidden. Full quality warns below 30 FPS. Mid and Low warn below 14 FPS because both intentionally target about 20 FPS and commonly report around 18 FPS after browser frame scheduling. A 2 FPS recovery margin prevents the warning from flickering near its threshold while allowing normal capped rendering to recover to green. Long hidden-tab gaps reset sampling instead of producing a false low result.
+The optional Settings diagnostic samples rendered FPS in 0.75-second windows and stores its preference as `the-quiet-pond-performance-diagnostic`. Its callback is subscribed only while enabled. Warnings start below 30 FPS in Full and 14 FPS in Mid/Low, which target 20 but commonly report about 18 after browser scheduling. A 2 FPS recovery margin prevents flicker; long hidden-tab gaps reset sampling to avoid false lows.
 
 ## Movement and camera
 
-Automatic camera yaw is excluded from the movement heading while an input direction is held, preventing backward and sideways orbit loops. Releasing input, changing its angle by more than 0.15 radians, resetting the camera, or starting manual camera input clears this compensation. Assistance is disabled during motion-locked climbing and debug flight.
+`js/config/world.js` owns movement and Ant camera settings; `js/config/game.js` composes them into `POND_GAME`. Settings enter the scene as data. While input is held, automatic yaw is excluded from movement heading to prevent orbit loops. Releasing/changing direction by over 0.15 radians, camera reset, or manual camera input clears this compensation. Assist is off during motion-locked climbing and debug flight.
 
-`js/config/world.js` owns movement and Ant camera configuration, composed into `POND_GAME` by `js/config/game.js`. Settings are data-only inputs to the scene engine.
+Ground travel follows the current camera heading. Acceleration/braking use smoothing rates; turn speed affects body facing without bending the path. The analog deadzone rejects tiny joystick motion, then scales speed continuously. Diagonal and combined input share the single-direction speed cap.
 
-Ground travel is relative to the current camera heading. Acceleration and braking use smoothing rates; visual turn speed changes how quickly the body faces movement without bending the requested path. The analog deadzone suppresses tiny joystick displacement and the remaining range scales continuously to full speed. Diagonal and combined inputs cannot exceed the same maximum magnitude as a single direction.
-
-The gameplay camera uses positional smoothing with gentle travel assistance. `assistEnabled` enables horizontal alignment after `assistDelay` seconds of travel (0.45 by default). Manual orbit or zoom pauses it for `assistResumeDelay` seconds (2.5). `assistResponsiveness` controls easing and `assistMaxSpeed` caps turning in radians per second. Assistance preserves pitch and zoom and stops when travel stops. The default distance is 1.5, height is 0.85, and maximum zoom distance is 3. C or the reset camera button restores behind-ant framing explicitly. `followFacing` remains disabled; it is the separate direct chase behavior.
+The camera smooths positional follow and horizontal travel alignment. `assistEnabled` toggles assist; `assistDelay` defaults to 0.45 seconds, manual orbit/zoom pauses it for `assistResumeDelay` (2.5 seconds), `assistResponsiveness` sets easing, and `assistMaxSpeed` caps radians/second. It preserves pitch/zoom and stops with travel. Defaults: distance 1.5, height 0.85, max distance 3. C/reset restores behind-ant framing. `followFacing` is a separate, disabled direct-chase mode.
 
 Keep the existing contact/path checks when tuning speed. Validate stopping near obstacles, pond support, surface transitions, and low-FPS behavior in the browser. See [controls.md](controls.md) and [verification.md](verification.md).
 
 ## Time and weather
 
-`TIME_CONFIG` starts at 10:30 and advances one game hour per 120 real seconds. `WEATHER_CONFIG` controls randomized dry/rain durations and intensity. `TIME_OF_DAY` in `js/config/scene.js` provides shared dawn/dusk boundaries. Decimal hours use 0 or 24 for midnight.
+`TIME_CONFIG` starts at 10:30 and advances one game hour per 120 seconds. `WEATHER_CONFIG` sets randomized dry/rain durations and intensity. `TIME_OF_DAY` in `js/config/scene.js` sets shared dawn/dusk boundaries; decimal 0 or 24 means midnight.
 
-`DEFAULTS` sets the deterministic seed, season, terrain/tree shape, wind, and environment. The fixed habitat is Pond. DEFAULTS.cameraFov controls the gameplay lens (36 degrees). The hero camera pose defines the Explore overview. Model transform defaults provide scale and offset values for game prop placement.
+`DEFAULTS` sets deterministic seed, season, terrain/tree shape, wind, and environment. Habitat is fixed to Pond. `DEFAULTS.cameraFov` sets the gameplay lens (36 degrees); the hero camera pose sets the Explore overview. Model transform defaults set game-prop scale and offset.
 
-`ANT_LOCATOR` controls the red locator beam and glowing sphere shown around the ant in Explore View. It defines their colors, dimensions, opacity, pulse speed, and render order. The locator follows the ant on the ground and while climbing, and is hidden in Ant View.
+`ANT_LOCATOR` sets the Explore red beam/sphere colors, dimensions, opacity, pulse speed, and render order. It follows the ant on ground and climbs, and is hidden in Ant View.
 
 ## Content and traversal
 
@@ -55,6 +53,6 @@ Keep the existing contact/path checks when tuning speed. Validate stopping near 
 | `js/content/objectives.js` | Checklist definition and evaluator metadata |
 | `js/content/messages.js` | Stable English and Indonesian message keys |
 
-The six seeds form two batches of three. Candidate selection keeps ground, rock-top, and companion-tree perch safety checks and falls back to validated ground if the preferred elevated anchor is unavailable. `activeCount` is batch size; `totalCount` determines completion. Ground reservations compile before world detail so vegetation respects fixed content.
+Six seeds appear in two batches of three. Candidate selection validates ground, rock tops, and companion-tree perches, falling back to validated ground if an elevated anchor is unavailable. `activeCount` sets batch size; `totalCount` sets completion. Compile ground reservations before details so vegetation respects fixed content.
 
 Read [content-framework.md](content-framework.md) before adding assets or objectives. Every runtime addition needs a corresponding service-worker pre-cache entry. Keep `js/config/app.js`, package versions, and worker release aligned.
