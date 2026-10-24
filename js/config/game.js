@@ -8,6 +8,7 @@ import {
   SEED_CONFIG,
 } from './content.js';
 import { RADIO_AUDIO_CONFIG } from './radio.js';
+import { AMBIENCE_CONFIG } from './ambience.js';
 import {
   ANT_CAMERA_FOLLOW_CONFIG,
   ANT_MOVEMENT_CONFIG,
@@ -25,6 +26,7 @@ export const POND_GAME = Object.freeze({
   objectives: OBJECTIVE_TUNING,
   interactions: INTERACTION_CONFIG,
   radioAudio: RADIO_AUDIO_CONFIG,
+  ambience: AMBIENCE_CONFIG,
   time: TIME_CONFIG,
   weather: WEATHER_CONFIG,
   debug: DEBUG_CONFIG,

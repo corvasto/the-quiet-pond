@@ -7,6 +7,7 @@ import { DEFAULTS } from '../config/index.js';
 import { PondGameObjectives } from './game-objectives.js';
 import { ObjectiveChime } from './objective-chime.js';
 import { PondRadioAudio } from './radio-audio.js';
+import { AmbienceAudio } from './ambience-audio.js';
 import { SeedToBurrowGame } from './seed-to-burrow.js';
 
 export class PondGameSession {
@@ -40,9 +41,12 @@ export class PondGameSession {
     this.worldTimeHours = 0;
     this.lastAppliedSunHour = null;
     this.weatherPhase = 'dry';
+    this.debugWeatherOverride = false;
     this.weatherRemainingSeconds = 0;
     this.worldCycleUnsubscribe = null;
     this.radioAudio = null;
+    this.audioListener = null;
+    this.ambienceAudio = null;
     this.objectives = null;
     this.latestGameSnapshot = null;
     this.framePosition = null;
@@ -68,12 +72,18 @@ export class PondGameSession {
     });
     await this.app.start();
     this.app.setView('ant', true);
+    this.audioListener = new THREE.AudioListener();
+    this.app.camera.add(this.audioListener);
     this.radioAudio = new PondRadioAudio(this.app, {
       onCaption: (text, duration) => this.onRadioCaption(text, duration),
       language: this.language,
       musicVolume: this.musicVolume,
+      audioListener: this.audioListener,
     });
     this.radioAudio.start();
+    this.ambienceAudio = new AmbienceAudio(this.app, this.audioListener);
+    this.ambienceAudio.setEnabled(this.soundEnabled);
+    this.ambienceAudio.start();
     this.objectives = new PondGameObjectives(this.app, {
       onChange: () => this.emitGameState(),
       onAllComplete: () => this.announceAllObjectives(),
@@ -301,6 +311,7 @@ export class PondGameSession {
   unlockSound() {
     this.game?.unlockSound();
     this.radioAudio?.unlock();
+    this.ambienceAudio?.unlock();
     this.objectiveChime?.unlock();
   }
 
@@ -308,6 +319,7 @@ export class PondGameSession {
     this.soundEnabled = Boolean(enabled);
     this.objectiveChime?.setEnabled(enabled);
     this.game?.setSoundEnabled(enabled);
+    this.ambienceAudio?.setEnabled(enabled);
     return this.soundEnabled;
   }
 
@@ -325,6 +337,24 @@ export class PondGameSession {
 
   canDebugControlRadio() {
     return this.isClimbDebugEnabled() && POND_GAME.debug?.allowRadioControls === true;
+  }
+
+  canDebugControlWeather() {
+    return POND_GAME.debug?.enabled === true;
+  }
+
+  toggleDebugRain() {
+    if (!this.canDebugControlWeather() || !this.app) return null;
+    const phase = this.weatherPhase === 'rain' ? 'dry' : 'rain';
+    this.debugWeatherOverride = true;
+    this.weatherPhase = phase;
+    this.scheduleWeather(phase);
+    if (phase === 'rain') {
+      const rain = POND_GAME.weather?.rain;
+      if (rain) this.app.setRainIntensity(this.randomBetween(rain.minimumIntensity, rain.maximumIntensity));
+    }
+    this.app.setRainEnabled(phase === 'rain');
+    return phase;
   }
 
   cycleDebugRadioMusic() {
@@ -374,9 +404,15 @@ export class PondGameSession {
       raining: this.weatherPhase === 'rain',
       antPosition: this.app.getAntWorldPosition(this.framePosition ??= new THREE.Vector3()),
     });
+    this.ambienceAudio?.update(
+      safeDelta,
+      this.worldTimeHours,
+      this.weatherPhase === 'rain',
+    );
   }
 
   updateWeather(delta) {
+    if (this.debugWeatherOverride) return;
     const rain = POND_GAME.weather?.rain;
     if (POND_GAME.weather?.enabled === false || !rain) return;
     this.weatherRemainingSeconds -= delta;
@@ -457,10 +493,15 @@ export class PondGameSession {
     this.climbing?.dispose();
     this.radioAudio?.dispose();
     this.radioAudio = null;
+    this.ambienceAudio?.dispose();
+    this.ambienceAudio = null;
     this.objectives?.dispose();
     this.objectives = null;
     this.objectiveChime?.dispose();
     this.objectiveChime = null;
+    this.audioListener?.removeFromParent();
+    this.audioListener?.gain?.disconnect();
+    this.audioListener = null;
     this.app?.dispose();
     this.game = null;
     this.climbing = null;

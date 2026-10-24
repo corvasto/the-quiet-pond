@@ -11,12 +11,12 @@ export const RADIO_AUDIO_CONFIG = Object.freeze({
   announcementCooldownSeconds: 70,
   captionSeconds: 5,
   music: Object.freeze({
-    daytime: new URL('../../assets/audio/radio-music-bright-morning-and-noon.mp3', import.meta.url).href,
-    nightRain: new URL('../../assets/audio/radio-music-night-sleep-or-raining.mp3', import.meta.url).href,
+    daytime: new URL('../../assets/audio/radio/radio-music-bright-morning-and-noon.mp3', import.meta.url).href,
+    nightRain: new URL('../../assets/audio/radio/radio-music-night-sleep-or-raining.mp3', import.meta.url).href,
   }),
   static: Object.freeze({
     enabled: true,
-    url: new URL('../../assets/audio/radio-static.mp3', import.meta.url).href,
+    url: new URL('../../assets/audio/radio/radio-static.mp3', import.meta.url).href,
     distance: 3.4,
     volume: 0.055,
   }),

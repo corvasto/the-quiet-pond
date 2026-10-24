@@ -17,6 +17,7 @@ const byId = (id) => document.getElementById(id);
 // Track actual input so touch focus stays quiet and keyboard focus remains visible.
 document.addEventListener('pointerdown', () => {
   document.documentElement.dataset.inputMethod = 'pointer';
+  session?.unlockSound();
 }, { capture: true, passive: true });
 document.addEventListener('keydown', () => {
   document.documentElement.dataset.inputMethod = 'keyboard';
@@ -925,6 +926,12 @@ window.addEventListener('keydown', (event) => {
     showRadioCaption(t('debug.radio.voice', {
       result: session.playDebugRadioAnnouncement(),
     }), 3);
+    return;
+  }
+  if (event.code === 'KeyT' && !event.repeat && session?.canDebugControlWeather()) {
+    event.preventDefault();
+    const phase = session.toggleDebugRain();
+    showRadioCaption(t('debug.weather', { phase }), 3);
     return;
   }
   if ((event.code === 'ControlLeft' || event.code === 'ControlRight') && session?.isFlightEnabled()) {

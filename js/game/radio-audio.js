@@ -10,12 +10,18 @@ function isNight(hour) {
 }
 
 export class PondRadioAudio {
-  constructor(app, { onCaption = () => {}, language = 'en', musicVolume = null } = {}) {
+  constructor(app, {
+    onCaption = () => {},
+    language = 'en',
+    musicVolume = null,
+    audioListener = null,
+  } = {}) {
     this.app = app;
     this.onCaption = onCaption;
     this.config = POND_GAME.radioAudio;
     this.musicVolume = clamp01(musicVolume ?? this.config.musicVolume ?? 0.82);
-    this.listener = null;
+    this.listener = audioListener;
+    this.ownsListener = false;
     this.radioPosition = new THREE.Vector3();
     this.antPosition = new THREE.Vector3();
     this.audioLoader = new THREE.AudioLoader();
@@ -44,8 +50,11 @@ export class PondRadioAudio {
     const radio = this.app.getSceneLandmarks()?.radio;
     if (!radio?.position) return;
     this.radioPosition.copy(radio.position);
-    this.listener = new THREE.AudioListener();
-    this.app.camera.add(this.listener);
+    if (!this.listener) {
+      this.listener = new THREE.AudioListener();
+      this.app.camera.add(this.listener);
+      this.ownsListener = true;
+    }
     this.loadPromise = this.loadAudio();
   }
 
@@ -78,7 +87,7 @@ export class PondRadioAudio {
     const loadId = ++this.announcementLoadId;
     const announcementEntries = Object.entries(this.config.announcements ?? {});
     const loadedAnnouncements = await Promise.all(announcementEntries.map(async ([key, entry]) => {
-      const url = new URL(`../../assets/audio/${language}/${entry.file}`, import.meta.url).href;
+      const url = new URL(`../../assets/audio/radio/${language}/${entry.file}`, import.meta.url).href;
       const buffer = await this.audioLoader.loadAsync(url);
       return [key, {
         buffer,
@@ -322,8 +331,10 @@ export class PondRadioAudio {
     this.music.forEach((audio) => this.releaseAudio(audio));
     this.releaseAudio(this.staticAudio);
     this.releaseAudio(this.announcementAudio);
-    this.listener?.removeFromParent();
-    this.listener?.gain?.disconnect();
+    if (this.ownsListener) {
+      this.listener?.removeFromParent();
+      this.listener?.gain?.disconnect();
+    }
     this.music.clear();
     this.announcements.clear();
     this.announcementLoadId += 1;

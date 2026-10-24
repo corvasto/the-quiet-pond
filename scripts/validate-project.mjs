@@ -26,6 +26,7 @@ import {
   SEED_CONFIG,
 } from '../js/config/content.js';
 import { RADIO_AUDIO_CONFIG } from '../js/config/radio.js';
+import { AMBIENCE_CONFIG } from '../js/config/ambience.js';
 import { getNightAmount, normalizeDayHour } from '../js/utils/time-of-day.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -218,10 +219,15 @@ audioUrls.forEach((url) => {
 });
 Object.values(RADIO_AUDIO_CONFIG.announcements).forEach(({ file }) => {
   ['en', 'id'].forEach((language) => {
-    const filePath = path.join(projectRoot, 'assets', 'audio', language, file);
+    const filePath = path.join(projectRoot, 'assets', 'audio', 'radio', language, file);
     check(fs.existsSync(filePath), `Announcement is missing for ${language}: ${file}`);
     check(appShell.has(shellPathFromFile(filePath)), `Announcement is not pre-cached for ${language}: ${file}`);
   });
+});
+Object.values(AMBIENCE_CONFIG.tracks).forEach(({ url }) => {
+  const filePath = fileURLToPath(url);
+  check(fs.existsSync(filePath), `Ambience audio file is missing: ${shellPathFromFile(filePath)}`);
+  check(appShell.has(shellPathFromFile(filePath)), `Ambience audio file is not pre-cached: ${shellPathFromFile(filePath)}`);
 });
 
 const englishKeys = Object.keys(MESSAGE_CATALOG.en).sort();
