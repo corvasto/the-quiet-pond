@@ -1,7 +1,7 @@
 export const TIME_CONFIG = Object.freeze({
   enabled: true,
   // Decimal 24-hour game time. Both 0 and 24 mean midnight; 5.5 means 05:30.
-  startHour: 18.0,
+  startHour: 10.5,
   // Real seconds required for one game hour. At 120, one real minute advances 30 game minutes.
   secondsPerGameHour: 120,
 });
