@@ -3,6 +3,7 @@ export { APP_VERSION } from './app.js';
 export { PERFORMANCE } from './quality.js';
 export {
   ANT_LOCATOR,
+  ANT_NIGHT_LIGHT,
   CAMERA_VIEWS,
   DEFAULTS,
   DIORAMA,

@@ -64,6 +64,15 @@ export const ENVIRONMENT = Object.freeze({
   sunGlare: PERFORMANCE.sunGlare,
 });
 
+export const ANT_NIGHT_LIGHT = Object.freeze({
+  color: '#d9e8ff',
+  intensity: 0.8,
+  distance: 3.5,
+  decay: 0.2,
+  // World-space gap above the ant model's measured top surface.
+  height: 0.075,
+});
+
 export const TIME_OF_DAY = Object.freeze({
   // Used only when a caller supplies a missing or non-finite hour.
   fallbackHour: 10.5,

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_VIEWS, SCENE_PROPS } from '../config/index.js';
+import { ANT_NIGHT_LIGHT, CAMERA_VIEWS, SCENE_PROPS } from '../config/index.js';
 import {
   createObjectGroundFootprint,
   createTriangleSurfaceProxy,
@@ -109,13 +109,93 @@ const propPlacementMethods = {
       position,
       this.readerBaseYaw + THREE.MathUtils.degToRad(this.settings.readerRotation),
     );
+    this.readerHomePosition = new THREE.Vector3(position.x, position.y, position.z);
+    this.readerHomeYaw = this.reader.group.rotation.y;
     this.reader.group.updateWorldMatrix(true, true);
     this.readerCollisionBounds.setFromObject(this.reader.group);
+    this.readerSurfaceProxy?.removeFromParent();
+    this.readerSurfaceProxy?.userData.dispose?.();
     this.readerSurfaceProxy = createTriangleSurfaceProxy(this.reader.group, {
       cellSize: SCENE_PROPS.reader.climbProxyCellSize,
       minimumTriangleArea: SCENE_PROPS.reader.climbProxyMinimumTriangleArea,
       groundCollisionHeight: SCENE_PROPS.reader.climbProxyGroundCollisionHeight,
     });
+  },
+
+  prepareReaderNightRoutine(ground, world) {
+    if (!this.reader?.group || !this.tent?.group || !ground) return;
+    this.tent.group.updateWorldMatrix(true, true);
+    const tentPosition = this.tent.group.getWorldPosition(new THREE.Vector3());
+    const tentQuaternion = this.tent.group.getWorldQuaternion(new THREE.Quaternion());
+    const seatOffset = new THREE.Vector3(0, 0, -0.55).applyQuaternion(tentQuaternion);
+    const x = tentPosition.x + seatOffset.x;
+    const z = tentPosition.z + seatOffset.z;
+    this.readerTentPosition = new THREE.Vector3(
+      x,
+      ground.heightAt(x, z) + SCENE_PROPS.reader.lift,
+      z,
+    );
+    this.readerTentYaw = this.readerHomeYaw;
+    this.readerNightBlend = 0;
+    this.readerFadeMaterials = [];
+    this.reader.group.traverse((object) => {
+      if (!object.isMesh || !object.material) return;
+      const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+      const fadeMaterials = sourceMaterials.map((source) => {
+        const material = source.clone();
+        material.transparent = true;
+        // Keep nearer parts of this multi-mesh model from revealing surfaces behind them.
+        material.depthWrite = true;
+        this.readerFadeMaterials.push({ material, opacity: material.opacity });
+        return material;
+      });
+      object.material = Array.isArray(object.material) ? fadeMaterials : fadeMaterials[0];
+    });
+    const light = new THREE.PointLight('#ffd58a', 0, 5.5, 2);
+    light.name = 'Quiet reader tent light';
+    const requestedWorldPosition = new THREE.Vector3(9.1, 3, 9.8);
+    const relativeLightPosition = this.tent.group.worldToLocal(requestedWorldPosition.clone());
+    light.position.copy(this.tent.group.localToWorld(relativeLightPosition));
+    world.add(light);
+    this.readerTentLight = light;
+    this.readerTentLightLocalPosition = relativeLightPosition;
+  },
+
+  updateReaderNightRoutine(delta) {
+    if (!this.reader?.group || !this.readerHomePosition || !this.readerTentPosition) return;
+    const hour = ((Number(this.settings.sunHour) % 24) + 24) % 24;
+    const evening = THREE.MathUtils.smoothstep(hour, 19.9, 20.25);
+    const morning = 1 - THREE.MathUtils.smoothstep(hour, 5.1, 6.6);
+    const target = Math.max(evening, morning);
+    this.readerNightBlend = THREE.MathUtils.damp(this.readerNightBlend, target, 1.8, delta);
+    if (this.readerNightBlend > 0.01 && this.readerClimbingController?.route?.id === 'reader') {
+      this.readerClimbingController.abortRoute();
+    }
+    const fade = Math.min(1, Math.abs(this.readerNightBlend * 2 - 1));
+    const insideTent = this.readerNightBlend >= 0.5;
+    this.reader.group.position.copy(insideTent ? this.readerTentPosition : this.readerHomePosition);
+    this.reader.group.rotation.y = insideTent ? this.readerTentYaw : this.readerHomeYaw;
+    this.readerFadeMaterials.forEach(({ material, opacity }) => {
+      material.opacity = opacity * fade;
+    });
+    this.reader.group.updateWorldMatrix(true, true);
+    this.readerCollisionBounds.setFromObject(this.reader.group);
+    if (this.readerSurfaceProxy) {
+      this.readerSurfaceProxy.position.set(
+        this.reader.group.position.x - this.readerHomePosition.x,
+        this.reader.group.position.y - this.readerHomePosition.y,
+        this.reader.group.position.z - this.readerHomePosition.z,
+      );
+    }
+    if (this.readerTentLight) {
+      this.readerTentLight.visible = this.readerNightBlend > 0.01;
+      this.readerTentLight.intensity = 8 * this.readerNightBlend;
+      this.readerTentLight.position.copy(
+        this.tent.group.localToWorld(
+          this.readerTentLightWorldPosition.copy(this.readerTentLightLocalPosition),
+        ),
+      );
+    }
   },
 
   placeScatteredModelProps(ground, world) {
@@ -206,6 +286,13 @@ const propPlacementMethods = {
     this.streetLampGlow.material.opacity = night * 0.94;
     const glowSize = THREE.MathUtils.lerp(0.48, 0.92, night) * flicker;
     this.streetLampGlow.scale.set(glowSize, glowSize, 1);
+  },
+
+  updateAntNightLight() {
+    if (!this.antNightLight) return;
+    const night = getNightAmount(this.settings.sunHour);
+    this.antNightLight.intensity = ANT_NIGHT_LIGHT.intensity * night;
+    this.antNightLight.visible = night > 0.01;
   },
 
   placeTent(anchor, ground) {

@@ -99,6 +99,7 @@ export class PondGameSession {
         this.emitPrompt();
       },
     });
+    this.app.readerClimbingController = this.climbing;
     this.game.start();
     this.climbing.start();
     this.restoreSaveState(this.saveState);
@@ -449,6 +450,9 @@ export class PondGameSession {
   dispose() {
     this.worldCycleUnsubscribe?.();
     this.worldCycleUnsubscribe = null;
+    if (this.app?.readerClimbingController === this.climbing) {
+      this.app.readerClimbingController = null;
+    }
     this.game?.dispose();
     this.climbing?.dispose();
     this.radioAudio?.dispose();

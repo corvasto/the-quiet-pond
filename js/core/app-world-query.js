@@ -324,8 +324,12 @@ const WORLD_QUERY_METHODS = {
       rocks: [...rockAnchors, ...pondRockAnchors],
       reader: describeModel(this.reader, {
         walkBlockRadius: SCENE_PROPS.reader.targetWidth * this.settings.readerScale * 0.3,
-        surfaceObject: this.readerSurfaceProxy ?? this.reader.group,
-        groundFootprint: this.readerSurfaceProxy?.userData.containsGroundPoint
+        surfaceObject: this.readerNightBlend > 0.01
+          ? null
+          : this.readerSurfaceProxy ?? this.reader.group,
+        groundFootprint: this.readerNightBlend > 0.01
+          ? null
+          : this.readerSurfaceProxy?.userData.containsGroundPoint
           ? this.readerSurfaceProxy.userData
           : null,
       }),

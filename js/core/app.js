@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {
   ANT_LOCATOR,
+  ANT_NIGHT_LIGHT,
   CAMERA_VIEWS,
   DEFAULTS,
   PERFORMANCE,
@@ -284,6 +285,8 @@ export class PondApp {
     this.streetLamp = null;
     this.streetLampLight = null;
     this.streetLampGlow = null;
+    this.readerTentLight = null;
+    this.antNightLight = null;
     this.tent = null;
     this.tentAnchor = null;
     this.tentBaseYaw = 0;
@@ -295,6 +298,13 @@ export class PondApp {
     this.radioAnchor = null;
     this.radioBaseYaw = 0;
     this.readerBaseYaw = 0;
+    this.readerHomePosition = null;
+    this.readerHomeYaw = 0;
+    this.readerTentPosition = null;
+    this.readerNightBlend = 0;
+    this.readerFadeMaterials = [];
+    this.readerTentLightLocalPosition = null;
+    this.readerTentLightWorldPosition = new THREE.Vector3();
     this.propHeroPosition = { x: 0, z: 0 };
     this.cameraTween = null;
     this.viewOffset = new THREE.Vector3();
@@ -503,6 +513,12 @@ export class PondApp {
     this.streetLampGlow?.userData.dispose?.();
     this.streetLampLight = null;
     this.streetLampGlow = null;
+    this.readerTentLight?.removeFromParent();
+    this.readerTentLight = null;
+    this.antNightLight?.removeFromParent();
+    this.antNightLight = null;
+    this.readerFadeMaterials.forEach(({ material }) => material.dispose());
+    this.readerFadeMaterials = [];
     this.pondWater?.water.removeFromParent();
     this.world.removeFromParent();
     this.environment.setSunGlareOccluder(null);
@@ -749,6 +765,7 @@ export class PondApp {
       this.placeTent(tentAnchor, ground);
       world.add(this.tent.group);
     }
+    this.prepareReaderNightRoutine(ground, world);
     const frogAnchor = getModelPropSpot(ground, 'frog');
     if (this.frog && frogAnchor) {
       this.placeFrog(frogAnchor, ground);
@@ -766,6 +783,24 @@ export class PondApp {
     }
     if (this.ant) {
       this.placeAnt(heroPosition, ground);
+      this.antNightLight = new THREE.PointLight(
+        ANT_NIGHT_LIGHT.color,
+        0,
+        ANT_NIGHT_LIGHT.distance,
+        ANT_NIGHT_LIGHT.decay,
+      );
+      this.antNightLight.name = 'Faint ant night light';
+      this.ant.group.updateWorldMatrix(true, true);
+      const antBounds = new THREE.Box3().setFromObject(this.ant.group, true);
+      const antCenter = antBounds.getCenter(new THREE.Vector3());
+      const lightWorldPosition = new THREE.Vector3(
+        antCenter.x,
+        antBounds.max.y + ANT_NIGHT_LIGHT.height,
+        antCenter.z,
+      );
+      this.ant.group.worldToLocal(lightWorldPosition);
+      this.antNightLight.position.copy(lightWorldPosition);
+      this.ant.group.add(this.antNightLight);
       world.add(this.ant.group);
     }
     this.placeScatteredModelProps(ground, world);
@@ -794,6 +829,7 @@ export class PondApp {
     );
     if (PERFORMANCE.shadows) this.renderer.shadowMap.needsUpdate = true;
     this.updateStreetLampLight();
+    this.updateAntNightLight();
     this.setRenderQuality(this.settings.quality);
   }
 
@@ -936,6 +972,8 @@ export class PondApp {
     for (const mixer of this.backgroundAntMixers) mixer.update(delta);
     for (const mixer of this.genericModelMixers) mixer.update(delta);
     this.updateStreetLampLight(elapsed);
+    this.updateAntNightLight();
+    this.updateReaderNightRoutine(delta);
     const effectiveWind = this.updateWeatherWind();
     this.rainAccumulator += delta;
     if (

@@ -1,7 +1,7 @@
 {
   "name": "The Quiet Pond",
   "short_name": "Quiet Pond",
-  "description": "A cozy exploration game about a small pond world and its hidden routines.",
+  "description": "A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

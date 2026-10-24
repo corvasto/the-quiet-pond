@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "A cozy ant exploration game in a procedural pond world.",
+  "description": "A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.",
   "scripts": {
     "check": "node scripts/validate-project.mjs",
     "test": "node scripts/check-player-motion.mjs && node scripts/check-objectives.mjs && node scripts/check-ant-locator.mjs && node scripts/check-fps-diagnostic.mjs && node scripts/check-offline-shell.mjs"
