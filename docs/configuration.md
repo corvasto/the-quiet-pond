@@ -28,7 +28,7 @@ The optional Settings diagnostic samples rendered FPS in 0.75-second windows and
 
 `js/config/world.js` owns movement and Ant camera settings; `js/config/game.js` composes them into `POND_GAME`. Settings enter the scene as data. While input is held, automatic yaw is excluded from movement heading to prevent orbit loops. Releasing/changing direction by over 0.15 radians, camera reset, or manual camera input clears this compensation. Assist is off during motion-locked climbing and debug flight.
 
-Ground travel follows the current camera heading. Acceleration/braking use smoothing rates; turn speed affects body facing without bending the path. The analog deadzone rejects tiny joystick motion, then scales speed continuously. Diagonal and combined input share the single-direction speed cap.
+Ground travel uses the camera's horizontal heading when movement starts or changes direction. Acceleration/braking use smoothing rates; turn speed affects body facing without bending the path. The mobile joystick moves 360 degrees with a central analog deadzone; joystick distance controls speed, including on diagonals. Manual camera orbit is compensated while movement is held, so swiping changes the view without steering the ant's current ground path.
 
 The camera smooths positional follow and horizontal travel alignment. `assistEnabled` toggles assist; `assistDelay` defaults to 0.45 seconds, manual orbit/zoom pauses it for `assistResumeDelay` (2.5 seconds), `assistResponsiveness` sets easing, and `assistMaxSpeed` caps radians/second. It preserves pitch/zoom and stops with travel. Defaults: distance 1.5, height 0.85, max distance 3. C/reset restores behind-ant framing. `followFacing` is a separate, disabled direct-chase mode.
 

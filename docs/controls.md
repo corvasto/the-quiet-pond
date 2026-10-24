@@ -18,7 +18,7 @@ Movement follows the view, with short acceleration/braking, normalized diagonals
 
 ## Touch
 
-The left joystick moves 360 degrees: a central deadzone blocks accidental input, and distance controls speed. Hold Run with another finger for ground running; use Climb / Get down and camera reset as needed. Drag uncovered scene space to look while moving.
+The left joystick moves 360 degrees relative to the camera's horizontal heading. A central deadzone blocks accidental input, and distance from the center controls speed, including on diagonals. Hold Run with another finger for ground running; use Climb / Get down and camera reset as needed. Drag uncovered scene space to orbit while moving. As with keyboard movement, the ant keeps its current ground heading while the camera moves.
 
 Explore hides movement controls. One finger pans; two rotate and pinch-zoom. Returning restores gameplay touch controls.
 

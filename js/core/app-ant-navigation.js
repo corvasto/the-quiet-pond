@@ -94,7 +94,6 @@ const antNavigationMethods = {
   setAntMovementKey(direction, pressed) {
     if (!['forward', 'backward', 'left', 'right', 'up', 'down'].includes(direction)) return;
     if (pressed && this.isAntViewActive()) {
-      this.antJoystickActive = false;
       this.antMovementInput.add(direction);
     } else {
       this.antMovementInput.delete(direction);
@@ -114,7 +113,6 @@ const antNavigationMethods = {
 
   setAntMovementAxes(horizontal, forward) {
     const active = this.isAntViewActive();
-    if (active && (horizontal || forward)) this.antJoystickActive = true;
     this.antMovementAxes.set(
       active ? clampMovementAxis(horizontal) : 0,
       active ? clampMovementAxis(forward) : 0,
@@ -429,15 +427,12 @@ const antNavigationMethods = {
       this.antForward.set(-offset.x, 0, -offset.z);
     }
     this.antForward.normalize();
-    // Camera orbit must not steer an unchanged held movement input.
+    // Keep held movement on its ground heading while the camera orbits.
     const movementYaw = -(this.antCameraMovementYaw ?? 0);
     const forwardX = this.antForward.x;
     const forwardZ = this.antForward.z;
     this.antForward.x = forwardX * Math.cos(movementYaw) + forwardZ * Math.sin(movementYaw);
     this.antForward.z = forwardZ * Math.cos(movementYaw) - forwardX * Math.sin(movementYaw);
-    if (this.antMovementAxes.lengthSq() > this.antMovement.analogDeadzone ** 2) {
-      this.getAntJoystickForward(this.antForward);
-    }
     this.antRight.set(-this.antForward.z, 0, this.antForward.x);
     this.antMoveDirection
       .copy(this.antForward)

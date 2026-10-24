@@ -1582,7 +1582,7 @@ function onPointerDown( event ) {
 
 function onPointerMove( event ) {
 
-	if ( this.enabled === false ) return;
+	if ( this.enabled === false || this._isTrackingPointer( event ) === false ) return;
 
 	if ( event.pointerType === 'touch' ) {
 
@@ -1597,6 +1597,8 @@ function onPointerMove( event ) {
 }
 
 function onPointerUp( event ) {
+
+	if ( this._isTrackingPointer( event ) === false ) return;
 
 	this._removePointer( event );
 
@@ -1676,9 +1678,7 @@ function onMouseDown( event ) {
 
 		case MOUSE.ROTATE:
 
-			if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
-
-				if ( this.enablePan === false ) return;
+			if ( ( event.ctrlKey || event.metaKey || event.shiftKey ) && this.enablePan ) {
 
 				this._handleMouseDownPan( event );
 

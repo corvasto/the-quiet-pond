@@ -1227,6 +1227,10 @@ kbd {
 }
 
 @media (max-width: 760px), (pointer: coarse), (hover: none) {
+  #scene canvas {
+    touch-action: none;
+  }
+
   .game-brand,
   #fullscreen-button,
   .game-hint,
@@ -1422,15 +1426,15 @@ kbd {
 
   .mobile-game-actions {
     position: relative;
-    width: 166px;
-    height: 152px;
+    width: 184px;
+    height: 170px;
   }
 
   .mobile-game-action {
     position: absolute;
     display: grid;
-    width: 84px;
-    height: 84px;
+    width: 101px;
+    height: 101px;
     place-content: center;
     gap: 1px;
     padding: 8px;
@@ -1492,6 +1496,11 @@ kbd {
     max-height: calc(100dvh - 36px);
   }
 
+  #settings-dialog .game-dialog__frame,
+  #about-dialog .game-dialog__frame {
+    width: min(380px, 100%);
+  }
+
   .game-dialog__close {
     top: 12px;
     right: 12px;
@@ -1538,13 +1547,13 @@ kbd {
   }
 
   .mobile-game-actions {
-    width: 142px;
-    height: 132px;
+    width: 170px;
+    height: 158px;
   }
 
   .mobile-game-action {
-    width: 74px;
-    height: 74px;
+    width: 89px;
+    height: 89px;
   }
 }
 
@@ -1579,13 +1588,13 @@ kbd {
   }
 
   .mobile-game-actions {
-    width: 132px;
-    height: 116px;
+    width: 158px;
+    height: 139px;
   }
 
   .mobile-game-action {
-    width: 70px;
-    height: 70px;
+    width: 84px;
+    height: 84px;
     font-size: 0.6rem;
   }
 

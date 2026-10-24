@@ -13,8 +13,8 @@ Use this manual checklist for browser/device behavior; validation scripts do not
 
 ## Touch and layout
 
-1. On a real touch device, move the joystick from deadzone to rim in several directions. Check gradual speed, diagonals, release outside the pad, and cancelled touches.
-2. Hold A (lower-left action) to run; use B (above/right) to climb/get down. Check bottom clearance in portrait/landscape. Rotate camera 90 and 180 degrees while moving/stopped: joystick up/down must move away from/toward the current view, left/right across it. Retest after release/repress, reset/zoom, and returning from Explore. Camera follows position without turning behind joystick travel. Repeat on climbable surfaces at all qualities, checking jitter.
+1. On a real touch device, move the joystick from deadzone to rim in cardinal and diagonal directions. Check gradual speed, diagonal movement, release outside the pad, and cancelled touches.
+2. Hold A (lower-left action) to run; use B (above/right) to climb/get down. Check bottom clearance in portrait/landscape. Swipe with the other thumb while holding each joystick direction; camera orbit should not steer the ant's held ground path, matching keyboard movement. Retest after release/repress, reset/zoom, and returning from Explore. Repeat on climbable surfaces at all qualities, checking jitter.
 3. Test portrait and short landscape, expanded checklist, Settings/About, pause/save slots, and English/Indonesian. Time stays top-left within the safe area, clear of top-right controls. Checklist chevron points up when open/down when closed. Language/quality selects share chevron shape and 160 ms rotation, and remain tappable. FPS diagnostic stays bottom-right without covering controls. Pause omits language, sound, quality, diagnostic, and About. Keep controls/prompts legible and reachable.
 4. In Explore, test one-finger pan and two-finger rotate/zoom; return and check gameplay touch mapping.
 

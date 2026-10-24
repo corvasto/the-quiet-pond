@@ -157,17 +157,12 @@ const cameraMethods = {
       Math.sin(afterYaw - beforeYaw),
       Math.cos(afterYaw - beforeYaw),
     );
-    // Keep a held movement direction stable while manual orbit and damping rotate the view.
+    // Preserve the held ground heading while camera damping settles after an orbit.
     this.antCameraMovementYaw = (this.antCameraMovementYaw ?? 0) + orbitYaw;
   },
 
   updateAntCameraAssistance(dt, travelX, travelZ) {
     const config = this.antCameraFollow;
-    // Touch steering follows the view, so automatic orbit would also steer the ant.
-    if (this.antJoystickActive) {
-      this.antCameraAssistTravelTime = 0;
-      return;
-    }
     if (!config.enabled || !config.assistEnabled || this.antMotionLocked || this.antFlightEnabled) return;
     this.antCameraAssistPause = Math.max(0, (this.antCameraAssistPause ?? 0) - dt);
     // Ignore vertical climbing and tiny contact corrections.

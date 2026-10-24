@@ -274,31 +274,57 @@ for (const [x, y] of [[0, -1], [1, 0], [-1, 0], [0.7, -0.7]]) {
   }
 }
 const climb = new AntClimbing(climbApp);
-// Drag handlers can update the camera between animation frames.
+// Joystick movement should use the same orbit compensation as keyboard movement.
 for (const fps of [20, 60, 120]) {
-  const joystick = new NavigationHarness();
-  joystick.setAntMovementAxes(0, 1);
-  joystick.updateAntMovement(1 / fps);
   for (const yaw of [Math.PI / 2, -Math.PI + 0.01, Math.PI - 0.01]) {
-    joystick.camera.position.set(Math.sin(yaw), 0.6, Math.cos(yaw));
+    const joystick = new NavigationHarness();
+    joystick.setAntMovementAxes(0, 1);
     joystick.updateAntMovement(1 / fps);
-    near(joystick.antMoveDirection.x, -Math.sin(yaw));
-    near(joystick.antMoveDirection.z, -Math.cos(yaw));
+    const heldDirection = joystick.antMoveDirection.clone();
+    const target = joystick.controls.target;
+    const horizontalRadius = Math.hypot(
+      joystick.camera.position.x - target.x,
+      joystick.camera.position.z - target.z,
+    );
+    const cameraY = joystick.camera.position.y;
+    joystick.controls.update = () => {
+      joystick.camera.position.set(
+        target.x + Math.sin(yaw) * horizontalRadius,
+        cameraY,
+        target.z + Math.cos(yaw) * horizontalRadius,
+      );
+    };
+    joystick.updateAntOrbitControls(1 / fps);
+    joystick.controls.update = () => {};
+    joystick.updateAntMovement(1 / fps);
+    assert.ok(
+      joystick.antMoveDirection.dot(heldDirection) > 0.999999,
+      `Camera orbit must not steer a held joystick direction: ${joystick.antMoveDirection.toArray()} vs ${heldDirection.toArray()}, yaw ${joystick.antCameraMovementYaw}.`,
+    );
     joystick.setAntMovementAxes(1, 0);
     joystick.updateAntMovement(1 / fps);
-    near(joystick.antMoveDirection.x, Math.cos(yaw));
-    near(joystick.antMoveDirection.z, -Math.sin(yaw));
+    const cameraForward = target.clone().sub(joystick.camera.position).setY(0).normalize();
+    const cameraRight = new THREE.Vector3(-cameraForward.z, 0, cameraForward.x);
+    assert.ok(
+      joystick.antMoveDirection.dot(cameraRight) > 0.999999,
+      'A changed joystick direction should use the current camera heading.',
+    );
     joystick.clearAntMovement();
     joystick.setAntMovementAxes(0, 1);
     joystick.updateAntMovement(1 / fps);
-    near(joystick.antMoveDirection.x, -Math.sin(yaw));
-    near(joystick.antMoveDirection.z, -Math.cos(yaw));
+    assert.ok(
+      joystick.antMoveDirection.dot(cameraForward) > 0.999999,
+      'Fresh joystick input should use the current camera heading.',
+    );
     joystick.antCameraFollow = ANT_CAMERA_FOLLOW_CONFIG;
     const orbit = joystick.camera.position.clone();
     for (let frame = 0; frame < fps * 4; frame += 1) {
       joystick.updateAntCameraAssistance(1 / fps, 0.1 / fps, 0);
     }
-    near(joystick.camera.position.distanceTo(orbit), 0);
+    assert.ok(
+      joystick.camera.position.distanceTo(orbit) > 0.1,
+      'Joystick movement should receive the same delayed camera assistance as keyboard movement.',
+    );
   }
 }
 climb.setMovementAxes(0, 0.56);

@@ -316,7 +316,6 @@ export class PondApp {
     this.antCameraManualActive = false;
     this.antCameraMovementYaw = 0;
     this.antCameraInputAngle = null;
-    this.antJoystickActive = false;
     this.antCameraPose = Object.freeze({
       position: this.antCameraPosition,
       target: this.antCameraTarget,

@@ -582,7 +582,6 @@ function closeSettingsDialog() {
   settingsPausedGame = false;
   if (shouldResume) {
     setPaused(false);
-    requestAnimationFrame(() => elements.settingsButton.focus());
     return;
   }
   if (paused) {
@@ -590,7 +589,8 @@ function closeSettingsDialog() {
     requestAnimationFrame(() => elements.resumeButton.focus());
     return;
   }
-  elements.settingsButton.focus();
+  if (gameReady) requestAnimationFrame(() => session?.focusScene());
+  else elements.settingsButton.focus();
 }
 
 function openSettingsDialog() {
@@ -608,7 +608,8 @@ function closeAboutDialog() {
   elements.aboutDialog.hidden = true;
   if (aboutPausedGame) setPaused(false);
   aboutPausedGame = false;
-  if (gameReady && !paused) requestAnimationFrame(() => elements.aboutShortcut.focus());
+  if (gameReady && !paused) requestAnimationFrame(() => session?.focusScene());
+  else if (paused) requestAnimationFrame(() => elements.resumeButton.focus());
   else elements.aboutShortcut.focus();
 }
 
@@ -762,7 +763,9 @@ function setupMobileGameControls() {
     const distance = Math.hypot(deltaX, deltaY);
     const scale = distance > radius ? radius / distance : 1;
     knob.style.transform = `translate(calc(-50% + ${deltaX * scale}px), calc(-50% + ${deltaY * scale}px))`;
-    session?.setMovementAxes(deltaX * scale / radius, -deltaY * scale / radius);
+    const horizontal = deltaX * scale / radius;
+    const forward = -deltaY * scale / radius;
+    session?.setMovementAxes(horizontal, forward);
   };
 
   const onPointerDown = (event) => {

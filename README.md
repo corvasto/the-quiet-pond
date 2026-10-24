@@ -45,10 +45,10 @@ Load the game once online and let it finish caching for offline play. Menus vary
 
 ### Mobile
 
-- Drag the camera-relative joystick to move.
+- Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
 - Tap **A** to run.
 - Tap **B** to climb or get down.
-- Drag the scene to look around and pinch to adjust camera distance.
+- Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 
 See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for camera behavior, traversal, and objectives.
 
