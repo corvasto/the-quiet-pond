@@ -328,10 +328,12 @@ const settingsDialogMarkup = gameHtml.slice(
 );
 check(pauseDialogMarkup.includes('id="restart-button"'), 'Pause is missing its restart action.');
 check(pauseDialogMarkup.includes('id="save-slot-list"'), 'Pause is missing save-slot management.');
-for (const id of ['language-select', 'sound-enabled', 'performance-diagnostic-enabled', 'quality-select', 'about-button']) {
+for (const id of ['language-select', 'sound-enabled', 'performance-diagnostic-enabled', 'quality-select']) {
   check(!pauseDialogMarkup.includes(`id="${id}"`), `Pause must not contain ${id}.`);
   check(settingsDialogMarkup.includes(`id="${id}"`), `Settings must contain ${id}.`);
 }
+check(gameHtml.includes('id="about-shortcut"'), 'The global About shortcut is missing.');
+check(!settingsDialogMarkup.includes('id="about-button"'), 'About must not be nested inside Settings.');
 check(gameHtml.includes('id="performance-diagnostic"'), 'The FPS diagnostic HUD is missing.');
 check(
   /function syncPerformanceDiagnosticSubscription\(\)[\s\S]*?if \(!performanceDiagnosticEnabled \|\| !session\) return;[\s\S]*?session\.onFrame\(updatePerformanceDiagnostic\)/.test(gameModeSource),

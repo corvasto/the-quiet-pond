@@ -28,7 +28,7 @@
         <span class="game-objective__eyebrow" data-i18n="ui.checklist.title">The Quiet Pond checklist</span>
         <h1 id="game-objective-title" data-i18n="objective.seed.find">Find an active seed.</h1>
       </div>
-      <button id="checklist-toggle" class="game-checklist__toggle" type="button" aria-expanded="true" aria-controls="checklist-body" data-i18n="ui.checklist">Checklist</button>
+      <button id="checklist-toggle" class="game-checklist__toggle" type="button" aria-expanded="true" aria-controls="checklist-body"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5v12H5z"/><path d="M14 3.5v5h5M8 12h7M8 15.5h5M14.8 18.5l4.3-4.3 1.5 1.5-4.3 4.3-2 .5z"/></svg><span data-i18n="ui.checklist">Checklist</span></button>
     </div>
     <div id="checklist-body" class="game-checklist__body">
       <p id="game-prompt" aria-live="polite" data-i18n="objective.seed.find">Find an active seed.</p>
@@ -56,6 +56,10 @@
     <button id="reset-camera-button" class="reset-camera-button" type="button" aria-label="Reset camera behind the ant (C)" data-i18n-aria-label="ui.resetCamera.aria"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.5 7M4 4v6h6"/></svg><span data-i18n="ui.resetCamera">Reset view</span></button>
     <button id="settings-button" class="settings-button" type="button" aria-expanded="false" aria-controls="settings-dialog" aria-label="Settings" data-i18n-aria-label="ui.settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3v-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87L4.2 7.07l2.83-2.83.06.06A1.7 1.7 0 0 0 8.96 4 1.7 1.7 0 0 0 10 2.44V2h4v.44A1.7 1.7 0 0 0 15.04 4a1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9 1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span data-i18n="ui.settings">Settings</span></button>
     <button id="fullscreen-button" type="button" data-i18n="ui.fullscreen">Fullscreen</button>
+    <button id="about-shortcut" class="about-shortcut" type="button" aria-label="About" data-i18n-aria-label="ui.about.button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>
+      <span class="about-shortcut__label" data-i18n="ui.about.button">About</span>
+    </button>
   </nav>
 
   <!-- MOBILE-ONLY GAME CONTROLS: these mirror the keyboard gameplay actions. -->
@@ -112,8 +116,8 @@
   </div>
 
   <div id="settings-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
-    <div class="settings-dialog__frame">
-      <button id="close-settings-button" class="settings-dialog__close" type="button" aria-label="Close settings" data-i18n-aria-label="ui.settings.close">
+    <div class="game-dialog__frame">
+      <button id="close-settings-button" class="game-dialog__close" type="button" aria-label="Close settings" data-i18n-aria-label="ui.settings.close">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
       <div id="settings-card" class="game-dialog__card">
@@ -187,19 +191,36 @@
             <small id="quality-error" role="alert" hidden data-i18n="ui.quality.error">Could not save progress. Allow browser storage and try again.</small>
           </div>
         </section>
-        <div class="game-dialog__actions game-dialog__actions--single">
-          <button id="about-button" type="button" data-i18n="ui.about.button">About</button>
-        </div>
       </div>
     </div>
   </div>
 
   <div id="about-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title" hidden>
-    <div id="about-card" class="game-dialog__card game-dialog__card--about">
+    <div class="game-dialog__frame">
+      <button id="close-about-button" class="game-dialog__close" type="button" aria-label="Close About" data-i18n-aria-label="ui.about.close">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div id="about-card" class="game-dialog__card game-dialog__card--about">
       <span class="game-objective__eyebrow">The Quiet Pond</span>
       <h2 id="about-title" tabindex="-1" data-i18n="ui.about.title">About this game</h2>
       <p id="game-version" class="game-dialog__version">Version</p>
       <p data-i18n="ui.about.description">Explore a small, living pond, discover active seeds, and help guide them home. Take your time - the quiet world is full of gentle details and hidden routines.</p>
+      <section id="about-support" class="game-dialog__support" aria-labelledby="about-support-title" tabindex="-1">
+        <h3 id="about-support-title"><span aria-hidden="true">💛</span><span data-i18n="ui.about.support.title">Support the project</span></h3>
+        <p data-i18n="ui.about.support.description">Enjoying the pond? You can support this hobby project with a small tip.</p>
+        <div class="game-dialog__support-links">
+          <a class="game-dialog__support-link game-dialog__support-link--trakteer" href="https://trakteer.id/corvasto_/tip" target="_blank" rel="noopener noreferrer">
+            <span class="game-dialog__support-icon" aria-hidden="true">🇮🇩</span>
+            <span class="game-dialog__support-label" data-i18n="ui.about.support.indonesia">Support from Indonesia - Trakteer</span>
+            <span class="game-dialog__support-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="game-dialog__support-link game-dialog__support-link--kofi" href="https://ko-fi.com/corvasto" target="_blank" rel="noopener noreferrer">
+            <span class="game-dialog__support-icon" aria-hidden="true">☕</span>
+            <span class="game-dialog__support-label" data-i18n="ui.about.support.international">Support internationally - Ko-fi</span>
+            <span class="game-dialog__support-arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
       <section class="game-dialog__attribution" aria-labelledby="about-attribution-title">
         <h3 id="about-attribution-title" data-i18n="ui.about.attribution.title">Attributions</h3>
         <ul>
@@ -227,9 +248,8 @@
           <li><a class="game-dialog__source-link" href="https://github.com/corvasto/the-quiet-pond" target="_blank" rel="noopener noreferrer" data-i18n="ui.about.source">Source code on GitHub</a></li>
         </ul>
       </section>
-      <div class="game-dialog__actions game-dialog__actions--single">
-        <button id="close-about-button" class="primary" type="button" data-i18n="ui.close">Close</button>
       </div>
+    </div>
     </div>
   </div>
 

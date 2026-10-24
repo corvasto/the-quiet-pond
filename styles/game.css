@@ -183,7 +183,10 @@ body.debug-ant-dragging #scene canvas {
 }
 
 .game-checklist__toggle {
+  display: flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
   min-width: 92px;
   min-height: 44px;
   padding: 10px 14px;
@@ -197,11 +200,22 @@ body.debug-ant-dragging #scene canvas {
   font-weight: 600;
 }
 
+.game-checklist__toggle svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
 .game-checklist__toggle::after {
   display: inline-block;
   width: 8px;
   height: 8px;
-  margin-left: 9px;
+  margin-left: 3px;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   content: '';
@@ -375,6 +389,46 @@ body.debug-ant-dragging #scene canvas {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
+}
+
+.about-shortcut {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: border-color 150ms ease, filter 150ms ease, transform 150ms ease;
+}
+
+.about-shortcut svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #ffe0ad;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.about-shortcut:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .about-shortcut:hover {
+    transform: translateY(-1px);
+    border-color: rgba(234, 199, 120, 0.72);
+    filter: brightness(1.14);
+  }
 }
 
 .performance-diagnostic {
@@ -623,19 +677,19 @@ kbd {
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
 }
 
-.settings-dialog__frame {
+.game-dialog__frame {
   position: relative;
   width: min(420px, 100%);
   max-height: calc(100vh - 48px);
   max-height: calc(100dvh - 48px);
 }
 
-.settings-dialog__frame .game-dialog__card {
+.game-dialog__frame .game-dialog__card {
   width: 100%;
   max-height: inherit;
 }
 
-.settings-dialog__close {
+.game-dialog__close {
   position: absolute;
   z-index: 1;
   top: 0;
@@ -653,7 +707,7 @@ kbd {
   cursor: pointer;
 }
 
-.settings-dialog__close:focus-visible {
+.game-dialog__close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -812,6 +866,97 @@ kbd {
   font-size: 0.68rem !important;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.game-dialog__support {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(238, 153, 111, 0.58);
+  border-radius: 16px;
+  background: linear-gradient(140deg, rgba(136, 77, 56, 0.42), rgba(67, 77, 51, 0.34) 58%, rgba(20, 53, 46, 0.8));
+  box-shadow: inset 0 1px rgba(255, 238, 202, 0.08), 0 10px 28px rgba(0, 0, 0, 0.14);
+}
+
+.game-dialog__support h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: #ffe0ad;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  font-weight: 500;
+}
+
+.game-dialog__support h3 > span:first-child {
+  font-family: sans-serif;
+  font-size: 1.1rem;
+}
+
+.game-dialog__support p {
+  margin: 6px 0 0;
+  font-size: 0.76rem;
+}
+
+.game-dialog__support-links {
+  display: grid;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.game-dialog__support-link {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  min-height: 46px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 236, 205, 0.28);
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  transition: border-color 140ms ease, filter 140ms ease, transform 140ms ease;
+}
+
+.game-dialog__support-link--trakteer {
+  background: linear-gradient(100deg, rgba(226, 119, 83, 0.46), rgba(141, 71, 56, 0.42));
+}
+
+.game-dialog__support-link--kofi {
+  background: linear-gradient(100deg, rgba(87, 160, 173, 0.42), rgba(43, 103, 106, 0.48));
+}
+
+.game-dialog__support-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 248, 230, 0.14);
+  font-size: 1.08rem;
+}
+
+.game-dialog__support-arrow {
+  color: #ffe0ad;
+  font-size: 1rem;
+  text-align: right;
+}
+
+.game-dialog__support-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .game-dialog__support-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 231, 190, 0.76);
+    filter: brightness(1.16);
+  }
 }
 
 .game-dialog__attribution {
@@ -1104,14 +1249,16 @@ kbd {
   }
 
   .game-actions .reset-camera-button,
-  .game-actions .settings-button {
+  .game-actions .settings-button,
+  .game-actions .about-shortcut {
     flex: 0 0 44px;
     min-width: 44px;
     padding: 10px;
   }
 
   .reset-camera-button span,
-  .settings-button span {
+  .settings-button span,
+  .about-shortcut__label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1125,6 +1272,11 @@ kbd {
     right: auto;
     left: max(12px, env(safe-area-inset-left));
     font-size: 0.9rem;
+  }
+
+  .about-shortcut svg {
+    width: 20px;
+    height: 20px;
   }
 
   .performance-diagnostic {
@@ -1201,13 +1353,13 @@ kbd {
   .mobile-game-controls {
     position: fixed;
     z-index: 6;
-    right: max(24px, env(safe-area-inset-right));
+    right: max(12px, env(safe-area-inset-right));
     bottom: calc(env(safe-area-inset-bottom) + 96px);
-    left: max(24px, env(safe-area-inset-left));
+    left: max(12px, env(safe-area-inset-left));
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 20px;
+    gap: 8px;
     pointer-events: none;
   }
 
@@ -1221,23 +1373,23 @@ kbd {
 
   .movement-joystick {
     position: relative;
-    flex: 0 0 144px;
-    width: 144px;
-    height: 144px;
+    flex: 0 0 173px;
+    width: 173px;
+    height: 173px;
     border: 1px solid rgba(182, 220, 193, 0.65);
     border-radius: 50%;
-    background: rgba(16, 42, 40, 0.66);
+    background: rgba(16, 42, 40, 0.38);
     box-shadow: inset 0 0 24px rgba(182, 220, 193, 0.09), 0 8px 24px rgba(0, 0, 0, 0.2);
   }
 
   .movement-joystick.is-held {
     border-color: var(--sage);
-    background: rgba(25, 66, 53, 0.82);
+    background: rgba(25, 66, 53, 0.68);
   }
 
   .movement-joystick__ring {
     position: absolute;
-    inset: 23px;
+    inset: 28px;
     border: 1px dashed rgba(182, 220, 193, 0.48);
     border-radius: 50%;
   }
@@ -1246,11 +1398,11 @@ kbd {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border: 2px solid #d9eee0;
     border-radius: 50%;
-    background: var(--sage);
+    background: rgba(182, 220, 193, 0.64);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
     transform: translate(-50%, -50%);
   }
@@ -1284,7 +1436,7 @@ kbd {
     padding: 8px;
     border: 1px solid #f9dfa8;
     border-radius: 50%;
-    background: var(--accent);
+    background: rgba(240, 207, 136, 0.74);
     color: #342913;
     font-size: 0.66rem;
     font-weight: 700;
@@ -1302,7 +1454,7 @@ kbd {
     bottom: 0;
     left: 0;
     border-color: var(--sage);
-    background: var(--panel);
+    background: rgba(16, 42, 40, 0.68);
     color: var(--ink);
   }
 
@@ -1317,12 +1469,12 @@ kbd {
   }
 
   .mobile-game-action:active {
-    background: #ffe0a0;
+    background: rgba(255, 224, 160, 0.9);
   }
 
   .mobile-game-action--run.is-held,
   .mobile-game-action--run:active {
-    background: var(--sage);
+    background: rgba(182, 220, 193, 0.9);
     color: #16372d;
   }
 
@@ -1335,16 +1487,12 @@ kbd {
     max-height: calc(100dvh - 36px);
   }
 
-  .settings-dialog__frame {
+  .game-dialog__frame {
     width: 100%;
     max-height: calc(100dvh - 36px);
   }
 
-  .settings-dialog__frame .game-dialog__card {
-    padding-top: 68px;
-  }
-
-  .settings-dialog__close {
+  .game-dialog__close {
     top: 12px;
     right: 12px;
   }
@@ -1379,14 +1527,14 @@ kbd {
   }
 
   .movement-joystick {
-    flex-basis: 124px;
-    width: 124px;
-    height: 124px;
+    flex-basis: 149px;
+    width: 149px;
+    height: 149px;
   }
 
   .movement-joystick__knob {
-    width: 44px;
-    height: 44px;
+    width: 53px;
+    height: 53px;
   }
 
   .mobile-game-actions {
@@ -1420,14 +1568,14 @@ kbd {
   }
 
   .movement-joystick {
-    flex-basis: 112px;
-    width: 112px;
-    height: 112px;
+    flex-basis: 134px;
+    width: 134px;
+    height: 134px;
   }
 
   .movement-joystick__knob {
-    width: 42px;
-    height: 42px;
+    width: 50px;
+    height: 50px;
   }
 
   .mobile-game-actions {

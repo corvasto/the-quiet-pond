@@ -34,7 +34,7 @@ const elements = {
   exploreButton: byId('explore-button'),
   resetCameraButton: byId('reset-camera-button'),
   fullscreenButton: byId('fullscreen-button'),
-  aboutButton: byId('about-button'),
+  aboutShortcut: byId('about-shortcut'),
   aboutDialog: byId('about-dialog'),
   aboutCard: byId('about-card'),
   aboutTitle: byId('about-title'),
@@ -74,6 +74,7 @@ const elements = {
   checklist: byId('game-checklist-list'),
   checklistPanel: document.querySelector('.game-checklist'),
   checklistToggle: byId('checklist-toggle'),
+  checklistLabel: document.querySelector('#checklist-toggle span'),
   checklistBody: byId('checklist-body'),
   radioDebugHint: byId('radio-debug-hint'),
   languageSelect: byId('language-select'),
@@ -127,7 +128,6 @@ let latestSnapshot = null;
 let latestPrompt = '';
 let mobileMovementCleanup = null;
 let aboutPausedGame = false;
-let aboutReturnsToSettings = false;
 let settingsPausedGame = false;
 const SAVE_SLOT_COUNT = 3;
 let saveSlots = readSaveSlots();
@@ -606,22 +606,14 @@ function openSettingsDialog() {
 
 function closeAboutDialog() {
   elements.aboutDialog.hidden = true;
-  if (aboutReturnsToSettings) {
-    aboutReturnsToSettings = false;
-    elements.settingsDialog.hidden = false;
-    elements.settingsButton.setAttribute('aria-expanded', 'true');
-    requestAnimationFrame(() => elements.aboutButton.focus());
-    return;
-  }
   if (aboutPausedGame) setPaused(false);
   aboutPausedGame = false;
-  elements.aboutButton.focus();
+  if (gameReady && !paused) requestAnimationFrame(() => elements.aboutShortcut.focus());
+  else elements.aboutShortcut.focus();
 }
 
 function openAboutDialog() {
   clearGameInput();
-  aboutReturnsToSettings = !elements.settingsDialog.hidden;
-  if (aboutReturnsToSettings) elements.settingsDialog.hidden = true;
   aboutPausedGame = gameReady && !paused;
   if (aboutPausedGame) setPaused(true);
   elements.aboutDialog.hidden = false;
@@ -656,7 +648,7 @@ function updateExploreControl() {
 
 function setChecklistCollapsed(collapsed) {
   elements.checklistBody.hidden = collapsed;
-  elements.checklistToggle.textContent = t('ui.checklist');
+  elements.checklistLabel.textContent = t('ui.checklist');
   elements.checklistToggle.setAttribute('aria-expanded', String(!collapsed));
   document.querySelector('.game-checklist')?.classList.toggle('is-collapsed', collapsed);
 }
@@ -988,7 +980,7 @@ document.addEventListener('visibilitychange', () => {
 elements.pauseButton.addEventListener('click', togglePause);
 elements.settingsButton.addEventListener('click', openSettingsDialog);
 elements.closeSettingsButton.addEventListener('click', closeSettingsDialog);
-elements.aboutButton.addEventListener('click', openAboutDialog);
+elements.aboutShortcut.addEventListener('click', openAboutDialog);
 elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);

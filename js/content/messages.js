@@ -167,10 +167,24 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
     id: 'Menguji pengumuman radio: {result}.',
   }),
   'ui.about.title': defineMessage({ en: 'About this game', id: 'Tentang game ini' }),
+  'ui.about.close': defineMessage({ en: 'Close About', id: 'Tutup Tentang' }),
   'ui.version': defineMessage({ en: 'Version {version}', id: 'Versi {version}' }),
   'ui.about.description': defineMessage({
     en: 'Explore a small, living pond, discover active seeds, and help guide them home. Take your time - the quiet world is full of gentle details and hidden routines.',
     id: 'Jelajahi kolam kecil yang hidup, temukan benih-benih aktif, dan bantu mengantarkannya pulang. Nikmati waktumu - dunia yang tenang ini penuh detail lembut dan rutinitas tersembunyi.',
+  }),
+  'ui.about.support.title': defineMessage({ en: 'Support the project', id: 'Dukung proyek ini' }),
+  'ui.about.support.description': defineMessage({
+    en: 'Enjoying the pond? You can support this hobby project with a small tip.',
+    id: 'Suka game ini? Kamu bisa mendukung proyek hobi ini dengan tip kecil.',
+  }),
+  'ui.about.support.indonesia': defineMessage({
+    en: 'Support on Trakteer (QRIS/GoPay)',
+    id: 'Dukung via Trakteer (QRIS/GoPay)',
+  }),
+  'ui.about.support.international': defineMessage({
+    en: 'Support on Ko-fi',
+    id: 'Dukung via Ko-fi',
   }),
   'ui.about.attribution.title': defineMessage({ en: 'Attributions', id: 'Atribusi' }),
   'ui.about.attribution.models': defineMessage({
