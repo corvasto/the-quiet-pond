@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="The Quiet Pond, a cozy exploration game about a small world and its hidden routines.">
+  <meta name="theme-color" content="#102a28">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>The Quiet Pond</title>
+  <link rel="stylesheet" href="./styles/game.css">
+</head>
+<body>
+  <main id="scene" aria-label="The Quiet Pond game" data-i18n-aria-label="ui.scene.aria"></main>
+
+  <header class="game-brand" aria-label="Game title" data-i18n-aria-label="ui.title.aria">
+    <span>The Quiet Pond</span>
+    <small data-i18n="ui.brand.subtitle">A cozy exploration game</small>
+  </header>
+
+  <aside id="debug-coordinates" class="debug-coordinates" aria-label="Current ant world coordinates" data-i18n-aria-label="debug.coordinates.aria" hidden>
+    <span data-i18n="debug.coordinates.title">Ant position</span>
+    <output id="debug-coordinate-values" aria-live="off">x 0.000  y 0.000  z 0.000</output>
+  </aside>
+
+  <section class="game-objective game-checklist" aria-labelledby="game-objective-title">
+    <div class="game-checklist__header">
+      <div>
+        <span class="game-objective__eyebrow" data-i18n="ui.checklist.title">The Quiet Pond checklist</span>
+        <h1 id="game-objective-title" data-i18n="objective.seed.find">Find an active seed.</h1>
+      </div>
+      <button id="checklist-toggle" class="game-checklist__toggle" type="button" aria-expanded="true" aria-controls="checklist-body" data-i18n="ui.checklist">Checklist</button>
+    </div>
+    <div id="checklist-body" class="game-checklist__body">
+      <p id="game-prompt" aria-live="polite" data-i18n="objective.seed.find">Find an active seed.</p>
+      <div class="game-progress" role="progressbar" aria-label="The Quiet Pond seed progress" data-i18n-aria-label="ui.progress.aria" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0">
+        <span id="game-progress-fill"></span>
+      </div>
+      <div id="game-step" class="game-checklist__count">Seeds 0 / 6</div>
+      <ul id="game-checklist-list" class="game-checklist__list" aria-label="Game objectives" data-i18n-aria-label="ui.objectives.aria"></ul>
+    </div>
+  </section>
+
+  <div id="radio-caption" class="radio-caption" role="status" aria-live="polite" hidden></div>
+
+  <div id="game-time" class="game-time" aria-label="Time of day" data-i18n-aria-label="ui.time.aria">10:30 AM</div>
+
+  <aside id="performance-diagnostic" class="performance-diagnostic" aria-label="Performance diagnostic" data-i18n-aria-label="ui.performance.aria" hidden>
+    <span class="performance-diagnostic__label" data-i18n="ui.performance.title">Performance</span>
+    <output><strong id="fps-value">--</strong> <span data-i18n="ui.performance.fps">FPS</span></output>
+    <p id="fps-warning" role="status" data-i18n="ui.performance.warning" hidden>Low FPS - select Low graphics quality or close other apps.</p>
+  </aside>
+
+  <nav class="game-actions" aria-label="Game controls" data-i18n-aria-label="ui.controls.aria">
+    <button id="pause-button" type="button" aria-expanded="false" data-i18n="ui.pause">Pause</button>
+    <button id="explore-button" type="button" aria-pressed="false" data-i18n="ui.explore">Explore</button>
+    <button id="reset-camera-button" class="reset-camera-button" type="button" aria-label="Reset camera behind the ant (C)" data-i18n-aria-label="ui.resetCamera.aria"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.5 7M4 4v6h6"/></svg><span data-i18n="ui.resetCamera">Reset view</span></button>
+    <button id="settings-button" class="settings-button" type="button" aria-expanded="false" aria-controls="settings-dialog" aria-label="Settings" data-i18n-aria-label="ui.settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3v-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87L4.2 7.07l2.83-2.83.06.06A1.7 1.7 0 0 0 8.96 4 1.7 1.7 0 0 0 10 2.44V2h4v.44A1.7 1.7 0 0 0 15.04 4a1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9 1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span data-i18n="ui.settings">Settings</span></button>
+    <button id="fullscreen-button" type="button" data-i18n="ui.fullscreen">Fullscreen</button>
+  </nav>
+
+  <!-- MOBILE-ONLY GAME CONTROLS: these mirror the keyboard gameplay actions. -->
+  <section class="mobile-game-controls" aria-label="Touch game controls" data-i18n-aria-label="ui.touchControls.aria">
+    <div id="movement-joystick" class="movement-joystick" role="application" aria-label="Movement joystick" data-i18n-aria-label="ui.movementJoystick.aria">
+      <span class="movement-joystick__ring" aria-hidden="true"></span>
+      <span id="movement-knob" class="movement-joystick__knob" aria-hidden="true"></span>
+      <span class="movement-joystick__label" data-i18n="ui.move">Move</span>
+    </div>
+    <div class="mobile-game-actions">
+      <button id="run-button" class="mobile-game-action mobile-game-action--run" type="button" aria-label="A - Hold to run" data-i18n-aria-label="ui.holdRun.aria" aria-pressed="false"><span class="mobile-game-action__key" aria-hidden="true">A</span><span class="mobile-game-action__label" data-i18n="ui.holdRun">Hold to run</span></button>
+      <button id="climb-button" class="mobile-game-action mobile-game-action--jump" type="button" aria-label="B - Jump or climb" data-i18n-aria-label="ui.jumpClimb.aria"><span class="mobile-game-action__key" aria-hidden="true">B</span><span class="mobile-game-action__label" data-i18n="ui.jumpClimb">Jump / Climb</span></button>
+    </div>
+  </section>
+
+  <div class="game-hint">
+    <div id="ant-hint" class="game-hint__rows">
+      <div class="game-hint__row">
+        <span><kbd>WASD</kbd> / <kbd>↑←↓→</kbd> <span data-i18n="ui.move">Move</span></span>
+        <span><kbd>Shift</kbd> <span data-i18n="hint.run">run</span></span>
+        <span><kbd>Space</kbd> <span data-i18n="hint.climbDown">climb or get down</span></span>
+      </div>
+      <div class="game-hint__row game-hint__row--secondary">
+        <span data-i18n="hint.dragLook">Drag to look</span>
+        <span data-i18n="hint.wheelZoom">Scroll to zoom</span>
+        <span><kbd>C</kbd> <span data-i18n="ui.resetCamera">Reset view</span></span>
+        <span><kbd>M</kbd> <span data-i18n="hint.explore">explore</span></span>
+        <span id="debug-key-hint" hidden><kbd>G</kbd> <span data-i18n="hint.debug">debug</span> <kbd>Y</kbd> <span data-i18n="hint.fly">fly</span></span>
+        <span id="radio-debug-hint" hidden><kbd>R</kbd> <span data-i18n="hint.radioMusic">radio music</span> <kbd>V</kbd> <span data-i18n="hint.testVoice">test voice</span></span>
+      </div>
+    </div>
+    <div id="explore-hint" class="game-hint__row" hidden><span data-i18n="hint.dragOrbit">Drag to orbit</span><span data-i18n="hint.rightDragPan">Right-drag to pan</span><span data-i18n="hint.wheelZoom">Scroll to zoom</span><span id="debug-relocate-hint" hidden><kbd>Shift</kbd> + <span data-i18n="hint.leftDragMoveAnt">left drag move ant</span></span><span><kbd>M</kbd> <span data-i18n="ui.antView">Ant view</span></span></div>
+  </div>
+  <p id="touch-hint" class="touch-hint" data-i18n="hint.touchLook">Drag the scene to look · Pinch to zoom · ↶ Reset view</p>
+
+  <div id="pause-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden>
+    <div class="game-dialog__card">
+      <span class="game-objective__eyebrow">Pond</span>
+      <h2 id="pause-title" data-i18n="ui.paused">Paused</h2>
+      <p data-i18n="ui.paused.description">Take a moment. The Pond will wait.</p>
+      <div class="game-dialog__actions">
+        <button id="resume-button" class="primary" type="button" data-i18n="ui.resume">Resume</button>
+        <button id="restart-button" type="button" data-i18n="ui.restart">Restart</button>
+      </div>
+      <section class="save-slots" aria-labelledby="save-slots-title">
+        <div class="save-slots__header">
+          <h3 id="save-slots-title" data-i18n="ui.save.title">Save games</h3>
+          <button id="new-game-button" type="button" data-i18n="ui.save.new">New game</button>
+        </div>
+        <div id="save-slot-list" class="save-slots__list" aria-live="polite"></div>
+      </section>
+      <p id="pause-dialog-keys" class="game-dialog__keys"><kbd>Esc</kbd> <span data-i18n="ui.pause.keys.or">or</span> <kbd>P</kbd> <span data-i18n="ui.pause.keys.resume">resumes play.</span></p>
+    </div>
+  </div>
+
+  <div id="settings-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <div id="settings-card" class="game-dialog__card">
+      <span class="game-objective__eyebrow">Pond</span>
+      <h2 id="settings-title" tabindex="-1" data-i18n="ui.settings">Settings</h2>
+      <p data-i18n="ui.settings.description">Adjust the pond to suit you.</p>
+      <div class="language-setting">
+        <label for="language-select" data-i18n="ui.language">Language</label>
+        <span class="select-control">
+          <select id="language-select" aria-label="Language" data-i18n-aria-label="ui.language">
+            <option value="en">English</option>
+            <option value="id">Bahasa Indonesia</option>
+          </select>
+        </span>
+      </div>
+      <label class="toggle-setting">
+        <input id="sound-enabled" type="checkbox" checked>
+        <span class="toggle-setting__copy">
+          <strong data-i18n="ui.sound.title">Soft chimes</strong>
+          <small data-i18n="sound.objectives">Soft chimes for completed objectives and seed progress.</small>
+        </span>
+      </label>
+      <label class="toggle-setting">
+        <input id="performance-diagnostic-enabled" type="checkbox">
+        <span class="toggle-setting__copy">
+          <strong data-i18n="ui.performance.setting">Performance diagnostic</strong>
+          <small data-i18n="ui.performance.description">Show realtime FPS and warn when performance is low.</small>
+        </span>
+      </label>
+      <div class="quality-setting">
+        <label for="quality-select" data-i18n="ui.quality.title">Graphics quality</label>
+        <span class="select-control">
+          <select id="quality-select" aria-describedby="quality-description">
+            <option value="auto" data-i18n="ui.quality.auto">Auto - device recommended</option>
+            <option value="low" data-i18n="ui.quality.low">Low - ~20 FPS, lowest load</option>
+            <option value="mid" data-i18n="ui.quality.mid">Mid - ~20 FPS, balanced</option>
+            <option value="full" data-i18n="ui.quality.full">Full - uncapped, best visuals</option>
+          </select>
+        </span>
+        <small id="quality-description" data-i18n="ui.quality.description">Full runs uncapped. Mid and Low target about 20 FPS. Applying saves progress and reloads the pond.</small>
+        <button id="apply-quality-button" class="primary" type="button" data-i18n="ui.quality.apply">Apply and reload</button>
+        <small id="quality-error" role="alert" hidden data-i18n="ui.quality.error">Could not save progress. Allow browser storage and try again.</small>
+      </div>
+      <div class="game-dialog__actions">
+        <button id="about-button" type="button" data-i18n="ui.about.button">About</button>
+        <button id="close-settings-button" class="primary" type="button" data-i18n="ui.close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="about-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title" hidden>
+    <div id="about-card" class="game-dialog__card game-dialog__card--about">
+      <span class="game-objective__eyebrow">The Quiet Pond</span>
+      <h2 id="about-title" tabindex="-1" data-i18n="ui.about.title">About this game</h2>
+      <p id="game-version" class="game-dialog__version">Version</p>
+      <p data-i18n="ui.about.description">Explore a small, living pond, discover active seeds, and help guide them home. Take your time - the quiet world is full of gentle details and hidden routines.</p>
+      <section class="game-dialog__attribution" aria-labelledby="about-attribution-title">
+        <h3 id="about-attribution-title" data-i18n="ui.about.attribution.title">Attributions</h3>
+        <ul>
+          <li>
+            <details class="game-dialog__credits-details">
+              <summary data-i18n="ui.about.attribution.models">3D model credits</summary>
+              <ul class="game-dialog__model-credits">
+                <li><a href="https://sketchfab.com/3d-models/an-animated-cat-aec25699660043a29595f9572149d1e8" target="_blank" rel="noopener noreferrer">An Animated Cat</a> by <a href="https://sketchfab.com/Evil_Katz" target="_blank" rel="noopener noreferrer">Evil_Katz</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/ant-dab7080251674ef98fc83b7604be2ffc" target="_blank" rel="noopener noreferrer">ANT</a> by <a href="https://sketchfab.com/MAXDESIGN" target="_blank" rel="noopener noreferrer">MAXDESIGN-3D</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/giant-cockroach-4b19ed8851f74c278eef835250a82896" target="_blank" rel="noopener noreferrer">Giant Cockroach</a> by <a href="https://sketchfab.com/Drillimpact" target="_blank" rel="noopener noreferrer">Drillimpact</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/common-frog-d1c6eae168a04f2b96afd4b16d4cf560" target="_blank" rel="noopener noreferrer">Common Frog</a> by <a href="https://sketchfab.com/kenchoo" target="_blank" rel="noopener noreferrer">kenchoo</a> - <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/generic-narcissus-flower-cf16e483ce7b4b9281b62366d9b1e52c" target="_blank" rel="noopener noreferrer">Generic narcissus flower</a> by <a href="https://sketchfab.com/assetfactory" target="_blank" rel="noopener noreferrer">assetfactory</a> - <a href="https://sketchfab.com/licenses" target="_blank" rel="noopener noreferrer">Sketchfab Standard license</a></li>
+                <li><a href="https://sketchfab.com/3d-models/lollipop-2262aa6ff36840db8d98baa986231f6e" target="_blank" rel="noopener noreferrer">Lollipop</a> by <a href="https://sketchfab.com/pmr1003" target="_blank" rel="noopener noreferrer">pmr1003</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/old-radio-75c11a2d21e24038804757dcbc11694a" target="_blank" rel="noopener noreferrer">Old radio</a> by <a href="https://sketchfab.com/jorgenix" target="_blank" rel="noopener noreferrer">jorgenix</a> - <a href="https://sketchfab.com/licenses" target="_blank" rel="noopener noreferrer">Sketchfab Standard license</a></li>
+                <li><a href="https://sketchfab.com/3d-models/flower-8285d71edcaf47ac9b54b5619704f8db" target="_blank" rel="noopener noreferrer">Flower</a> by <a href="https://sketchfab.com/syedabbas0815" target="_blank" rel="noopener noreferrer">PropShop</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/quiet-reading-8b90d64c07394a819dd3ec0e258147a2" target="_blank" rel="noopener noreferrer">Quiet Reading</a> by <a href="https://sketchfab.com/restore50" target="_blank" rel="noopener noreferrer">restore50</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/street-light-lamp-78339c366835415fbc58032e99268590" target="_blank" rel="noopener noreferrer">Street Light Lamp</a> by <a href="https://sketchfab.com/amurin" target="_blank" rel="noopener noreferrer">amurin</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/tent-9006af5d7af4491dbb573fdddaf8b30b" target="_blank" rel="noopener noreferrer">Tent</a> by <a href="https://sketchfab.com/Tactical_Beard" target="_blank" rel="noopener noreferrer">Tactical_Gamer</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+              </ul>
+            </details>
+          </li>
+          <li data-i18n="ui.about.attribution.music">Music: sourced from the YouTube Audio Library in YouTube Studio.</li>
+          <li data-i18n="ui.about.attribution.voices">Voices: generated with Google AI Studio.</li>
+          <li data-i18n="ui.about.attribution.original">Procedural world, game design, writing, and code: created for The Quiet Pond.</li>
+        </ul>
+      </section>
+      <div class="game-dialog__actions game-dialog__actions--single">
+        <button id="close-about-button" class="primary" type="button" data-i18n="ui.close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading" role="status" aria-live="polite">
+    <div class="loading__mark"><span></span><span></span><span></span></div>
+    <p data-i18n="ui.loading">Preparing a small world</p>
+  </div>
+
+  <div id="error-message" class="error-message" role="alert" hidden>
+    <strong data-i18n="ui.error.title">The Quiet Pond could not start.</strong>
+    <span data-i18n="ui.error.fallback">Open the browser console for details and check that the project is served over HTTP.</span>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/addons/": "./vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

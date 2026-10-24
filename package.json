@@ -1,0 +1,19 @@
+{
+  "name": "the-quiet-pond",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A cozy ant exploration game in a procedural pond world.",
+  "scripts": {
+    "check": "node scripts/validate-project.mjs",
+    "test": "node scripts/check-player-motion.mjs && node scripts/check-objectives.mjs && node scripts/check-ant-locator.mjs && node scripts/check-fps-diagnostic.mjs && node scripts/check-offline-shell.mjs"
+  },
+  "dependencies": {
+    "three": "0.184.0"
+  },
+  "directories": {
+    "doc": "docs"
+  },
+  "author": "corvasto",
+  "license": "ISC"
+}

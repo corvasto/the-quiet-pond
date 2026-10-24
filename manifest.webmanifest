@@ -1,0 +1,19 @@
+{
+  "name": "The Quiet Pond",
+  "short_name": "Quiet Pond",
+  "description": "A cozy exploration game about a small pond world and its hidden routines.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#102a28",
+  "theme_color": "#102a28",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "326x326",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
