@@ -771,7 +771,14 @@ kbd {
   text-underline-offset: 2px;
 }
 
+.game-dialog__source-link {
+  color: #d7e8b5;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 .game-dialog__model-credits a:focus-visible,
+.game-dialog__source-link:focus-visible,
 .game-dialog__credits-details > summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

@@ -174,6 +174,10 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
     en: 'Procedural world, game design, writing, and code: created for The Quiet Pond.',
     id: 'Dunia prosedural, desain game, penulisan, dan kode: dibuat untuk The Quiet Pond.',
   }),
+  'ui.about.source': defineMessage({
+    en: 'Source code on GitHub',
+    id: 'Kode sumber di GitHub',
+  }),
   'ui.close': defineMessage({ en: 'Close', id: 'Tutup' }),
   'ui.paused': defineMessage({ en: 'Paused', id: 'Dijeda' }),
   'ui.paused.description': defineMessage({
