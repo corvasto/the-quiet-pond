@@ -1,20 +1,42 @@
-[![Build and deploy GitHub Pages](https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml)
+<p align="center">
+  <picture>
+    <img src="./docs/screenshots/explore-mode.png" alt="explore mode" width="720" style="border-radius: 10px;">
+  </picture>
+</p>
 
-# The Quiet Pond
+<h1 align="center">The Quiet Pond</h1>
 
-A cozy ant exploration game about a living pond. Find seeds, climb through the scenery, and discover its daily routines.
+<p align="center">
+  <em>A cozy ant exploration game in a procedural pond world.</em>
+</p>
 
-A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
+<p align="center">
+  <a href="https://github.com/corvasto/the-quiet-pond"><img src="https://img.shields.io/badge/Made_with-❤️-white?style=flat" alt="mwl" /></a>
+  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.0.0-2b6cb0?style=flat-square" alt="version" /></a>
+  <a href="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml"><img src="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg" alt="deploy-pages" /></a>
+</p>
 
-_The Quiet Pond is a hobby project I’m making with my kids, with help from OpenAI Codex for coding and development._
+<p align="center">
+  🌐 Play here: <a href="https://corvasto.github.io/the-quiet-pond/">https://corvasto.github.io/the-quiet-pond/</a>
+</p>
 
-[Play The Quiet Pond](https://corvasto.github.io/the-quiet-pond/)
+---
 
-## Screenshots
+<h2 align="center">Support</h1>
+<p align="center">
+  <em>If you or your kids enjoy playing around with this game, you can support its development here</em>
+</p>
 
-![Mobile version](docs/screenshots/mobile-version.png)
-![Explore mode 1](docs/screenshots/explore-mode-01.png)
-![Explore mode 2](docs/screenshots/explore-mode-02.png)
+<p align="center">
+  <a href="https://trakteer.id/corvasto_/tip"><img src="https://img.shields.io/badge/Trakteer-Support_Me-E9A020?style=for-the-badge&logo=caffeine&logoColor=white" alt="trakteer" /></a>
+  <a href="https://ko-fi.com/corvasto"><img src="https://img.shields.io/badge/Ko--fi-Buy_me_a_coffee-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="ko-fi" /></a>
+</p>
+
+---
+
+A cozy ant exploration game about a living pond. Find seeds, climb through the scenery, and discover its daily routines. A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
+
+The Quiet Pond is a hobby project I'm making with my kids, with help from OpenAI Codex for coding and development. I also review and refine the code.
 
 ## Play from the source code
 
