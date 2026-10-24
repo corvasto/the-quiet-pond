@@ -1,3 +1,5 @@
+[![Build and deploy GitHub Pages](https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml)
+
 # The Quiet Pond
 
 A cozy ant exploration game about a living pond. Find seeds, climb through the scenery, and discover its daily routines.
