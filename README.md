@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="./docs/screenshots/explore-mode.png" alt="explore mode" width="720" style="border-radius: 10px;">
+    <img src="./docs/screenshots/explore-mode.png" alt="explore mode" width="1080" style="border-radius: 10px;">
   </picture>
 </p>
 
@@ -70,7 +70,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 ### Mobile
 
 - Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
-- Tap **A** to run.
+- Tap and hold **A** to run.
 - Tap **B** to climb or get down.
 - Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 
