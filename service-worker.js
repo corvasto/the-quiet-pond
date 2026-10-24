@@ -10,6 +10,8 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icon.png',
   './styles/game.css',
+  './assets/fonts/nunito-sans.woff',
+  './assets/fonts/fraunces.woff',
   './js/main.js',
   './js/ui/localization.js',
   './js/config/index.js',
