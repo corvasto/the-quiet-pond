@@ -6,11 +6,41 @@ The world is generated with Three.js and includes changing weather, a day/night 
 
 The Quiet Pond is a hobby project I’m making with my kids, with help from OpenAI Codex for coding and development.
 
+Try here  
+<p align="center">
+  <a href="https://corvasto.github.io/the-quiet-pond" style="
+    display: inline-block;
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: none;
+    color: black;
+    background-color: #deffde;
+    padding: 10px 20px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+  ">https://corvasto.github.io/the-quiet-pond</a>
+</p>
+
+## Screenshots
+
+![Mobile version](docs/screenshots/mobile-version.png)
+![Explore mode 1](docs/screenshots/explore-mode-01.png)
+![Explore mode 2](docs/screenshots/explore-mode-02.png)
+
 ## Play
 
 Serve the project folder with a static HTTP server, then open `index.html` or the folder root. Browser modules, models, and audio require HTTP; opening the file directly will not work.
 
 Three.js 0.184.0 and its required add-ons are included under `vendor/three/`. No package installation or CDN is required to play.
+
+## Install on a phone
+
+Open the deployed HTTPS site in your phone's browser while online:
+
+- **Android with Chrome:** Open the three-dot menu and tap **Install app** or **Install and create shortcut**, then confirm.
+- **iPhone with Safari:** Tap **Share > Add to Home Screen**. If offered, turn on **Open as Web App**, then tap **Add**.
+
+Open the game once online and let it finish loading so the service worker can cache the app for offline play. Browser menus and install options can vary by device and browser. See Google's guide to [installing web apps on Android](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en) and Apple's guide to [adding a website to the iPhone Home Screen](https://support.apple.com/guide/iphone/bookmark-a-website-on-iphone-iph42ab2f3a7/ios).
 
 ## Controls
 
