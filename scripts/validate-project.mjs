@@ -243,13 +243,17 @@ Object.entries(MESSAGE_CATALOG).forEach(([language, catalog]) => {
   check(JSON.stringify(keys) === JSON.stringify(englishKeys), `Locale ${language} does not match the English message keys.`);
 });
 check(
-  Array.isArray(SEED_CONFIG.spawnSurfaceSequence)
-    && SEED_CONFIG.spawnSurfaceSequence.length >= SEED_CONFIG.totalCount,
-  'The seed surface sequence must cover every configured seed.',
+  Array.isArray(SEED_CONFIG.spawnSurfacePattern)
+    && SEED_CONFIG.spawnSurfacePattern.length > 0,
+  'The seed spawn surface pattern must contain at least one surface.',
 );
-SEED_CONFIG.spawnSurfaceSequence.forEach((surface) => {
+SEED_CONFIG.spawnSurfacePattern.forEach((surface) => {
   check(SEED_CONFIG.spawnSurfaces[surface] === true, `Seed sequence uses disabled surface: ${surface}`);
 });
+check(
+  Array.isArray(SEED_CONFIG.storedSeedSlots) && SEED_CONFIG.storedSeedSlots.length > 0,
+  'The stored seed layout must contain at least one configured slot.',
+);
 GAME_OBJECTIVES.forEach((objective) => {
   check(Boolean(MESSAGE_CATALOG.en[objective.labelKey]), `Objective ${objective.id} has no English label key.`);
   check(Boolean(MESSAGE_CATALOG.id[objective.labelKey]), `Objective ${objective.id} has no Indonesian label key.`);
@@ -311,8 +315,7 @@ const gameModeSource = fs.readFileSync(path.join(projectRoot, 'js/main.js'), 'ut
 const gameSessionSource = fs.readFileSync(path.join(projectRoot, 'js/game/game-session.js'), 'utf8');
 check(!/Version \d+\.\d+\.\d+/.test(gameHtml), 'index.html contains a hardcoded app version.');
 check(!gameHtml.includes("navigator.serviceWorker.register('./service-worker.js'"), 'index.html contains an unversioned service-worker registration.');
-check(gameHtml.includes(`aria-valuemax="${SEED_CONFIG.totalCount}"`), 'index.html initial progress maximum does not match SEED_CONFIG.');
-check(gameHtml.includes(`Seeds 0 / ${SEED_CONFIG.totalCount}`), 'index.html initial seed text does not match SEED_CONFIG.');
+check(gameHtml.includes('aria-valuemax="1"'), 'index.html needs a valid initial seed progress maximum before startup.');
 check(gameHtml.includes('id="about-attribution-title"'), 'The About dialog is missing its attribution section.');
 check(gameHtml.includes('id="debug-coordinate-values"'), 'The debug ant-coordinate output is missing.');
 const pauseDialogMarkup = gameHtml.slice(

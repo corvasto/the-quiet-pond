@@ -32,10 +32,10 @@
     </div>
     <div id="checklist-body" class="game-checklist__body">
       <p id="game-prompt" aria-live="polite" data-i18n="objective.seed.find">Find an active seed.</p>
-      <div class="game-progress" role="progressbar" aria-label="The Quiet Pond seed progress" data-i18n-aria-label="ui.progress.aria" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0">
+      <div class="game-progress" role="progressbar" aria-label="The Quiet Pond seed progress" data-i18n-aria-label="ui.progress.aria" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
         <span id="game-progress-fill"></span>
       </div>
-      <div id="game-step" class="game-checklist__count">Seeds 0 / 6</div>
+      <div id="game-step" class="game-checklist__count">Seeds 0 / 1</div>
       <ul id="game-checklist-list" class="game-checklist__list" aria-label="Game objectives" data-i18n-aria-label="ui.objectives.aria"></ul>
     </div>
   </section>
@@ -112,50 +112,84 @@
   </div>
 
   <div id="settings-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
-    <div id="settings-card" class="game-dialog__card">
-      <span class="game-objective__eyebrow">Pond</span>
-      <h2 id="settings-title" tabindex="-1" data-i18n="ui.settings">Settings</h2>
-      <p data-i18n="ui.settings.description">Adjust the pond to suit you.</p>
-      <div class="language-setting">
-        <label for="language-select" data-i18n="ui.language">Language</label>
-        <span class="select-control">
-          <select id="language-select" aria-label="Language" data-i18n-aria-label="ui.language">
-            <option value="en">English</option>
-            <option value="id">Bahasa Indonesia</option>
-          </select>
-        </span>
-      </div>
-      <label class="toggle-setting">
-        <input id="sound-enabled" type="checkbox" checked>
-        <span class="toggle-setting__copy">
-          <strong data-i18n="ui.sound.title">Soft chimes</strong>
-          <small data-i18n="sound.objectives">Soft chimes for completed objectives and seed progress.</small>
-        </span>
-      </label>
-      <label class="toggle-setting">
-        <input id="performance-diagnostic-enabled" type="checkbox">
-        <span class="toggle-setting__copy">
-          <strong data-i18n="ui.performance.setting">Performance diagnostic</strong>
-          <small data-i18n="ui.performance.description">Show realtime FPS and warn when performance is low.</small>
-        </span>
-      </label>
-      <div class="quality-setting">
-        <label for="quality-select" data-i18n="ui.quality.title">Graphics quality</label>
-        <span class="select-control">
-          <select id="quality-select" aria-describedby="quality-description">
-            <option value="auto" data-i18n="ui.quality.auto">Auto - device recommended</option>
-            <option value="low" data-i18n="ui.quality.low">Low - ~20 FPS, lowest load</option>
-            <option value="mid" data-i18n="ui.quality.mid">Mid - ~20 FPS, balanced</option>
-            <option value="full" data-i18n="ui.quality.full">Full - uncapped, best visuals</option>
-          </select>
-        </span>
-        <small id="quality-description" data-i18n="ui.quality.description">Full runs uncapped. Mid and Low target about 20 FPS. Applying saves progress and reloads the pond.</small>
-        <button id="apply-quality-button" class="primary" type="button" data-i18n="ui.quality.apply">Apply and reload</button>
-        <small id="quality-error" role="alert" hidden data-i18n="ui.quality.error">Could not save progress. Allow browser storage and try again.</small>
-      </div>
-      <div class="game-dialog__actions">
-        <button id="about-button" type="button" data-i18n="ui.about.button">About</button>
-        <button id="close-settings-button" class="primary" type="button" data-i18n="ui.close">Close</button>
+    <div class="settings-dialog__frame">
+      <button id="close-settings-button" class="settings-dialog__close" type="button" aria-label="Close settings" data-i18n-aria-label="ui.settings.close">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div id="settings-card" class="game-dialog__card">
+        <span class="game-objective__eyebrow">Pond</span>
+        <h2 id="settings-title" tabindex="-1" data-i18n="ui.settings">Settings</h2>
+        <p data-i18n="ui.settings.description">Adjust the pond to suit you.</p>
+        <section class="settings-group" aria-labelledby="settings-language-title">
+          <h3 id="settings-language-title" data-i18n="ui.settings.interface">Interface</h3>
+          <div class="language-setting">
+            <label for="language-select" data-i18n="ui.language">Language</label>
+            <span class="select-control">
+              <select id="language-select" aria-label="Language" data-i18n-aria-label="ui.language">
+                <option value="en">English</option>
+                <option value="id">Bahasa Indonesia</option>
+              </select>
+            </span>
+          </div>
+        </section>
+        <section class="settings-group" aria-labelledby="settings-season-title">
+          <h3 id="settings-season-title" data-i18n="ui.settings.world">World</h3>
+          <div class="language-setting">
+            <label for="season-select" data-i18n="ui.season.title">Season</label>
+            <span class="select-control">
+              <select id="season-select" aria-describedby="season-description">
+                <option value="spring" data-i18n="ui.season.spring">Spring</option>
+                <option value="summer" data-i18n="ui.season.summer">Summer</option>
+                <option value="autumn" data-i18n="ui.season.autumn">Autumn</option>
+              </select>
+            </span>
+            <small id="season-description" data-i18n="ui.season.description">Season changes apply after reload. Progress is saved.</small>
+          </div>
+        </section>
+        <section class="settings-group" aria-labelledby="settings-audio-title">
+          <h3 id="settings-audio-title" data-i18n="ui.settings.audio">Audio</h3>
+          <label class="toggle-setting">
+            <input id="sound-enabled" type="checkbox" checked>
+            <span class="toggle-setting__copy">
+              <strong data-i18n="ui.sound.title">Soft chimes</strong>
+              <small data-i18n="sound.objectives">Soft chimes for completed objectives and seed progress.</small>
+            </span>
+          </label>
+          <div class="music-volume-setting">
+            <label for="music-volume" data-i18n="ui.audio.musicVolume">Radio music volume</label>
+            <div class="music-volume-setting__control">
+              <input id="music-volume" type="range" min="0" max="100" step="1" value="82" aria-label="Radio music volume" data-i18n-aria-label="ui.audio.musicVolume">
+              <output id="music-volume-value" for="music-volume">82%</output>
+            </div>
+          </div>
+        </section>
+        <section class="settings-group" aria-labelledby="settings-performance-title">
+          <h3 id="settings-performance-title" data-i18n="ui.settings.performance">Performance</h3>
+          <label class="toggle-setting">
+            <input id="performance-diagnostic-enabled" type="checkbox">
+            <span class="toggle-setting__copy">
+              <strong data-i18n="ui.performance.setting">Performance diagnostic</strong>
+              <small data-i18n="ui.performance.description">Show realtime FPS and warn when performance is low.</small>
+            </span>
+          </label>
+          <div class="quality-setting">
+            <label for="quality-select" data-i18n="ui.quality.title">Graphics quality</label>
+            <span class="select-control">
+              <select id="quality-select" aria-describedby="quality-description">
+                <option value="auto" data-i18n="ui.quality.auto">Auto - device recommended</option>
+                <option value="low" data-i18n="ui.quality.low">Low - ~20 FPS, lowest load</option>
+                <option value="mid" data-i18n="ui.quality.mid">Mid - ~20 FPS, balanced</option>
+                <option value="full" data-i18n="ui.quality.full">Full - uncapped, best visuals</option>
+              </select>
+            </span>
+            <small id="quality-description" data-i18n="ui.quality.description">Full runs uncapped. Mid and Low target about 20 FPS. Applying saves progress and reloads the pond.</small>
+            <button id="apply-quality-button" class="primary" type="button" data-i18n="ui.quality.apply">Apply changes and reload</button>
+            <small id="quality-error" role="alert" hidden data-i18n="ui.quality.error">Could not save progress. Allow browser storage and try again.</small>
+          </div>
+        </section>
+        <div class="game-dialog__actions game-dialog__actions--single">
+          <button id="about-button" type="button" data-i18n="ui.about.button">About</button>
+        </div>
       </div>
     </div>
   </div>
@@ -202,6 +236,7 @@
   <div id="loading" class="loading" role="status" aria-live="polite">
     <div class="loading__mark"><span></span><span></span><span></span></div>
     <p data-i18n="ui.loading">Preparing a small world</p>
+    <p class="loading__tip" data-i18n="ui.loading.qualityTip">If the game feels choppy, open Settings and choose a lower graphics quality.</p>
   </div>
 
   <div id="error-message" class="error-message" role="alert" hidden>

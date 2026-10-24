@@ -1,5 +1,6 @@
 import { PondGameSession } from './game/game-session.js';
-import { APP_VERSION } from './config/index.js';
+import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
+import { POND_GAME } from './config/game.js';
 import { GAME_OBJECTIVES } from './content/objectives.js';
 import {
   PERFORMANCE_DIAGNOSTIC,
@@ -56,6 +57,9 @@ const elements = {
   newGameButton: byId('new-game-button'),
   saveSlotList: byId('save-slot-list'),
   soundEnabled: byId('sound-enabled'),
+  musicVolume: byId('music-volume'),
+  musicVolumeValue: byId('music-volume-value'),
+  seasonSelect: byId('season-select'),
   qualitySelect: byId('quality-select'),
   applyQualityButton: byId('apply-quality-button'),
   qualityError: byId('quality-error'),
@@ -100,10 +104,24 @@ let paused = false;
 let gameReady = false;
 let debugRelocateCleanup = null;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
+const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
+const SOUND_EFFECTS_KEY = 'the-quiet-pond-soft-chimes';
+const MUSIC_VOLUME_KEY = 'the-quiet-pond-music-volume';
 const SAVE_SLOTS_KEY = 'the-quiet-pond-saves-v1';
 const ACTIVE_SAVE_SLOT_KEY = 'the-quiet-pond-active-save-slot-v1';
 let language = readStoredValue(LANGUAGE_KEY) === 'id' ? 'id' : 'en';
+let season = readSeasonPreference();
+let soundEffectsEnabled = readStoredValue(SOUND_EFFECTS_KEY) !== '0';
+let musicVolume = readMusicVolumePreference();
+const initialSeedTotal = Math.max(1, Number(POND_GAME.seed.totalCount) || 1);
+elements.progress.setAttribute('aria-valuemax', String(initialSeedTotal));
+elements.step.textContent = formatSeedProgress(0, initialSeedTotal, language);
+elements.soundEnabled.checked = soundEffectsEnabled;
+elements.seasonSelect.value = season;
+elements.musicVolume.value = String(Math.round(musicVolume * 100));
+elements.musicVolumeValue.value = `${Math.round(musicVolume * 100)}%`;
+elements.musicVolumeValue.textContent = `${Math.round(musicVolume * 100)}%`;
 let performanceDiagnosticEnabled = readStoredValue(PERFORMANCE_DIAGNOSTIC_KEY) === '1';
 let latestSnapshot = null;
 let latestPrompt = '';
@@ -133,6 +151,35 @@ function readStoredValue(key) {
     return window.localStorage.getItem(key);
   } catch {
     return null;
+  }
+}
+
+function readMusicVolumePreference() {
+  const stored = readStoredValue(MUSIC_VOLUME_KEY);
+  const fallback = Math.min(1, Math.max(0, Number(POND_GAME.radioAudio.musicVolume) || 0));
+  if (stored === null) return fallback;
+  const value = Number(stored);
+  return Number.isFinite(value)
+    ? Math.min(1, Math.max(0, value))
+    : fallback;
+}
+
+function readSeasonPreference() {
+  const stored = readStoredValue(SEASON_KEY);
+  return Object.hasOwn(SEASONS, stored) ? stored : DEFAULTS.season;
+}
+
+function updateMusicVolume(value, persist = true) {
+  musicVolume = Math.min(1, Math.max(0, Number(value) / 100 || 0));
+  const percentage = Math.round(musicVolume * 100);
+  elements.musicVolumeValue.value = `${percentage}%`;
+  elements.musicVolumeValue.textContent = `${percentage}%`;
+  session?.setMusicVolume(musicVolume);
+  if (!persist) return;
+  try {
+    window.localStorage.setItem(MUSIC_VOLUME_KEY, String(musicVolume));
+  } catch (error) {
+    console.warn('[the-quiet-pond] Could not store the music volume preference.', error);
   }
 }
 
@@ -956,9 +1003,16 @@ elements.restartButton.addEventListener('click', () => {
 });
 elements.newGameButton.addEventListener('click', () => startNewGame());
 elements.soundEnabled.addEventListener('change', () => {
-  if (elements.soundEnabled.checked) session?.unlockSound();
-  session?.setSoundEnabled(elements.soundEnabled.checked);
+  soundEffectsEnabled = elements.soundEnabled.checked;
+  try {
+    window.localStorage.setItem(SOUND_EFFECTS_KEY, soundEffectsEnabled ? '1' : '0');
+  } catch (error) {
+    console.warn('[the-quiet-pond] Could not store the chime preference.', error);
+  }
+  if (soundEffectsEnabled) session?.unlockSound();
+  session?.setSoundEnabled(soundEffectsEnabled);
 });
+elements.musicVolume.addEventListener('input', () => updateMusicVolume(elements.musicVolume.value));
 elements.performanceDiagnosticEnabled.addEventListener('change', () => {
   setPerformanceDiagnosticEnabled(elements.performanceDiagnosticEnabled.checked, true);
 });
@@ -975,8 +1029,14 @@ elements.applyQualityButton.addEventListener('click', () => {
     return;
   }
   const preference = elements.qualitySelect.value;
+  const selectedSeason = elements.seasonSelect.value;
+  if (!Object.hasOwn(SEASONS, selectedSeason)) {
+    elements.qualityError.hidden = false;
+    return;
+  }
   try {
     window.localStorage.setItem(QUALITY_STORAGE_KEY, preference);
+    window.localStorage.setItem(SEASON_KEY, selectedSeason);
   } catch {
     elements.qualityError.hidden = false;
     return;
@@ -1006,6 +1066,9 @@ async function startGame() {
       onRadioCaption: showRadioCaption,
       onTimeChange: updateGameTime,
       language,
+      season,
+      soundEnabled: soundEffectsEnabled,
+      musicVolume,
       saveState: saveSlots[activeSaveSlotIndex]?.state ?? null,
     });
     await session.start();

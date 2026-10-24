@@ -7,7 +7,8 @@ export const SEED_CONFIG = Object.freeze({
   // collectRadius controls interaction, while carryOffset is local to the ant attachment.
   collectRadius: 0.34,
   carryOffset: Object.freeze({ x: 0.048, y: 0.068, z: 0.042 }),
-  // totalCount is the full objective; activeCount is the simultaneous visible subset.
+  // Change totalCount to add or remove collectible seeds. Spawn surfaces repeat
+  // this pattern and stored positions are generated from their layout pattern.
   totalCount: 6,
   activeCount: 3,
   spawnSurfaces: Object.freeze({
@@ -18,9 +19,14 @@ export const SEED_CONFIG = Object.freeze({
   }),
   // Rock and branch candidates use verified surface anchors. A missing anchor
   // falls back to collision-validated ground instead of stalling a batch.
-  spawnSurfaceSequence: Object.freeze([
-    'ground', 'rocks', 'branches',
-    'ground', 'rocks', 'branches',
+  spawnSurfacePattern: Object.freeze(['ground', 'rocks', 'branches']),
+  storedSeedSlots: Object.freeze([
+    Object.freeze({ x: -0.18, y: 0.055, z: -0.08 }),
+    Object.freeze({ x: 0, y: 0.055, z: -0.12 }),
+    Object.freeze({ x: 0.18, y: 0.055, z: -0.08 }),
+    Object.freeze({ x: -0.1, y: 0.068, z: 0.12 }),
+    Object.freeze({ x: 0.1, y: 0.068, z: 0.12 }),
+    Object.freeze({ x: 0, y: 0.08, z: 0.27 }),
   ]),
   groundSpawnRadius: 11,
   // Smaller rocks are valid climb scenery but too cramped for a seed target.

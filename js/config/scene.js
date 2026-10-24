@@ -26,7 +26,7 @@ export const ANT_LOCATOR = Object.freeze({
 
 export const DEFAULTS = Object.freeze({
   seed: 'ancient-oak',
-  season: 'summer',
+  season: 'summer', //summer|spring|autumn
   // Tree shape values are multipliers consumed by the procedural tree generator.
   age: 1.2,
   branchSpread: 1.3,
@@ -40,7 +40,6 @@ export const DEFAULTS = Object.freeze({
   sunHour: 10.5,
   // Generator geometry tier inherited from the selected q profile, not the profile name itself.
   quality: PERFORMANCE.sceneQuality,
-  area: 'pond',
   autoRotate: false,
   // Imported-prop rotations are degree deltas and offsets are additive world units.
   // These runtime placement defaults preserve authored game prop transforms.

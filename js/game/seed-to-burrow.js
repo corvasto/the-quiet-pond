@@ -596,7 +596,7 @@ export class SeedToBurrowGame {
         break;
       }
       const seedIndex = this.depositedSeedCount + this.activeSeeds.length;
-      const preferredSurfaces = POND_GAME.seed.spawnSurfaceSequence ?? [];
+      const preferredSurfaces = POND_GAME.seed.spawnSurfacePattern ?? [];
       const preferredSurface = preferredSurfaces[seedIndex % preferredSurfaces.length];
       const preferredCandidates = preferredSurface
         ? available.filter((candidate) => candidate.surface === preferredSurface)
@@ -760,15 +760,18 @@ export class SeedToBurrowGame {
   addStoredSeed() {
     const storedSeed = createSeedVisual({ debug: this.debugLighting });
     const index = this.storedSeeds.length;
-    const storedSeedSlots = [
-      new THREE.Vector3(-0.18, 0.055, -0.08),
-      new THREE.Vector3(0, 0.055, -0.12),
-      new THREE.Vector3(0.18, 0.055, -0.08),
-      new THREE.Vector3(-0.1, 0.068, 0.12),
-      new THREE.Vector3(0.1, 0.068, 0.12),
-      new THREE.Vector3(0, 0.08, 0.27),
-    ];
-    storedSeed.position.copy(storedSeedSlots[index % storedSeedSlots.length]);
+    const storedSeedSlots = POND_GAME.seed.storedSeedSlots ?? [];
+    const configuredSlot = storedSeedSlots[index % storedSeedSlots.length];
+    if (configuredSlot) {
+      storedSeed.position.set(configuredSlot.x, configuredSlot.y, configuredSlot.z);
+    } else {
+      const overflowIndex = index - storedSeedSlots.length;
+      const ring = Math.floor(overflowIndex / 8) + 1;
+      const slot = overflowIndex % 8;
+      const angle = (slot / 8) * Math.PI * 2;
+      const radius = 0.32 + (ring - 1) * 0.14;
+      storedSeed.position.set(Math.cos(angle) * radius, 0.08, Math.sin(angle) * radius);
+    }
     storedSeed.scale.setScalar(0.62);
     const storedGlow = storedSeed.userData.glow;
     if (storedGlow) {

@@ -10,10 +10,11 @@ function isNight(hour) {
 }
 
 export class PondRadioAudio {
-  constructor(app, { onCaption = () => {}, language = 'en' } = {}) {
+  constructor(app, { onCaption = () => {}, language = 'en', musicVolume = null } = {}) {
     this.app = app;
     this.onCaption = onCaption;
     this.config = POND_GAME.radioAudio;
+    this.musicVolume = clamp01(musicVolume ?? this.config.musicVolume ?? 0.82);
     this.listener = null;
     this.radioPosition = new THREE.Vector3();
     this.antPosition = new THREE.Vector3();
@@ -159,6 +160,11 @@ export class PondRadioAudio {
     return this.enabled;
   }
 
+  setMusicVolume(volume) {
+    this.musicVolume = clamp01(volume);
+    return this.musicVolume;
+  }
+
   setLanguage(language) {
     const nextLanguage = language === 'id' ? 'id' : 'en';
     if (nextLanguage === this.language) return;
@@ -213,7 +219,7 @@ export class PondRadioAudio {
     const fadeFactor = 1 - Math.exp(-Math.max(0.016, Number(delta) || 0.016) / fadeSeconds);
     this.music.forEach((audio, key) => {
       const target = key === musicKey && this.nearby
-        ? proximity * (this.config.musicVolume ?? 0.62)
+        ? proximity * this.musicVolume
         : 0;
       const nextVolume = THREE.MathUtils.lerp(audio.getVolume(), target, fadeFactor);
       audio.setVolume(nextVolume);

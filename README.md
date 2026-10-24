@@ -2,9 +2,9 @@
 
 A cozy ant exploration game about a living pond. Find seeds, climb through the scenery, and discover its daily routines.
 
-Three.js powers a procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
+A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
 
-The Quiet Pond is a hobby project I’m making with my kids, with help from OpenAI Codex for coding and development.
+_The Quiet Pond is a hobby project I’m making with my kids, with help from OpenAI Codex for coding and development._
 
 [Play The Quiet Pond](https://corvasto.github.io/the-quiet-pond/)
 
@@ -14,13 +14,13 @@ The Quiet Pond is a hobby project I’m making with my kids, with help from Open
 ![Explore mode 1](docs/screenshots/explore-mode-01.png)
 ![Explore mode 2](docs/screenshots/explore-mode-02.png)
 
-## Play
+## Play from the source code
 
-Serve the project folder over HTTP, then open `index.html` or the folder root. Modules, models, and audio do not work from `file://`. Three.js 0.184.0 and its add-ons are bundled in `vendor/`; no install or CDN is needed.
+Serve the project folder over HTTP, then open `index.html` or the folder root. Modules, models, and audio do not work from `file://`.
 
 ## Install on a phone
 
-Open the HTTPS site while online:
+Open the HTTPS site (example from this repo: https://corvasto.github.io/the-quiet-pond) while online:
 
 - **Android with Chrome:** Open the three-dot menu and tap **Install app** or **Install and create shortcut**, then confirm.
 - **iPhone with Safari:** Tap **Share > Add to Home Screen**. If offered, turn on **Open as Web App**, then tap **Add**.
@@ -28,6 +28,8 @@ Open the HTTPS site while online:
 Load the game once online and let it finish caching for offline play. Menus vary by browser. See Google's [Android install guide](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en) and Apple's [iPhone Home Screen guide](https://support.apple.com/guide/iphone/bookmark-a-website-on-iphone-iph42ab2f3a7/ios).
 
 ## Controls
+
+### Desktop
 
 | Input | Action |
 | --- | --- |
@@ -41,11 +43,18 @@ Load the game once online and let it finish caching for offline play. Menus vary
 | P or Escape | Pause or resume |
 | F | Fullscreen |
 
-Touch uses a camera-relative joystick, A to run, and B to climb/get down. See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for inputs, camera behavior, traversal, and objectives.
+### Mobile
+
+- Drag the camera-relative joystick to move.
+- Tap **A** to run.
+- Tap **B** to climb or get down.
+- Drag the scene to look around and pinch to adjust camera distance.
+
+See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for camera behavior, traversal, and objectives.
 
 ## Explore the pond
 
-Collect six seeds in two batches, deliver a leaf offering, and explore 11 optional discoveries. Progress saves to one of three local slots; saves and language preferences are tied to the site's origin. See [gameplay](docs/gameplay.md).
+Gather seeds, deliver a leaf offering, and discover the pond's hidden details. Progress saves locally; saves and language preferences are tied to the site's origin. See [gameplay](docs/gameplay.md).
 
 ## Project structure
 
@@ -70,7 +79,9 @@ docs/               Architecture, tuning, content, and verification guides
 
 ## Configuration and architecture
 
-Settings and quality profiles live in `js/config/`; use `index.html?q=full`, `?q=mid`, or `?q=low` to choose a startup profile. All use High Quality world generation; Full is uncapped, while Mid/Low target about 20 FPS. Settings offers Auto/Low/Mid/Full, language, chimes, FPS diagnostics, and About. Auto selects Mid on mobile and Full elsewhere; a valid URL `q` overrides the saved preference. Apply and reload saves progress. Debug tools require `?debug=1` and can be combined with quality (for example `?q=mid&debug=1`). See [configuration](docs/configuration.md), [architecture](docs/architecture.md), [content framework](docs/content-framework.md), and [scene customization](docs/scene-customization.md).
+Settings and quality profiles live in `js/config/`. Add `?q=full`, `?q=mid`, or `?q=low` to the URL to choose the browser startup profile. You can also change quality in the in-game Settings menu (Auto, Low, Mid, Full), alongside language, chimes, FPS diagnostics, and About. Auto selects Mid on mobile and Full elsewhere. All profiles use High Quality world generation; Full is uncapped, while Mid and Low target about 20 FPS. Applying settings and reloading saves progress. See [configuration](docs/configuration.md), [architecture](docs/architecture.md), [content framework](docs/content-framework.md), and [scene customization](docs/scene-customization.md).
+
+Debug tools require `?debug=1`. Combine it with a startup profile, such as `?q=mid&debug=1`.
 
 ## Development and verification
 

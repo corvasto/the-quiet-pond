@@ -6,6 +6,7 @@ import {
   DEFAULTS,
   PERFORMANCE,
   SCENE_PROPS,
+  SEASONS,
   getHabitatArea,
 } from '../config/index.js';
 import { selectSceneProps } from '../content/assets.js';
@@ -211,6 +212,7 @@ export class PondApp {
     antMovement = null,
     antMovementRadius = null,
     sunHour = null,
+    season = DEFAULTS.season,
   } = {}) {
     this.container = container;
     if (mode !== 'game') throw new RangeError('Only game mode is supported.');
@@ -225,6 +227,7 @@ export class PondApp {
       : null;
     this.settings = {
       ...DEFAULTS,
+      season: Object.hasOwn(SEASONS, season) ? season : DEFAULTS.season,
       ...(Number.isFinite(sunHour) ? { sunHour: Number(sunHour) } : {}),
     };
     this.world = null;

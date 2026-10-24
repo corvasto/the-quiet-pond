@@ -3,6 +3,7 @@ import { translateMessage } from '../content/messages.js';
 import { PondApp } from '../core/app.js';
 import { AntClimbing } from './ant-climbing.js';
 import { POND_GAME } from '../config/game.js';
+import { DEFAULTS } from '../config/index.js';
 import { PondGameObjectives } from './game-objectives.js';
 import { ObjectiveChime } from './objective-chime.js';
 import { PondRadioAudio } from './radio-audio.js';
@@ -15,6 +16,9 @@ export class PondGameSession {
     onRadioCaption = () => {},
     onTimeChange = () => {},
     language = 'en',
+    season = DEFAULTS.season,
+    soundEnabled = true,
+    musicVolume = POND_GAME.radioAudio.musicVolume,
     saveState = null,
   } = {}) {
     this.container = container;
@@ -23,6 +27,9 @@ export class PondGameSession {
     this.onRadioCaption = onRadioCaption;
     this.onTimeChange = onTimeChange;
     this.language = language === 'id' ? 'id' : 'en';
+    this.season = season;
+    this.soundEnabled = Boolean(soundEnabled);
+    this.musicVolume = THREE.MathUtils.clamp(Number(musicVolume) || 0, 0, 1);
     this.app = null;
     this.game = null;
     this.climbing = null;
@@ -40,6 +47,7 @@ export class PondGameSession {
     this.latestGameSnapshot = null;
     this.framePosition = null;
     this.objectiveChime = new ObjectiveChime();
+    this.objectiveChime.setEnabled(this.soundEnabled);
     this.allObjectivesAnnounced = false;
     this.saveState = saveState;
     this.savePosition = new THREE.Vector3();
@@ -56,12 +64,14 @@ export class PondGameSession {
       antMovement: POND_GAME.antMovement,
       antMovementRadius: POND_GAME.antMovementRadius,
       sunHour: POND_GAME.time.startHour,
+      season: this.season,
     });
     await this.app.start();
     this.app.setView('ant', true);
     this.radioAudio = new PondRadioAudio(this.app, {
       onCaption: (text, duration) => this.onRadioCaption(text, duration),
       language: this.language,
+      musicVolume: this.musicVolume,
     });
     this.radioAudio.start();
     this.objectives = new PondGameObjectives(this.app, {
@@ -82,6 +92,7 @@ export class PondGameSession {
         this.emitPrompt();
       },
     });
+    this.game.setSoundEnabled(this.soundEnabled);
     this.climbing = new AntClimbing(this.app, {
       onPromptChange: (prompt) => {
         this.climbPrompt = prompt;
@@ -293,9 +304,16 @@ export class PondGameSession {
   }
 
   setSoundEnabled(enabled) {
-    this.radioAudio?.setEnabled(enabled);
+    this.soundEnabled = Boolean(enabled);
     this.objectiveChime?.setEnabled(enabled);
-    return this.game?.setSoundEnabled(enabled) ?? false;
+    this.game?.setSoundEnabled(enabled);
+    return this.soundEnabled;
+  }
+
+  setMusicVolume(volume) {
+    this.musicVolume = THREE.MathUtils.clamp(Number(volume) || 0, 0, 1);
+    this.radioAudio?.setMusicVolume(this.musicVolume);
+    return this.musicVolume;
   }
 
   setLanguage(language) {
