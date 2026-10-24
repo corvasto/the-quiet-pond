@@ -1,3 +1,10 @@
+import { resolveAssetUrl } from '../utils/asset-url.js';
+
+const COMPRESSED_MODEL_EXTENSION = typeof __COMPRESSED_MODELS__ !== 'undefined'
+  && __COMPRESSED_MODELS__
+  ? '.glb.gz'
+  : '.glb';
+
 const finiteNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -49,7 +56,11 @@ function defineAsset({
   }
   return Object.freeze({
     file,
-    url: new URL(`../../assets/models/${file}`, import.meta.url).href,
+    url: resolveAssetUrl(
+      `./assets/models/${file.replace(/\.glb$/i, COMPRESSED_MODEL_EXTENSION)}`,
+      `../../assets/models/${file}`,
+      import.meta.url,
+    ),
     label,
     loadErrorMessage: loadErrorMessage ?? `The ${label} model could not be loaded:`,
     size: Object.freeze({ width: Math.max(0.001, size.width) }),

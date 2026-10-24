@@ -59,6 +59,7 @@ const APP_SHELL = [
   './js/props/model-prop.js',
   './js/props/model-placement.js',
   './js/utils/random.js',
+  './js/utils/asset-url.js',
   './js/utils/noise.js',
   './js/utils/time-of-day.js',
   './js/utils/player-motion.js',

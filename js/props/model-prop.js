@@ -38,7 +38,20 @@ export async function loadModelProp({
 } = {}) {
   if (!url) throw new Error('A model URL is required.');
   const loader = new GLTFLoader();
-  const gltf = await loader.loadAsync(url);
+  let gltf;
+  if (url.endsWith('.glb.gz')) {
+    if (typeof DecompressionStream === 'undefined') {
+      throw new Error('This browser cannot decompress the optimized model asset.');
+    }
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`The compressed model could not be loaded (${response.status}).`);
+    const decompressed = await new Response(
+      response.body.pipeThrough(new DecompressionStream('gzip')),
+    ).arrayBuffer();
+    gltf = await loader.parseAsync(decompressed, new URL('./', url).href);
+  } else {
+    gltf = await loader.loadAsync(url);
+  }
   const model = gltf.scene;
   model.updateMatrixWorld(true);
 

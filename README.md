@@ -75,6 +75,7 @@ assets/             Models, audio, and other game assets
 vendor/             Local Three.js runtime and license
 scripts/            Project validation and headless tests
 docs/               Architecture, tuning, content, and verification guides
+build/release/      Generated minified production site (not committed)
 ```
 
 ## Configuration and architecture
@@ -85,7 +86,7 @@ Debug tools require `?debug=1`. Combine it with a startup profile, such as `?q=m
 
 ## Development and verification
 
-Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement and offline-shell tests. These commands do not start a server.
+Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement and offline-shell tests. Run `npm run build:release` to generate the minified, compressed site in `build/release`. These commands do not start a server.
 
 Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
 

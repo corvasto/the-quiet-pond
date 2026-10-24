@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { POND_GAME } from '../config/game.js';
+import { resolveAssetUrl } from '../utils/asset-url.js';
 
 function clamp01(value) {
   return THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
@@ -87,7 +88,11 @@ export class PondRadioAudio {
     const loadId = ++this.announcementLoadId;
     const announcementEntries = Object.entries(this.config.announcements ?? {});
     const loadedAnnouncements = await Promise.all(announcementEntries.map(async ([key, entry]) => {
-      const url = new URL(`../../assets/audio/radio/${language}/${entry.file}`, import.meta.url).href;
+      const url = resolveAssetUrl(
+        `./assets/audio/radio/${language}/${entry.file}`,
+        `../../assets/audio/radio/${language}/${entry.file}`,
+        import.meta.url,
+      );
       const buffer = await this.audioLoader.loadAsync(url);
       return [key, {
         buffer,

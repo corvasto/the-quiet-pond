@@ -5,7 +5,10 @@
   "type": "module",
   "description": "A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.",
   "scripts": {
+    "build:release": "node scripts/build-release.mjs",
     "check": "node scripts/validate-project.mjs",
+    "check:release": "node scripts/check-release-build.mjs",
+    "run:release": "npx serve build/release",
     "test": "node scripts/check-player-motion.mjs && node scripts/check-objectives.mjs && node scripts/check-ant-locator.mjs && node scripts/check-fps-diagnostic.mjs && node scripts/check-offline-shell.mjs"
   },
   "dependencies": {
@@ -15,5 +18,8 @@
     "doc": "docs"
   },
   "author": "corvasto",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
 }

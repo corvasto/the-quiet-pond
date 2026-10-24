@@ -1,3 +1,5 @@
+import { resolveAssetUrl } from '../utils/asset-url.js';
+
 export const RADIO_AUDIO_CONFIG = Object.freeze({
   enabled: true,
   // Distances are world units and also bound when proximity playback can begin.
@@ -11,12 +13,12 @@ export const RADIO_AUDIO_CONFIG = Object.freeze({
   announcementCooldownSeconds: 70,
   captionSeconds: 5,
   music: Object.freeze({
-    daytime: new URL('../../assets/audio/radio/radio-music-bright-morning-and-noon.mp3', import.meta.url).href,
-    nightRain: new URL('../../assets/audio/radio/radio-music-night-sleep-or-raining.mp3', import.meta.url).href,
+    daytime: resolveAssetUrl('./assets/audio/radio/radio-music-bright-morning-and-noon.mp3', '../../assets/audio/radio/radio-music-bright-morning-and-noon.mp3', import.meta.url),
+    nightRain: resolveAssetUrl('./assets/audio/radio/radio-music-night-sleep-or-raining.mp3', '../../assets/audio/radio/radio-music-night-sleep-or-raining.mp3', import.meta.url),
   }),
   static: Object.freeze({
     enabled: true,
-    url: new URL('../../assets/audio/radio/radio-static.mp3', import.meta.url).href,
+    url: resolveAssetUrl('./assets/audio/radio/radio-static.mp3', '../../assets/audio/radio/radio-static.mp3', import.meta.url),
     distance: 3.4,
     volume: 0.055,
   }),
