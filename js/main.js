@@ -65,6 +65,9 @@ const elements = {
   applyQualityButton: byId('apply-quality-button'),
   qualityError: byId('quality-error'),
   loading: byId('loading'),
+  loadingProgress: byId('loading-progress'),
+  loadingPercentage: byId('loading-percentage'),
+  loadingBarFill: byId('loading-bar-fill'),
   errorMessage: byId('error-message'),
   radioCaption: byId('radio-caption'),
   gameTime: byId('game-time'),
@@ -632,6 +635,18 @@ function showStartupError(error) {
     || t('ui.error.fallback');
 }
 
+let loadingProgressValue = 0;
+
+function updateLoadingProgress(value) {
+  loadingProgressValue = Math.max(
+    loadingProgressValue,
+    Math.min(100, Math.round(Number(value) || 0)),
+  );
+  elements.loadingPercentage.textContent = `${loadingProgressValue}%`;
+  elements.loadingBarFill.style.width = `${loadingProgressValue}%`;
+  elements.loadingProgress.setAttribute('aria-valuenow', String(loadingProgressValue));
+}
+
 function updateExploreControl() {
   const exploreActive = session?.isExploreActive() ?? false;
   const debugRelocationActive = exploreActive && (session?.isClimbDebugEnabled() ?? false);
@@ -1067,6 +1082,7 @@ async function startGame() {
       onPromptChange: updatePrompt,
       onRadioCaption: showRadioCaption,
       onTimeChange: updateGameTime,
+      onLoadProgress: updateLoadingProgress,
       language,
       season,
       soundEnabled: soundEffectsEnabled,
@@ -1083,7 +1099,8 @@ async function startGame() {
     updateExploreControl();
     saveActiveSlot();
     renderSaveSlots();
-    elements.loading.hidden = true;
+    updateLoadingProgress(100);
+    window.setTimeout(() => { elements.loading.hidden = true; }, 180);
   } catch (error) {
     performanceDiagnosticUnsubscribe?.();
     performanceDiagnosticUnsubscribe = null;

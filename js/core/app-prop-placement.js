@@ -376,23 +376,10 @@ const propPlacementMethods = {
   placeAnt(heroPosition, ground) {
     if (!this.ant) return;
     const offset = SCENE_PROPS.ant.offset;
-    let x = heroPosition.x + offset.x;
-    let z = heroPosition.z + offset.z;
+    const x = heroPosition.x + offset.x;
+    const z = heroPosition.z + offset.z;
     if (ground.pondProfile) {
       const profile = ground.pondProfile;
-      const directionX = heroPosition.x - profile.center.x;
-      const directionZ = heroPosition.z - profile.center.z;
-      const cosine = Math.cos(profile.rotation);
-      const sine = Math.sin(profile.rotation);
-      const localX = directionX * cosine + directionZ * sine;
-      const localZ = -directionX * sine + directionZ * cosine;
-      const approachAngle = Math.atan2(
-        localZ / profile.radiusZ,
-        localX / profile.radiusX,
-      );
-      const shorelineStart = profile.pointAt(approachAngle, 0.48);
-      x = shorelineStart.x;
-      z = shorelineStart.z;
       this.antMovementCenter.set(
         THREE.MathUtils.lerp(heroPosition.x, profile.center.x, 0.42),
         THREE.MathUtils.lerp(heroPosition.z, profile.center.z, 0.42),

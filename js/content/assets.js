@@ -143,7 +143,7 @@ export const ASSET_CATALOG = Object.freeze({
       anchor: 'heroTree',
       lift: 0.006,
       clearingRadius: 0.42,
-      offset: { x: -1.25, y: 0, z: 1.15 },
+      offset: { x: 5.5, y: 0, z: -3.476 },
     },
     animation: {
       speed: 3.6,

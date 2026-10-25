@@ -1,8 +1,16 @@
 @font-face {
-  font-family: "Nunito Sans";
-  src: url("../assets/fonts/nunito-sans.woff") format("woff");
+  font-family: "Patrick Hand";
+  src: url("../assets/fonts/Patrick_Hand/PatrickHand-Regular.ttf") format("truetype");
   font-style: normal;
-  font-weight: 100 1000;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Indie Flower";
+  src: url("../assets/fonts/Indie_Flower/IndieFlower-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
 }
 
@@ -15,15 +23,15 @@
 }
 
 :root {
-  --font-ui: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: Fraunces, Georgia, "Times New Roman", serif;
+  --font-ui: "Patrick Hand", "Trebuchet MS", sans-serif;
+  --font-display: "Indie Flower", Georgia, serif;
   color-scheme: dark;
-  --ink: #f3f7ed;
-  --muted: #bfd2c7;
-  --line: rgba(181, 216, 201, 0.3);
-  --panel: rgba(16, 42, 40, 0.86);
-  --accent: #f0cf88;
-  --sage: #b6dcc1;
+  --ink: #f2e4bd;
+  --muted: #c9c4a9;
+  --line: rgba(183, 177, 145, 0.58);
+  --panel: rgba(24, 43, 38, 0.94);
+  --accent: #d9bd82;
+  --sage: #a9bd9a;
   --accent-deep: #3f331c;
   font-family: var(--font-ui);
   background: #102a28;
@@ -166,7 +174,8 @@ body.debug-ant-dragging #scene canvas {
 }
 
 .game-brand span {
-  font-family: var(--font-display);
+  color: #f3f7ed;
+  font-family: Fraunces, Georgia, "Times New Roman", serif;
   font-size: clamp(1.3rem, 2.1vw, 1.8rem);
   letter-spacing: 0.025em;
 }
@@ -205,17 +214,16 @@ body.debug-ant-dragging #scene canvas {
   flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  min-width: 92px;
   min-height: 44px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  padding: 10px 13px;
+  border: 1px solid #7f8770;
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(71, 84, 70, 0.97), rgba(27, 44, 39, 0.98) 45%, rgba(20, 34, 32, 0.98));
+  box-shadow: inset 0 1px 1px rgba(255, 246, 213, 0.2), inset 0 -2px 3px rgba(0, 0, 0, 0.38), 0 3px 5px rgba(0, 0, 0, 0.32);
   color: var(--ink);
   cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 400;
 }
 
 .game-checklist__toggle svg {
@@ -309,6 +317,7 @@ body.debug-ant-dragging #scene canvas {
 @media (hover: hover) and (pointer: fine) {
   .game-checklist__toggle:hover {
     border-color: rgba(234, 199, 120, 0.72);
+    background: #284c43;
     color: var(--ink);
   }
 }
@@ -395,18 +404,21 @@ body.debug-ant-dragging #scene canvas {
 }
 
 .game-time {
-  top: 88px;
-  left: 30px;
-  padding: 7px 11px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
+  top: 94px;
+  left: 28px;
+  display: grid;
+  min-height: 44px;
+  place-items: center;
+  padding: 10px 13px;
+  border: 1px solid #7f8770;
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(71, 84, 70, 0.97), rgba(27, 44, 39, 0.98) 45%, rgba(20, 34, 32, 0.98));
+  box-shadow: inset 0 1px 1px rgba(255, 246, 213, 0.2), inset 0 -2px 3px rgba(0, 0, 0, 0.38), 0 3px 5px rgba(0, 0, 0, 0.32);
   color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-family: Fraunces, Georgia, "Times New Roman", serif;
+  font-size: 0.98rem;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
+  font-weight: 400;
 }
 
 .about-shortcut {
@@ -555,13 +567,14 @@ body.debug-ant-dragging #scene canvas {
 .quality-setting button {
   min-height: 44px;
   padding: 10px 13px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
+  border: 1px solid #7f8770;
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(71, 84, 70, 0.97), rgba(27, 44, 39, 0.98) 45%, rgba(20, 34, 32, 0.98));
+  box-shadow: inset 0 1px 1px rgba(255, 246, 213, 0.2), inset 0 -2px 3px rgba(0, 0, 0, 0.38), 0 3px 5px rgba(0, 0, 0, 0.32);
   color: var(--ink);
   cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 550;
+  font-size: 0.98rem;
+  font-weight: 400;
   transition: border-color 160ms ease, background 160ms ease;
 }
 
@@ -580,10 +593,10 @@ body.debug-ant-dragging #scene canvas {
 }
 
 .game-actions #pause-button {
-  border-color: var(--sage);
-  background: var(--sage);
-  color: #16372d;
-  font-weight: 700;
+  border-color: #89927d;
+  background: linear-gradient(180deg, #596b5d, #263d36 65%, #1b302c);
+  color: var(--ink);
+  font-weight: 400;
 }
 
 .reset-camera-button,
@@ -1144,8 +1157,8 @@ kbd {
   gap: 14px;
   background: #102a28;
   color: var(--muted);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
+  font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -1153,42 +1166,54 @@ kbd {
   margin: 0;
 }
 
+.loading__percentage {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.loading__bar {
+  display: block;
+  width: min(220px, calc(100vw - 72px));
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(183, 177, 145, 0.62);
+  border-radius: 99px;
+  background: rgba(7, 17, 15, 0.72);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.48), 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+
+#loading-bar-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a9bd9a, #d9bd82);
+  box-shadow: 0 0 9px rgba(217, 189, 130, 0.62);
+  transition: width 180ms ease-out;
+}
+
 .loading__tip {
   max-width: min(28rem, calc(100vw - 3rem));
   color: #c1d0c8;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   letter-spacing: normal;
   line-height: 1.5;
   text-align: center;
   text-transform: none;
 }
 
-.loading__mark {
-  display: flex;
-  gap: 5px;
-}
-
-.loading__mark span {
-  width: 6px;
-  height: 22px;
-  border-radius: 3px;
-  background: var(--accent);
-  animation: loading-pulse 1s ease-in-out infinite alternate;
-}
-
-.loading__mark span:nth-child(2) {
-  animation-delay: 120ms;
-}
-
-.loading__mark span:nth-child(3) {
-  animation-delay: 240ms;
-}
-
-@keyframes loading-pulse {
-  to {
-    opacity: 0.28;
-    transform: scaleY(0.45);
-  }
+.loading__ant {
+  display: block;
+  width: min(192px, calc(100vw - 48px));
+  height: auto;
+  object-fit: contain;
 }
 
 .error-message {
@@ -1293,7 +1318,7 @@ kbd {
     top: max(12px, env(safe-area-inset-top));
     right: auto;
     left: max(12px, env(safe-area-inset-left));
-    font-size: 0.9rem;
+    font-size: 0.75rem;
   }
 
   .about-shortcut svg {

@@ -93,6 +93,7 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
     id: 'Benih-benih telah pulang, dan persembahan itu dikenang.',
   }),
   'ui.loading': defineMessage({ en: 'Preparing a small world', id: 'Menyiapkan dunia kecil' }),
+  'ui.loading.progress': defineMessage({ en: 'Loading progress', id: 'Progres pemuatan' }),
   'ui.loading.qualityTip': defineMessage({
     en: 'If the game feels choppy, open Settings and choose a lower graphics quality.',
     id: 'Jika permainan terasa tersendat, buka Pengaturan dan pilih kualitas grafis yang lebih rendah.',

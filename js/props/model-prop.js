@@ -120,8 +120,9 @@ export async function loadModelProp({
   };
 }
 
-export async function loadModelProps(configs, { anisotropy = 4 } = {}) {
+export async function loadModelProps(configs, { anisotropy = 4, onProgress = () => {} } = {}) {
   const entries = Object.entries(configs ?? {});
+  let completed = 0;
   const loadedEntries = await Promise.all(entries.map(async ([id, config]) => {
     try {
       const model = await loadModelProp({
@@ -136,6 +137,9 @@ export async function loadModelProps(configs, { anisotropy = 4 } = {}) {
         ?? `The ${id} model could not be loaded:`;
       console.warn(message, error);
       return { id, model: null, config, error };
+    } finally {
+      completed += 1;
+      onProgress(entries.length ? completed / entries.length : 1);
     }
   }));
 

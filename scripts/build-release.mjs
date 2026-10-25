@@ -75,7 +75,7 @@ function generateReleaseShell(source) {
     './styles/game.css',
     './js/main.js',
     ...fsSyncWalk(releaseAssets)
-      .filter((file) => /\.(?:glb\.gz|woff|mp3|opus|wav)$/i.test(file))
+      .filter((file) => /\.(?:glb\.gz|woff|ttf|png|gif|webm|mp3|opus|wav)$/i.test(file))
       .map((file) => `./${path.relative(releaseDirectory, file).replaceAll('\\', '/')}`),
   ];
   const array = JSON.stringify(shellPaths, null, 2);
@@ -129,8 +129,7 @@ await Promise.all([
     bundle: true,
     minify: true,
     legalComments: 'none',
-    loader: { '.woff': 'file' },
-    assetNames: '../assets/fonts/[name]',
+    external: ['../assets/*'],
   }),
 ]);
 

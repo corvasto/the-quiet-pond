@@ -255,8 +255,14 @@
   </div>
 
   <div id="loading" class="loading" role="status" aria-live="polite">
-    <div class="loading__mark"><span></span><span></span><span></span></div>
+    <video class="loading__ant" width="192" height="98" autoplay muted loop playsinline preload="auto" aria-hidden="true" tabindex="-1">
+      <source src="./assets/images/ui/ant-loading.webm" type="video/webm">
+    </video>
     <p data-i18n="ui.loading">Preparing a small world</p>
+    <div id="loading-progress" class="loading__percentage" role="progressbar" aria-label="Loading progress" data-i18n-aria-label="ui.loading.progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span id="loading-percentage">0%</span>
+      <span class="loading__bar" aria-hidden="true"><span id="loading-bar-fill"></span></span>
+    </div>
     <p class="loading__tip" data-i18n="ui.loading.qualityTip">If the game feels choppy, open Settings and choose a lower graphics quality.</p>
   </div>
 

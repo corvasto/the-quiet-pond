@@ -16,6 +16,7 @@ export class PondGameSession {
     onPromptChange = () => {},
     onRadioCaption = () => {},
     onTimeChange = () => {},
+    onLoadProgress = () => {},
     language = 'en',
     season = DEFAULTS.season,
     soundEnabled = true,
@@ -27,6 +28,7 @@ export class PondGameSession {
     this.onPromptChange = onPromptChange;
     this.onRadioCaption = onRadioCaption;
     this.onTimeChange = onTimeChange;
+    this.onLoadProgress = onLoadProgress;
     this.language = language === 'id' ? 'id' : 'en';
     this.season = season;
     this.soundEnabled = Boolean(soundEnabled);
@@ -67,10 +69,12 @@ export class PondGameSession {
       antCameraFollow: POND_GAME.antCameraFollow,
       antMovement: POND_GAME.antMovement,
       antMovementRadius: POND_GAME.antMovementRadius,
+      onLoadProgress: this.onLoadProgress,
       sunHour: POND_GAME.time.startHour,
       season: this.season,
     });
     await this.app.start();
+    this.onLoadProgress(96);
     this.app.setView('ant', true);
     this.audioListener = new THREE.AudioListener();
     this.app.camera.add(this.audioListener);
@@ -113,6 +117,7 @@ export class PondGameSession {
     this.game.start();
     this.climbing.start();
     this.restoreSaveState(this.saveState);
+    this.onLoadProgress(99);
     return this;
   }
 

@@ -17,7 +17,9 @@ assert.ok(!html.includes('type="importmap"'), 'Release HTML should not need an i
 assert.ok(html.includes('src="./js/main.js"'), 'Release HTML should load the bundled app.');
 assert.ok(script.length > 100_000, 'Bundled app should include the game runtime.');
 assert.ok(!/from\s+["']three(?:\/|["'])/.test(script), 'Three.js imports should be bundled.');
-assert.ok(css.includes('nunito-sans.woff') && css.includes('fraunces.woff'), 'Bundled CSS should retain local fonts.');
+assert.ok(css.includes('PatrickHand-Regular.ttf') && css.includes('IndieFlower-Regular.ttf'), 'Bundled CSS should retain the local game fonts.');
+assert.ok(css.includes('fraunces.woff'), 'Bundled CSS should retain the original title font.');
+assert.ok(!css.includes('background-title.png'), 'Bundled CSS should omit the removed title image.');
 
 const appShellBlock = serviceWorker.match(/const APP_SHELL = (\[[\s\S]*?\]);/)?.[1];
 assert.ok(appShellBlock, 'Release service worker should contain a generated app shell.');

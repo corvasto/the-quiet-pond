@@ -13,6 +13,21 @@ import { createBushes } from './bushes.js';
 import { createPondFeatures, createPondProfile } from './pond.js';
 import { createRocks } from './rocks.js';
 
+const GENERATION_YIELD_INTERVALS = Object.freeze({
+  textureRows: 32,
+  terrainVertices: 8192,
+  grassAttempts: 1024,
+  outerGrassAttempts: 2048,
+});
+
+function yieldToBrowser() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function isYieldBoundary(index, interval) {
+  return (index + 1) % interval === 0;
+}
+
 function colorFromPalette(random, palette, variation = 0.05) {
   const color = new THREE.Color(random.pick(palette));
   color.offsetHSL(random.signed(0.018), random.signed(variation), random.signed(variation));
@@ -145,7 +160,7 @@ function addGroundMacroVariation(material, macroUniforms) {
   material.needsUpdate = true;
 }
 
-function makeSoilTexture(random) {
+async function makeSoilTexture(random) {
   const size = 256;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -153,13 +168,17 @@ function makeSoilTexture(random) {
   const context = canvas.getContext('2d');
   const image = context.createImageData(size, size);
 
-  for (let index = 0; index < image.data.length; index += 4) {
-    const grain = random.range(-20, 18);
-    const fleck = random.chance(0.025) ? random.range(-42, 38) : 0;
-    image.data[index] = 70 + grain + fleck;
-    image.data[index + 1] = 51 + grain * 0.67 + fleck * 0.45;
-    image.data[index + 2] = 33 + grain * 0.38;
-    image.data[index + 3] = 255;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4;
+      const grain = random.range(-20, 18);
+      const fleck = random.chance(0.025) ? random.range(-42, 38) : 0;
+      image.data[index] = 70 + grain + fleck;
+      image.data[index + 1] = 51 + grain * 0.67 + fleck * 0.45;
+      image.data[index + 2] = 33 + grain * 0.38;
+      image.data[index + 3] = 255;
+    }
+    if (isYieldBoundary(y, GENERATION_YIELD_INTERVALS.textureRows)) await yieldToBrowser();
   }
   context.putImageData(image, 0, 0);
 
@@ -226,7 +245,7 @@ function blendCanvasEdges(context, width, height) {
   context.putImageData(image, 0, 0);
 }
 
-function makeForestFloorTextures(random, season, quality) {
+async function makeForestFloorTextures(random, season, quality) {
   const size = quality === 'high' ? 512 : 256;
   const colorCanvas = document.createElement('canvas');
   const bumpCanvas = document.createElement('canvas');
@@ -289,6 +308,7 @@ function makeForestFloorTextures(random, season, quality) {
       bumpImage.data[index + 2] = bump;
       bumpImage.data[index + 3] = 255;
     }
+    if (isYieldBoundary(y, GENERATION_YIELD_INTERVALS.textureRows)) await yieldToBrowser();
   }
 
   colorContext.putImageData(colorImage, 0, 0);
@@ -623,7 +643,7 @@ function createWildflowers(random, heightAt, season, quality, habitat, rejectPoi
   return group;
 }
 
-export function createGround({
+export async function createGround({
   seed = 'ancient-oak',
   grassDensity = 1,
   season = 'summer',
@@ -700,7 +720,7 @@ export function createGround({
     return THREE.MathUtils.lerp(terrainHeight, farGroundHeight, edgeBlend);
   };
 
-  const forestFloorTextures = makeForestFloorTextures(
+  const forestFloorTextures = await makeForestFloorTextures(
     random.fork('forest-floor-textures'),
     season,
     quality,
@@ -709,7 +729,7 @@ export function createGround({
   forestFloorTextures.bumpMap.repeat.set(1, 1);
 
   if (!habitat.infinite) {
-    const soilTexture = makeSoilTexture(random.fork('soil-texture'));
+    const soilTexture = await makeSoilTexture(random.fork('soil-texture'));
     soilTexture.repeat.set(5 * habitat.detailSize / DIORAMA.size, 2);
     const baseMaterial = new THREE.MeshStandardMaterial({
       color: '#6a5032',
@@ -816,6 +836,7 @@ export function createGround({
       terrainColors[index * 3 + 1] = terrainColor.g;
       terrainColors[index * 3 + 2] = terrainColor.b;
     }
+    if (isYieldBoundary(index, GENERATION_YIELD_INTERVALS.terrainVertices)) await yieldToBrowser();
   }
   if (terrainColors) {
     terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
@@ -1052,6 +1073,7 @@ export function createGround({
 
   while (placed < grassCapacity && attempts < grassCapacity * 10) {
     attempts += 1;
+    if (attempts % GENERATION_YIELD_INTERVALS.grassAttempts === 0) await yieldToBrowser();
     const selectedPatch = grassPatches.length > 0 && random.chance(0.78)
       ? random.pick(grassPatches)
       : null;
@@ -1128,6 +1150,7 @@ export function createGround({
       && outerAttempts < outerGrassCapacity * 12
     ) {
       outerAttempts += 1;
+      if (outerAttempts % GENERATION_YIELD_INTERVALS.outerGrassAttempts === 0) await yieldToBrowser();
       const radialT = Math.pow(outerRandom.float(), 1.6);
       const radius = THREE.MathUtils.lerp(innerRadius, outerRadius, radialT);
       const angle = outerRandom.range(0, Math.PI * 2);

@@ -51,6 +51,10 @@ const SPECIALIZED_MODEL_PROP_IDS = Object.freeze([
   'lollipop',
 ]);
 
+function yieldToBrowser() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 function addLeafWind(material, sharedUniforms = null) {
   const uniforms = sharedUniforms || {
     uTime: { value: 0 },
@@ -212,6 +216,7 @@ export class PondApp {
     antCameraFollow = null,
     antMovement = null,
     antMovementRadius = null,
+    onLoadProgress = () => {},
     sunHour = null,
     season = DEFAULTS.season,
   } = {}) {
@@ -220,6 +225,7 @@ export class PondApp {
     this.mode = 'game';
     this.groundReservations = normalizeGroundReservations(groundReservations);
     this.enablePondStoneInteraction = Boolean(enablePondStoneInteraction);
+    this.onLoadProgress = onLoadProgress;
     this.cameraViews = normalizeCameraViews(cameraViews);
     this.antCameraFollow = normalizeAntCameraFollow(antCameraFollow);
     this.antMovement = normalizeAntMovement(antMovement);
@@ -461,19 +467,25 @@ export class PondApp {
   }
 
   async start() {
+    this.onLoadProgress(4);
     const anisotropy = Math.min(
       PERFORMANCE.modelAnisotropy,
       this.renderer.capabilities.getMaxAnisotropy(),
     );
     this.sceneProps = selectSceneProps(SCENE_PROPS, this.mode);
-    this.modelProps = await loadModelProps(this.sceneProps, { anisotropy });
+    this.modelProps = await loadModelProps(this.sceneProps, {
+      anisotropy,
+      onProgress: (progress) => this.onLoadProgress(4 + progress * 68),
+    });
     SPECIALIZED_MODEL_PROP_IDS.forEach((id) => {
       this[id] = this.modelProps[id] ?? null;
     });
     this.setupAntAnimation();
     this.setupCatAnimation();
     this.setupCockroachAnimation();
+    this.onLoadProgress(78);
     await this.buildPond(this.settings);
+    this.onLoadProgress(94);
     this.running = true;
     this.clock.reset();
     this.renderer.setAnimationLoop(() => this.animate());
@@ -643,7 +655,7 @@ export class PondApp {
         radius: reservation.radius,
       })
     ));
-    const ground = createGround({
+    const ground = await createGround({
       ...this.settings,
       grassDensity: this.settings.grassDensity * PERFORMANCE.grassDensityScale,
       treeClearings: groundTreeClearings,
@@ -665,7 +677,11 @@ export class PondApp {
         })] : []),
       ],
     });
+    this.onLoadProgress(82);
+    await yieldToBrowser();
     const tree = createTree(this.settings);
+    this.onLoadProgress(85);
+    await yieldToBrowser();
     let activePondWater = null;
     if (ground.pondProfile) {
       if (!this.pondWater) {
@@ -684,6 +700,8 @@ export class PondApp {
         this.settings.quality,
       );
     }
+    this.onLoadProgress(87);
+    await yieldToBrowser();
     this.activePondWater = activePondWater;
     this.draggablePondStone = ground.pondStone;
     this.propHeroPosition = { x: heroPosition.x, z: heroPosition.z };
@@ -707,7 +725,7 @@ export class PondApp {
     leafMesh.customDepthMaterial = leafDepthMaterial;
     tree.leafWindUniforms = leafWindUniforms;
     tree.leafDepthMaterial = leafDepthMaterial;
-    const forest = createGroveTrees({
+    const forest = await createGroveTrees({
       seed: this.settings.seed,
       season: this.settings.season,
       quality: this.settings.quality,
@@ -717,6 +735,8 @@ export class PondApp {
       heightAt: ground.heightAt,
       layout: groveLayout,
     });
+    this.onLoadProgress(90);
+    await yieldToBrowser();
     const sourceTrees = [tree, ...(forest?.trees ?? [])];
     this.treeGroundColliders = sourceTrees.map((sourceTree, index) => {
       const position = sourceTree.group.getWorldPosition(new THREE.Vector3());
@@ -737,6 +757,8 @@ export class PondApp {
         footprint,
       };
     });
+    this.onLoadProgress(92);
+    await yieldToBrowser();
     if (leafWindUniforms) {
       forest?.leafMaterials.forEach((leafMaterial) => {
         addLeafWind(leafMaterial, leafWindUniforms);

@@ -68,7 +68,11 @@ export function createPondGroveLayout({
   });
 }
 
-export function createGroveTrees({
+function yieldToBrowser() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+export async function createGroveTrees({
   seed = 'ancient-oak',
   season = 'summer',
   quality = 'high',
@@ -114,6 +118,7 @@ export function createGroveTrees({
     tree.group.name = `${variantLabel} companion tree ${index + 1}`;
     group.add(tree.group);
     trees.push(tree);
+    await yieldToBrowser();
   }
 
   attachTreeCollectionDisposer(group);
