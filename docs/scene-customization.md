@@ -1,5 +1,9 @@
 # Scene customization
 
+## Explore camera
+
+In `js/config/scene.js`, edit `CAMERA_VIEWS.explore.position` and `.target` to tune the default Explore view. These are world coordinates in `[x, y, z]` order. The separate `CAMERA_VIEWS.hero` values keep the initial/reader framing unchanged. Open the game with `?debug=1`, enter Explore, and read the live camera position and target from the debug overlay. The orientation is also shown in Euler degrees for reference; the view is applied from position and target.
+
 ## Deterministic scene edits
 
 `DEFAULTS.seed` drives procedural generation. Preserve the seed and seeded-random request order to keep existing camera sequences composed the same; adding/removing scattered items can shift later results. Change one thing at a time and verify the starter timeline.

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="The Quiet Pond, a cozy exploration game about a small world and its hidden routines.">
   <meta name="theme-color" content="#102a28">
   <link rel="manifest" href="./manifest.webmanifest">
@@ -18,9 +18,15 @@
     <small data-i18n="ui.brand.subtitle">A cozy exploration game</small>
   </header>
 
-  <aside id="debug-coordinates" class="debug-coordinates" aria-label="Current ant world coordinates" data-i18n-aria-label="debug.coordinates.aria" hidden>
+  <aside id="debug-coordinates" class="debug-coordinates" aria-label="Live ant and camera values" data-i18n-aria-label="debug.coordinates.aria" hidden>
     <span data-i18n="debug.coordinates.title">Ant position</span>
     <output id="debug-coordinate-values" aria-live="off">x 0.000  y 0.000  z 0.000</output>
+    <span data-i18n="debug.camera.position">Explore camera position</span>
+    <output id="debug-camera-position" aria-live="off">x 0.000  y 0.000  z 0.000</output>
+    <span data-i18n="debug.camera.target">Explore camera target</span>
+    <output id="debug-camera-target" aria-live="off">x 0.000  y 0.000  z 0.000</output>
+    <span data-i18n="debug.camera.rotation">Camera orientation (degrees)</span>
+    <output id="debug-camera-rotation" aria-live="off">x 0.000  y 0.000  z 0.000</output>
   </aside>
 
   <section class="game-objective game-checklist" aria-labelledby="game-objective-title">
@@ -53,10 +59,9 @@
 
   <nav class="game-actions" aria-label="Game controls" data-i18n-aria-label="ui.controls.aria">
     <button id="pause-button" type="button" aria-expanded="false" data-i18n="ui.pause">Pause</button>
-    <button id="explore-button" type="button" aria-pressed="false" data-i18n="ui.explore">Explore</button>
     <button id="reset-camera-button" class="reset-camera-button" type="button" aria-label="Reset camera behind the ant (C)" data-i18n-aria-label="ui.resetCamera.aria"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.5 7M4 4v6h6"/></svg><span data-i18n="ui.resetCamera">Reset view</span></button>
+    <button id="explore-button" type="button" aria-pressed="false" data-i18n="ui.explore">Explore</button>
     <button id="settings-button" class="settings-button" type="button" aria-expanded="false" aria-controls="settings-dialog" aria-label="Settings" data-i18n-aria-label="ui.settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3v-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87L4.2 7.07l2.83-2.83.06.06A1.7 1.7 0 0 0 8.96 4 1.7 1.7 0 0 0 10 2.44V2h4v.44A1.7 1.7 0 0 0 15.04 4a1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9 1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span data-i18n="ui.settings">Settings</span></button>
-    <button id="fullscreen-button" type="button" data-i18n="ui.fullscreen">Fullscreen</button>
     <button id="about-shortcut" class="about-shortcut" type="button" aria-label="About" data-i18n-aria-label="ui.about.button">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>
       <span class="about-shortcut__label" data-i18n="ui.about.button">About</span>

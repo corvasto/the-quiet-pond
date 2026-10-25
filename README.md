@@ -65,7 +65,6 @@ Load the game once online and let it finish caching for offline play. Menus vary
 | Space | Climb or get down |
 | M | Toggle Explore |
 | P or Escape | Pause or resume |
-| F | Fullscreen |
 
 ### Mobile
 

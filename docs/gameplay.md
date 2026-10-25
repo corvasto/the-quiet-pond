@@ -22,7 +22,7 @@ The elevated camera starts wide and gently aligns behind sustained travel while 
 
 Pause offers resume/restart and three persistent local slots. Settings has English/Indonesian, soft chimes, optional live FPS diagnostics, Graphics quality, and About. Language updates UI and radio; the bottom-right diagnostic reports rendered FPS and turns red with a quality suggestion when low. Checklist goals are optional; missed weather/time goals cause no damage or game over. The final caption lasts 10 seconds, and an eaten lollipop stays eaten after reload.
 
-Press `P`/`Escape` to pause and `F` for fullscreen. `M`/Explore opens a free orbit camera with diorama pan/zoom. With climb debug enabled, `Shift`+left-drag in Explore relocates the ant; the burrow gets an Explore-only marker after seed pickup.
+Press `P`/`Escape` to pause. `M`/Explore opens a free orbit camera with diorama pan/zoom. With climb debug enabled, `Shift`+left-drag in Explore relocates the ant; the burrow gets an Explore-only marker after seed pickup.
 
 ## Object roaming
 

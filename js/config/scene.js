@@ -140,10 +140,14 @@ export const SEASONS = Object.freeze({
   }),
 });
 
-// Explore uses the world overview; Ant framing is configured in game/config/world.js.
+// Hero is the initial and reader framing; Explore has its own world overview.
 export const CAMERA_VIEWS = Object.freeze({
   hero: Object.freeze({
     position: Object.freeze([15.5, 10.8, 17.5]),
     target: Object.freeze([0, 5.4, 0]),
+  }),
+  explore: Object.freeze({
+    position: Object.freeze([10.222, 17.668, -31.367]),
+    target: Object.freeze([-1.134, -2.247, 4.497]),
   }),
 });

@@ -78,7 +78,6 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'ui.resetCamera.aria': defineMessage({ en: 'Reset camera behind the ant (C)', id: 'Atur kamera ke belakang semut (C)' }),
   'ui.explore': defineMessage({ en: 'Explore', id: 'Jelajah' }),
   'ui.antView': defineMessage({ en: 'Ant view', id: 'Tampilan Semut' }),
-  'ui.fullscreen': defineMessage({ en: 'Fullscreen', id: 'Layar penuh' }),
   'ui.language': defineMessage({ en: 'Language', id: 'Bahasa' }),
   'ui.touchControls.aria': defineMessage({ en: 'Touch game controls', id: 'Kontrol sentuh permainan' }),
   'ui.movementJoystick.aria': defineMessage({ en: 'Movement joystick', id: 'Joystick gerak' }),
@@ -159,9 +158,12 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   }),
   'debug.flight.disabled': defineMessage({ en: 'Debug flight disabled.', id: 'Terbang debug nonaktif.' }),
   'debug.coordinates.title': defineMessage({ en: 'Ant position', id: 'Posisi semut' }),
+  'debug.camera.position': defineMessage({ en: 'Explore camera position', id: 'Posisi kamera Jelajah' }),
+  'debug.camera.target': defineMessage({ en: 'Explore camera target', id: 'Target kamera Jelajah' }),
+  'debug.camera.rotation': defineMessage({ en: 'Camera orientation (degrees)', id: 'Orientasi kamera (derajat)' }),
   'debug.coordinates.aria': defineMessage({
-    en: 'Current ant world coordinates',
-    id: 'Koordinat dunia semut saat ini',
+    en: 'Live ant and camera values',
+    id: 'Nilai semut dan kamera saat ini',
   }),
   'debug.radio.music': defineMessage({ en: 'Radio music: {mode}.', id: 'Musik radio: {mode}.' }),
   'debug.radio.voice': defineMessage({

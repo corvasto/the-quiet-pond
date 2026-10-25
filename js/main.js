@@ -34,7 +34,6 @@ const elements = {
   settingsButton: byId('settings-button'),
   exploreButton: byId('explore-button'),
   resetCameraButton: byId('reset-camera-button'),
-  fullscreenButton: byId('fullscreen-button'),
   aboutShortcut: byId('about-shortcut'),
   aboutDialog: byId('about-dialog'),
   aboutCard: byId('about-card'),
@@ -43,6 +42,9 @@ const elements = {
   gameVersion: byId('game-version'),
   debugCoordinates: byId('debug-coordinates'),
   debugCoordinateValues: byId('debug-coordinate-values'),
+  debugCameraPosition: byId('debug-camera-position'),
+  debugCameraTarget: byId('debug-camera-target'),
+  debugCameraRotation: byId('debug-camera-rotation'),
   antHint: byId('ant-hint'),
   exploreHint: byId('explore-hint'),
   touchHint: byId('touch-hint'),
@@ -517,10 +519,26 @@ function updatePrompt(prompt) {
 function renderDebugCoordinates() {
   const position = session?.getAntWorldPosition();
   if (!position || !elements.debugCoordinateValues) return;
-  const text = `x ${position.x.toFixed(3)}  y ${position.y.toFixed(3)}  z ${position.z.toFixed(3)}`;
+  const camera = session?.getCameraDebugValues();
+  if (!camera) return;
+  const formatVector = (value) => `x ${value.x.toFixed(3)}  y ${value.y.toFixed(3)}  z ${value.z.toFixed(3)}`;
+  const formatRotation = (value) => formatVector({
+    x: value.x * 180 / Math.PI,
+    y: value.y * 180 / Math.PI,
+    z: value.z * 180 / Math.PI,
+  });
+  const text = [
+    formatVector(position),
+    formatVector(camera.position),
+    formatVector(camera.target),
+    formatRotation(camera.rotation),
+  ].join('|');
   if (text === lastDebugCoordinateText) return;
   lastDebugCoordinateText = text;
-  elements.debugCoordinateValues.textContent = text;
+  elements.debugCoordinateValues.textContent = formatVector(position);
+  elements.debugCameraPosition.textContent = formatVector(camera.position);
+  elements.debugCameraTarget.textContent = formatVector(camera.target);
+  elements.debugCameraRotation.textContent = formatRotation(camera.rotation);
 }
 
 function stopDebugCoordinates() {
@@ -968,11 +986,6 @@ window.addEventListener('keydown', (event) => {
     }
     return;
   }
-  if (event.repeat) return;
-  if (event.code === 'KeyF') {
-    event.preventDefault();
-    session?.toggleFullscreen();
-  }
 });
 
 window.addEventListener('keyup', (event) => {
@@ -1010,10 +1023,6 @@ elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
 elements.resetCameraButton.addEventListener('click', resetCameraView);
-elements.fullscreenButton.addEventListener('click', () => {
-  session?.toggleFullscreen();
-  requestAnimationFrame(() => session?.focusScene());
-});
 elements.restartButton.addEventListener('click', () => {
   saveActiveSlot();
   window.location.reload();

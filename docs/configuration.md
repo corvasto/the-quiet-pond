@@ -38,7 +38,7 @@ Keep the existing contact/path checks when tuning speed. Validate stopping near 
 
 `TIME_CONFIG` starts at 10:30 and advances one game hour per 120 seconds. `WEATHER_CONFIG` sets randomized dry/rain durations and intensity. `TIME_OF_DAY` in `js/config/scene.js` sets shared dawn/dusk boundaries; decimal 0 or 24 means midnight.
 
-`DEFAULTS` sets deterministic seed, season, terrain/tree shape, wind, and environment. Habitat is fixed to Pond. `DEFAULTS.cameraFov` sets the gameplay lens (36 degrees); the hero camera pose sets the Explore overview. Model transform defaults set game-prop scale and offset.
+`DEFAULTS` sets deterministic seed, season, terrain/tree shape, wind, and environment. Habitat is fixed to Pond. `DEFAULTS.cameraFov` sets the gameplay lens (36 degrees). In `js/config/scene.js`, `CAMERA_VIEWS.explore.position` and `.target` set the Explore overview; the separate `hero` pose remains the initial and reader framing. With `?debug=1`, the debug overlay shows live camera position, target, and Euler orientation in degrees. Model transform defaults set game-prop scale and offset.
 
 `ANT_LOCATOR` sets the Explore red beam/sphere colors, dimensions, opacity, pulse speed, and render order. It follows the ant on ground and climbs, and is hidden in Ant View.
 

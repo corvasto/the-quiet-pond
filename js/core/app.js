@@ -1043,13 +1043,6 @@ export class PondApp {
     this.renderer.render(this.scene, this.camera);
   }
 
-  toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.();
-    } else {
-      document.documentElement.requestFullscreen?.();
-    }
-  }
 }
 
 installPondWorldQueryMethods(PondApp);

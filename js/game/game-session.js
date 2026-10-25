@@ -150,6 +150,15 @@ export class PondGameSession {
     return this.app?.getAntWorldPosition(this.debugPosition) ?? null;
   }
 
+  getCameraDebugValues() {
+    if (!this.app?.camera || !this.app?.controls) return null;
+    return {
+      position: this.app.camera.position,
+      target: this.app.controls.target,
+      rotation: this.app.camera.rotation,
+    };
+  }
+
   restoreSaveState(state) {
     if (!state || state.version !== 1 || !this.app) return false;
     if (Number.isFinite(state.worldTimeHours)) {
@@ -296,7 +305,7 @@ export class PondGameSession {
     this.app.setExploreTouchMode?.(nextActive);
     this.climbing?.setExploreActive(nextActive);
     this.app.setAntLocatorActive(nextActive);
-    this.app.setView(nextActive ? 'hero' : 'ant');
+    this.app.setView(nextActive ? 'explore' : 'ant');
     this.game?.setExploreActive(nextActive);
     return true;
   }
@@ -370,10 +379,6 @@ export class PondGameSession {
   playDebugRadioAnnouncement() {
     if (!this.canDebugControlRadio()) return false;
     return this.radioAudio?.playDebugAnnouncement() ?? false;
-  }
-
-  toggleFullscreen() {
-    this.app?.toggleFullscreen();
   }
 
   focusScene() {

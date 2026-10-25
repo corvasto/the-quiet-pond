@@ -12,7 +12,6 @@
 | Space or Climb / Get down | Enter a nearby climb surface, transfer, or find a safe landing |
 | M or Explore | Enter or leave the free world camera |
 | P or Escape | Pause or resume |
-| F | Fullscreen |
 
 Movement follows the view, with short acceleration/braking, normalized diagonals, and body turning independent of travel direction. The camera follows position without overriding the selected angle. Pause, Settings, About, view changes, focus loss, and pointer cancellation release movement; resume with a fresh input. Text fields, selects, and focused buttons keep native keyboard behavior.
 
