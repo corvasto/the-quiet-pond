@@ -17,10 +17,12 @@ Reload code-level changes. Quality is selected at startup; the world is not rebu
 | Shadow map size | 2048 | 512 | 128 |
 | Ripple grid size | 128 | 64 | 36 |
 | Frame interval | Uncapped | 1/20 second | 1/20 second |
-| Background ants | Enabled | Enabled | Disabled |
+| Background companions | All configured | All configured | One companion |
 | Decorative model flowers | Enabled | Enabled | Disabled |
 
 All profiles retain antialiasing, cat, rain, reflection, ripples, shadows, leaf wind, and fireflies. Mid/Low reduce decoration and refresh costly effects less often; Full is the visual reference. Capped profiles target 20 FPS while motion remains frame-independent within a bounded simulation step.
+
+Low quality keeps one background ant so the meeting objective remains available. Mid and Full show all configured background companions. Add or remove companion spawn locations in `SCENE_PROPS.ant.backgroundWanderers` in `js/content/assets.js`; Mid and Full follow that list automatically.
 
 The optional Settings diagnostic samples rendered FPS in 0.75-second windows and stores its preference as `the-quiet-pond-performance-diagnostic`. Its callback is subscribed only while enabled. Warnings start below 30 FPS in Full and 14 FPS in Mid/Low, which target 20 but commonly report about 18 after browser scheduling. A 2 FPS recovery margin prevents flicker; long hidden-tab gaps reset sampling to avoid false lows.
 

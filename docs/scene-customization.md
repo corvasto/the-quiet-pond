@@ -46,7 +46,7 @@ Edit one value, reload, and compare the same camera frame. Use `lift` for surfac
 
 ## Ant tuning
 
-The ant definition sets visual width/placement, walk range and animation speed, movement/turn speeds, movement/collision radii, and Ant camera offset/look height. Its `placement.offset.x/z` set the startup position relative to the hero tree; `offset.y` adds height above the support surface. The game adds `placement.lift` to keep the ant above terrain or water. Existing saves restore their saved ant position. Its recipe removes root motion and compiles idle, walk, eat, and cockroach-inspection ranges at startup. Walk uses frames 363-439 at 30 FPS before configured speed.
+The ant definition sets visual width/placement, walk range and animation speed, movement/turn speeds, movement/collision radii, and Ant camera offset/look height. Its `placement.offset.x/z` set the startup position relative to the hero tree; `offset.y` adds height above the support surface. The game adds `placement.lift` to keep the ant above terrain or water. Existing saves restore their saved ant position. Its recipe removes root motion and compiles idle, walk, eat, and cockroach-inspection ranges at startup. Walk uses frames 363-439 at 30 FPS before configured speed. Background companion spawn locations live in `SCENE_PROPS.ant.backgroundWanderers`; Mid and Full show every configured companion, while Low shows one.
 
 ## Optional models
 

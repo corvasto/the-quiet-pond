@@ -15,10 +15,12 @@ const Controller = vm.runInNewContext(`${source}\nPondGameObjectives;`, {
 });
 const ant = new THREE.Vector3();
 const roach = new THREE.Vector3(2, 0, 0);
+const companionAnt = { group: { parent: {}, position: new THREE.Vector3(3, 0, 0) } };
 let present = true;
 const app = {
   getAntWorldPosition: (target) => target.copy(ant),
   getCockroachWorldPosition: (target) => present ? target.copy(roach) : null,
+  backgroundAnts: [companionAnt],
 };
 const objectives = new Controller(app);
 objectives.landmarkPositions.shelter = [];
@@ -41,7 +43,16 @@ assert.equal(objectives.taskState.cockroach.elapsed, 0);
 objectives.setPaused(false);
 tick(6);
 assert.equal(objectives.taskState.cockroach.complete, true);
-assert.equal(objectives.getSnapshot().total, 11);
+assert.equal(objectives.getSnapshot().total, 12);
+companionAnt.group.position.set(0.3, 0, 0);
+tick(6);
+assert.equal(objectives.taskState.companionAnt.complete, true, 'Meeting a visible companion ant completes its objective.');
+companionAnt.group.parent = null;
+const absentCompanion = new Controller(app);
+absentCompanion.landmarkPositions.shelter = [];
+absentCompanion.taskState.companionAnt.elapsed = 0.8;
+absentCompanion.update({ delta: 0.2 });
+assert.equal(absentCompanion.taskState.companionAnt.elapsed, 0, 'A hidden companion cannot progress the meeting objective.');
 const restored = new Controller(app);
 restored.restoreSaveState(objectives.getSaveState());
 assert.equal(restored.taskState.cockroach.complete, true);
@@ -58,4 +69,4 @@ for (let mask = 0; mask < 2 ** MANAGED_GAME_OBJECTIVES.length; mask++) {
     signatures.add(signature);
   }
 }
-console.log('Objective checks passed: moving target, absence, pause, linger reset, completion, save compatibility, and cache signatures.');
+console.log('Objective checks passed: moving target, companion ant meeting, absence, pause, linger reset, completion, save compatibility, and cache signatures.');

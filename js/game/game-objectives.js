@@ -304,6 +304,12 @@ export class PondGameObjectives {
   isObjectiveNearby(objective, antPosition, onPondSurface, config) {
     if (objective.evaluator === 'shelter') return this.isNearShelter(antPosition);
     if (objective.evaluator === 'pondSurface') return onPondSurface;
+    if (objective.target === 'companionAnt') {
+      const radius = Number(config[objective.radiusKey]) || 0;
+      return (this.app.backgroundAnts ?? []).some(({ group }) => (
+        group?.parent && antPosition.distanceTo(group.position) <= radius
+      ));
+    }
     const target = this.landmarkPositions[objective.target];
     if (!target) return false;
     const radius = Number(config[objective.radiusKey]) || 0;
@@ -384,6 +390,7 @@ export class PondGameObjectives {
       return withDebugCompletion({
         id: objective.id,
         label,
+        hint: objective.hintKey,
         complete: objective.managed ? this.taskState[objective.id].complete : coreComplete,
         status: objective.status === 'core'
           ? 'core'

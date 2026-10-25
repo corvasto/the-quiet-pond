@@ -506,7 +506,18 @@ function renderChecklist(checklist) {
     item.className = 'game-checklist__item';
     item.classList.toggle('is-complete', task.complete);
     item.classList.toggle('is-active', task.status === 'active' || task.status === 'core');
-    item.textContent = t(task.label);
+    const copy = document.createElement('span');
+    copy.className = 'game-checklist__copy';
+    const label = document.createElement('span');
+    label.textContent = t(task.label);
+    copy.append(label);
+    if (task.hint && !task.complete) {
+      const hint = document.createElement('small');
+      hint.className = 'game-checklist__hint';
+      hint.textContent = t(task.hint);
+      copy.append(hint);
+    }
+    item.append(copy);
     elements.checklist.append(item);
   });
 }

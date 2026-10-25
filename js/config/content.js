@@ -71,6 +71,7 @@ export const OBJECTIVE_TUNING = Object.freeze({
   shelterRadius: 1.25,
   shelterPadding: 0.75,
   lampRadius: 0.5,
+  companionAntRadius: 0.5,
   fireflies: Object.freeze({
     // A start later than end intentionally defines a window that wraps across midnight.
     startHour: 20,

@@ -198,11 +198,16 @@ const wandererMethods = {
     this.backgroundAntMixers.forEach((mixer) => mixer.stopAllAction());
     this.backgroundAntMixers = [];
     this.backgroundAnts = [];
-    if (!PERFORMANCE.backgroundAnts || !this.ant?.group || !ground || !world) return;
+    if (!this.ant?.group || !ground || !world) return;
     const sourceClip = createBackgroundAntWalkClip(this.ant.animations);
     if (!sourceClip) return;
     const config = SCENE_PROPS.ant;
-    config.backgroundWanderers.forEach((anchorConfig, index) => {
+    const configuredAnts = config.backgroundWanderers ?? [];
+    const requestedAntCount = PERFORMANCE.backgroundAntCount;
+    const companionAnts = Number.isFinite(requestedAntCount)
+      ? configuredAnts.slice(0, Math.max(0, Math.floor(requestedAntCount)))
+      : configuredAnts;
+    companionAnts.forEach((anchorConfig, index) => {
       const placeholder = {
         anchor: new THREE.Vector3(anchorConfig.x, 0, anchorConfig.z),
         radius: anchorConfig.radius,

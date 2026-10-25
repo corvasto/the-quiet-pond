@@ -6,6 +6,7 @@ function defineObjective(definition) {
     status: 'discovery',
     evaluator: null,
     availability: 'always',
+    hintKey: null,
     target: null,
     radiusKey: null,
     managed: true,
@@ -43,9 +44,17 @@ export const GAME_OBJECTIVES = Object.freeze([
   defineObjective({
     id: 'reader',
     labelKey: 'objective.reader',
+    hintKey: 'objective.reader.hint',
     evaluator: 'proximity3d',
     target: 'reader',
     radiusKey: 'readerBookRadius',
+  }),
+  defineObjective({
+    id: 'companionAnt',
+    labelKey: 'objective.companionAnt',
+    evaluator: 'proximity3d',
+    target: 'companionAnt',
+    radiusKey: 'companionAntRadius',
   }),
   defineObjective({
     id: 'radio',

@@ -368,6 +368,19 @@ body.debug-ant-dragging #scene canvas {
   line-height: 1.4;
 }
 
+.game-checklist__copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.game-checklist__hint {
+  color: #77705c;
+  font-size: 0.66rem;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
 .game-checklist__item::before {
   display: grid;
   flex: 0 0 15px;

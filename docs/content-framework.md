@@ -133,11 +133,14 @@ Add metadata to `GAME_OBJECTIVES` in `js/content/objectives.js`.
 defineObjective({
   id: 'acorn',
   labelKey: 'objective.acorn',
+  hintKey: 'objective.acorn.hint', // Optional. Shown below the label until completion.
   evaluator: 'proximity3d',
   target: 'acorn',
   radiusKey: 'acornRadius',
 }),
 ```
+
+When an objective has a `hintKey`, add its translated message in `js/content/messages.js`. The checklist renders these hints generically and hides them after that objective is complete.
 
 | Evaluator | Checks |
 | --- | --- |
