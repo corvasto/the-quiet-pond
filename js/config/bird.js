@@ -7,6 +7,7 @@ export const BIRD_FLIGHT_CONFIG = Object.freeze({
   maximumTurnRate: 1.8,
   bankAngle: 0.45,
   analogDeadzone: 0.12,
+  collisionRadiusScale: 0.65,
   // Measured from the bottom of the collision sphere to terrain or water.
   minimumGroundClearance: 2,
   maximumAltitude: 28,

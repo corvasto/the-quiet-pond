@@ -67,7 +67,7 @@ export class BirdFlight {
     this.model.group.children[0].position.sub(center);
     const scale = SCENE_PROPS.bird.targetWidth / Math.max(size.x, size.z);
     this.model.group.scale.setScalar(scale);
-    this.radius = size.length() * scale * 0.5 + 0.04;
+    this.radius = (size.length() * scale * 0.5 + 0.04) * this.config.collisionRadiusScale;
     this.action.timeScale = recipe.speed;
     this.mixer.setTime(0);
     this.model.group.visible = false;

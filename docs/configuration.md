@@ -42,6 +42,8 @@ Keep the existing contact/path checks when tuning speed. Validate stopping near 
 
 The bird asset uses `loadOnDemand`: normal startup skips its model decoding, animation sampling, and collision preparation. The first selection prepares it, with cooperative browser yields; subsequent switches reuse the data. In Ant View its model/skeleton and debug sphere are detached from the scene, and it has no frame subscription. Pause also removes that subscription. Explore keeps only wing animation active, with no movement, collision queries, or follow-camera work. The asset remains in the service-worker pre-cache for offline availability.
 
+`birdFlight.collisionRadiusScale` scales the collision ball and its debug display together. The default `0.65` makes it 35 percent smaller than the measured animation-envelope sphere, giving the wings some clearance tolerance around nearby objects.
+
 ## Time and weather
 
 `TIME_CONFIG` starts at 10:30 and advances one game hour per 120 seconds. `WEATHER_CONFIG` sets randomized dry/rain durations and intensity. `TIME_OF_DAY` in `js/config/scene.js` sets shared dawn/dusk boundaries; decimal 0 or 24 means midnight.
