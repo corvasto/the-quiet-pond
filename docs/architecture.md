@@ -36,12 +36,17 @@ Core never imports gameplay controllers. The session injects settings and connec
 | `app-prop-placement.js` | Placement, lights, and colliders |
 | `app-wanderers.js` | Background actors |
 | `app-world-query.js` | Landmarks, surface queries, blockers, and frame listeners |
+| `flight-collision.js` | Cached capsule/triangle BVH, sphere collision, and swept flight movement |
 
 Startup selects models, loads required assets in parallel, compiles reservations, generates terrain/vegetation, places props, and builds collision data once. `PondApp.dispose()` releases listeners, mixers, models, weather/render resources, controls, canvas, and the animation loop. The local Water add-on provides disposal and render-target hooks.
+
+Model descriptors with `loadOnDemand` skip startup loading. `PondApp.loadDeferredModel()` shares in-flight requests, caches the loaded model, and disposes late results if the app has closed. The bird prepares only on first selection, subscribes to frames only while active and unpaused, and detaches its scene objects during ant play. Explore runs animation only while preserving its position and the free camera. Tree collision tapers with branch radii; local collars use dimensions recorded by the wood generator, without widening entire branches. Movement candidates follow minimum terrain clearance before solid collision checks.
 
 ## Movement and camera
 
 Keyboard and analog input drive camera-relative ground motion with acceleration/braking, normalized diagonals, and independent body turning. Swept checks and water support validate travel. Climbing uses bounded contacts on precomputed proxies; entry, transfer, and landing checks reject unsafe steps. Camera tracking runs after gameplay listeners, follows final position, and gently aligns with sustained travel while preserving pitch/zoom. Manual orbit or zoom pauses assist; C resets behind the ant, Explore uses the overview, and pause/focus/view changes release input.
+
+`js/game/bird-flight.js` owns the playable reward lifecycle, animation, inputs, camera following, and collision queries. It receives tuning through the session and uses public runtime methods to acquire solid collision sources and set its camera. `js/utils/flight-motion.js` integrates capped turns and smoothed speeds in bounded steps. Collision geometry is collected once from tree wood, rocks, solid models, and the burrow; the moving reader uses the runtime's updated bounds. Session routing suspends ant gameplay during bird control and preserves mounted climb state for the return switch. Saved objective completion restores the unlock; flight itself is not restored across reloads.
 
 ## State and offline operation
 

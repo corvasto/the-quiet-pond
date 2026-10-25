@@ -347,7 +347,7 @@ check(
 );
 check(
   gameModeSource.includes('DEBUG_COORDINATE_UPDATE_MS = 100')
-  && gameModeSource.includes('session?.getAntWorldPosition()'),
+  && gameModeSource.includes('session?.getPlayerWorldPosition()'),
   'The debug coordinate readout must use the bounded world-position sampler.',
 );
 check(

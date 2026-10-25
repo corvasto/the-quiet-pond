@@ -832,6 +832,12 @@ function appendBranchCollar(
   const center = branch.points[0].clone().addScaledVector(tangent, nominalRadius * 0.22);
   const axisLength = nominalRadius * 1.48;
   const collarRadius = nominalRadius * 1.22;
+  branch.collisionCollar = {
+    center: center.clone(),
+    direction: tangent.clone(),
+    halfLength: axisLength - collarRadius,
+    radius: collarRadius,
+  };
   const circumference = Math.max(nominalRadius, 0.05) * TAU;
   const uRepeats = Math.max(1, Math.round(circumference / 1.35));
   const phaseU = ((branchIndex + 1) * 0.61803398875) % 1;
@@ -1562,6 +1568,7 @@ export function createTree(options = {}) {
   return {
     group,
     woodMesh,
+    collisionBranches: skeleton.branches,
     leafMaterial: foliage.material,
     stats,
     perchAnchor,

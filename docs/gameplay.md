@@ -24,6 +24,8 @@ Pause offers resume/restart and three persistent local slots. Settings has Engli
 
 Press `P`/`Escape` to pause. `M`/Explore opens a free orbit camera with diorama pan/zoom. With climb debug enabled, `Shift`+left-drag in Explore relocates the ant; the burrow gets an Explore-only marker after seed pickup.
 
+Completing every checklist objective unlocks the playable bird and reveals the character switch in the top controls. B toggles it on desktop. The bird flies with curved steering, banking, 1.5x wing animation, solid-object collision, and a minimum clearance above ground/water. On mobile, the joystick and camera view steer flight and altitude, and A/B are hidden. The same switch returns to the ant at its previous position. `?debug=1` enables this reward for testing without changing checklist progress.
+
 ## Object roaming
 
 Climbable targets are the hero ash, companion trees, ground/shoreline rocks, seated reader, radio, corner lamp, and tent. Rocks remain eligible down to `rock.minimumUsableRadius`, even barely wider than the ant. `Space` climbs when the ant's head is within `activationDistance` of a valid low contact; the prompt names the target. Movement or strafing never climbs by itself.

@@ -33,6 +33,9 @@ const elements = {
   pauseButton: byId('pause-button'),
   settingsButton: byId('settings-button'),
   exploreButton: byId('explore-button'),
+  birdSwitchButton: byId('bird-switch-button'),
+  birdSwitchLabel: document.querySelector('#bird-switch-button .bird-switch__label'),
+  birdSwitchShort: document.querySelector('#bird-switch-button .bird-switch__short'),
   resetCameraButton: byId('reset-camera-button'),
   aboutShortcut: byId('about-shortcut'),
   aboutDialog: byId('about-dialog'),
@@ -42,10 +45,17 @@ const elements = {
   gameVersion: byId('game-version'),
   debugCoordinates: byId('debug-coordinates'),
   debugCoordinateValues: byId('debug-coordinate-values'),
+  debugPositionLabel: byId('debug-position-label'),
+  debugTimeInput: byId('debug-time-input'),
+  debugTimeApply: byId('debug-time-apply'),
+  debugTimeFreeze: byId('debug-time-freeze'),
+  debugTimeReset: byId('debug-time-reset'),
   debugCameraPosition: byId('debug-camera-position'),
   debugCameraTarget: byId('debug-camera-target'),
   debugCameraRotation: byId('debug-camera-rotation'),
   antHint: byId('ant-hint'),
+  birdHint: byId('bird-hint'),
+  exploreReturnLabel: byId('explore-return-label'),
   exploreHint: byId('explore-hint'),
   touchHint: byId('touch-hint'),
   debugKeyHint: byId('debug-key-hint'),
@@ -495,6 +505,7 @@ function updateGameState(snapshot) {
   elements.progressFill.style.width = `${(depositedSeeds / totalSeeds) * 100}%`;
   document.body.dataset.gamePhase = snapshot.phase;
   renderChecklist(snapshot.checklist);
+  updateExploreControl();
   requestAutosave();
 }
 
@@ -528,10 +539,11 @@ function updatePrompt(prompt) {
 }
 
 function renderDebugCoordinates() {
-  const position = session?.getAntWorldPosition();
+  const position = session?.getPlayerWorldPosition();
   if (!position || !elements.debugCoordinateValues) return;
   const camera = session?.getCameraDebugValues();
   if (!camera) return;
+  elements.debugPositionLabel.textContent = t(session.isBirdActive() ? 'debug.bird.position' : 'debug.coordinates.title');
   const formatVector = (value) => `x ${value.x.toFixed(3)}  y ${value.y.toFixed(3)}  z ${value.z.toFixed(3)}`;
   const formatRotation = (value) => formatVector({
     x: value.x * 180 / Math.PI,
@@ -566,11 +578,17 @@ function syncDebugCoordinates() {
     return;
   }
   elements.debugCoordinates.hidden = false;
+  if (!elements.debugTimeInput.value) setDebugTimeInput(latestGameHour);
   renderDebugCoordinates();
   debugCoordinateInterval ??= window.setInterval(
     renderDebugCoordinates,
     DEBUG_COORDINATE_UPDATE_MS,
   );
+}
+
+function setDebugTimeInput(hour) {
+  const minutes = Math.round(((hour % 24 + 24) % 24) * 60) % 1440;
+  elements.debugTimeInput.value = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
 let radioCaptionTimeout = null;
@@ -678,17 +696,31 @@ function updateLoadingProgress(value) {
 
 function updateExploreControl() {
   const exploreActive = session?.isExploreActive() ?? false;
-  const debugRelocationActive = exploreActive && (session?.isClimbDebugEnabled() ?? false);
-  elements.exploreButton.textContent = t(exploreActive ? 'ui.antView' : 'ui.explore');
+  const birdActive = session?.isBirdActive() ?? false;
+  const birdPreparing = session?.isBirdPreparing() ?? false;
+  const returnLabel = birdActive ? 'ui.birdView' : 'ui.antView';
+  const debugRelocationActive = session?.canDebugRelocateAnt() ?? false;
+  elements.exploreButton.textContent = t(exploreActive ? returnLabel : 'ui.explore');
   elements.exploreButton.setAttribute('aria-pressed', String(exploreActive));
-  elements.antHint.hidden = exploreActive;
+  elements.exploreReturnLabel.textContent = t(returnLabel);
+  elements.antHint.hidden = exploreActive || birdActive;
+  elements.birdHint.hidden = exploreActive || !birdActive;
+  elements.birdSwitchButton.hidden = !(session?.canPlayBird() ?? false);
+  elements.birdSwitchButton.disabled = birdPreparing;
+  elements.birdSwitchLabel.textContent = t(birdPreparing ? 'ui.birdPreparing' : birdActive ? 'ui.playAsAnt' : 'ui.flyAsBird');
+  elements.birdSwitchShort.textContent = birdPreparing ? '...' : t(birdActive ? 'ui.ant' : 'ui.bird');
+  elements.birdSwitchButton.setAttribute('aria-pressed', String(birdActive));
+  elements.birdSwitchButton.setAttribute('aria-label', `${elements.birdSwitchLabel.textContent} (B)`);
+  elements.birdSwitchButton.title = `${elements.birdSwitchLabel.textContent} (B)`;
   elements.exploreHint.hidden = !exploreActive;
   elements.resetCameraButton.hidden = exploreActive;
-  elements.touchHint.textContent = t(exploreActive ? 'hint.touchExplore' : 'hint.touchLook');
+  elements.resetCameraButton.setAttribute('aria-label', t(birdActive ? 'ui.resetBirdCamera.aria' : 'ui.resetCamera.aria'));
+  elements.touchHint.textContent = t(exploreActive ? 'hint.touchExplore' : birdActive ? 'hint.touchBird' : 'hint.touchLook');
   elements.debugRelocateHint.hidden = !debugRelocationActive;
   elements.radioDebugHint.hidden = !(session?.canDebugControlRadio() ?? false);
   document.body.classList.toggle('debug-ant-relocate', debugRelocationActive);
   document.body.classList.toggle('game-explore-active', exploreActive);
+  document.body.classList.toggle('game-bird-active', birdActive);
   syncDebugCoordinates();
 }
 
@@ -772,6 +804,22 @@ function toggleExplore() {
   if (!session.toggleExplore()) {
     updatePrompt('prompt.explore.finishClimb');
     return;
+  }
+  updateExploreControl();
+  requestAnimationFrame(() => session?.focusScene());
+}
+
+async function toggleBird() {
+  if (!session || !gameReady || paused || !elements.settingsDialog.hidden || !elements.aboutDialog.hidden) return;
+  if (!session.canPlayBird() || session.isBirdPreparing()) return;
+  clearGameInput();
+  try {
+    const switched = await session.toggleBird();
+    if (switched) clearGameInput();
+    else if (!paused) showRadioCaption(t('prompt.bird.noRoom'), 4);
+  } catch (error) {
+    console.warn('[the-quiet-pond] Could not prepare bird flight.', error);
+    showRadioCaption(t('prompt.bird.loadFailed'), 5);
   }
   updateExploreControl();
   requestAnimationFrame(() => session?.focusScene());
@@ -926,6 +974,11 @@ window.addEventListener('keydown', (event) => {
     toggleExplore();
     return;
   }
+  if (event.code === 'KeyB' && !event.repeat && session?.canPlayBird()) {
+    event.preventDefault();
+    toggleBird();
+    return;
+  }
   if (event.code === 'KeyC' && !event.repeat) {
     event.preventDefault();
     resetCameraView();
@@ -935,7 +988,7 @@ window.addEventListener('keydown', (event) => {
     if (session?.isExploreActive()) return;
     event.preventDefault();
     if (canMoveAnt() && !event.repeat) {
-      if (session?.isFlightEnabled()) {
+      if (session?.isFlightEnabled() || session?.isBirdActive()) {
         heldFlightCodes.add(event.code);
         session.setMovementKey('up', true);
       } else session?.toggleClimb();
@@ -978,7 +1031,7 @@ window.addEventListener('keydown', (event) => {
     showRadioCaption(t('debug.weather', { phase }), 3);
     return;
   }
-  if ((event.code === 'ControlLeft' || event.code === 'ControlRight') && session?.isFlightEnabled()) {
+  if ((event.code === 'ControlLeft' || event.code === 'ControlRight') && (session?.isFlightEnabled() || session?.isBirdActive())) {
     event.preventDefault();
     if (canMoveAnt() && !event.repeat) {
       heldFlightCodes.add(event.code);
@@ -1033,6 +1086,19 @@ elements.aboutShortcut.addEventListener('click', openAboutDialog);
 elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
+elements.birdSwitchButton.addEventListener('click', toggleBird);
+elements.debugTimeApply.addEventListener('click', () => {
+  if (!elements.debugTimeInput.reportValidity()) return;
+  const [hours, minutes] = elements.debugTimeInput.value.split(':').map(Number);
+  session?.setDebugTime(hours + minutes / 60, { freeze: elements.debugTimeFreeze.checked });
+});
+elements.debugTimeFreeze.addEventListener('change', () => {
+  session?.setDebugTimeFrozen(elements.debugTimeFreeze.checked);
+});
+elements.debugTimeReset.addEventListener('click', () => {
+  session?.clearDebugTime();
+  setDebugTimeInput(latestGameHour);
+});
 elements.resetCameraButton.addEventListener('click', resetCameraView);
 elements.restartButton.addEventListener('click', () => {
   saveActiveSlot();

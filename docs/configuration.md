@@ -10,6 +10,8 @@ Reload code-level changes. Quality is selected at startup; the world is not rebu
 
 `js/config/world.js` owns `DEBUG_CONFIG`. Debug and G are off by default; only `?debug=1` enables startup diagnostics, G toggle, Explore relocation, objective markers, and radio tests. Missing, empty, zero, or other values disable it. The switch is not saved. Combine with quality as `?q=mid&debug=1`; remove it and reload for normal play. Checklist completion shortcuts remain unset.
 
+The debug overlay's Time preview accepts an exact hour/minute and can freeze that preview. Use game clock restores the normal time. Preview time feeds the environment, time-based objective availability, radio, and ambience; it is kept separate from the saved world clock. Debug time editing adds no extra frame subscription.
+
 | Value | Full | Mid | Low |
 | --- | --- | --- | --- |
 | Scene generation | High | High | High |
@@ -35,6 +37,10 @@ Ground travel uses the camera's horizontal heading when movement starts or chang
 The camera smooths positional follow and horizontal travel alignment. `assistEnabled` toggles assist; `assistDelay` defaults to 0.45 seconds, manual orbit/zoom pauses it for `assistResumeDelay` (2.5 seconds), `assistResponsiveness` sets easing, and `assistMaxSpeed` caps radians/second. It preserves pitch/zoom and stops with travel. Defaults: distance 1.5, height 0.85, max distance 3. C/reset restores behind-ant framing. `followFacing` is a separate, disabled direct-chase mode.
 
 Keep the existing contact/path checks when tuning speed. Validate stopping near obstacles, pond support, surface transitions, and low-FPS behavior in the browser. See [controls.md](controls.md) and [verification.md](verification.md).
+
+`js/config/bird.js` owns `POND_GAME.birdFlight`: flight speed, climb speed, acceleration/braking, turn response/rate, banking, camera distance/height, and altitude limits. `minimumGroundClearance` defaults to 2 scene units, measured from the bottom of the collision sphere to terrain or water; height uses Y. Movement follows this clearance over rising terrain. The maximum altitude is a world-space Y limit. Low/Mid/Full all support the unlocked bird. Its asset recipe in `js/content/assets.js` sets the model size and 1.5x flight animation playback. The controller samples the wing cycle once to size the collision sphere, strips animated root body movement, and builds a static collision BVH once. Trees use tapered capsules along their authored branch paths with separate local junction collars; solid props use triangles. Flight queries local BVH leaves and the reader's existing dynamic bounds, with small swept steps and sliding. Grass/leaves remain soft decoration. The top switch unlocks after all objectives; `?debug=1` bypasses the unlock only for that URL.
+
+The bird asset uses `loadOnDemand`: normal startup skips its model decoding, animation sampling, and collision preparation. The first selection prepares it, with cooperative browser yields; subsequent switches reuse the data. In Ant View its model/skeleton and debug sphere are detached from the scene, and it has no frame subscription. Pause also removes that subscription. Explore keeps only wing animation active, with no movement, collision queries, or follow-camera work. The asset remains in the service-worker pre-cache for offline availability.
 
 ## Time and weather
 
