@@ -23,7 +23,7 @@ import { Environment } from './environment.js';
 import { Fireflies } from './fireflies.js';
 import { LampMoths } from './moths.js';
 import { RainWeather } from './rain.js';
-import { loadModelProps } from '../props/model-prop.js';
+import { loadModelProp, loadModelProps } from '../props/model-prop.js';
 import { createObjectGroundFootprint } from '../props/model-surface-proxy.js';
 import {
   createModelPropPlacement,
@@ -244,6 +244,7 @@ export class PondApp {
     this.pondWater = null;
     this.activePondWater = null;
     this.modelProps = {};
+    this.deferredModelLoads = new Map();
     this.sceneProps = Object.freeze({});
     this.radio = null;
     this.reader = null;
@@ -473,7 +474,10 @@ export class PondApp {
       this.renderer.capabilities.getMaxAnisotropy(),
     );
     this.sceneProps = selectSceneProps(SCENE_PROPS, this.mode);
-    this.modelProps = await loadModelProps(this.sceneProps, {
+    const startupProps = Object.fromEntries(
+      Object.entries(this.sceneProps).filter(([, config]) => !config.loadOnDemand),
+    );
+    this.modelProps = await loadModelProps(startupProps, {
       anisotropy,
       onProgress: (progress) => this.onLoadProgress(4 + progress * 68),
     });
@@ -489,6 +493,28 @@ export class PondApp {
     this.running = true;
     this.clock.reset();
     this.renderer.setAnimationLoop(() => this.animate());
+  }
+
+  async loadDeferredModel(id) {
+    if (this.modelProps[id]) return this.modelProps[id];
+    if (this.deferredModelLoads.has(id)) return this.deferredModelLoads.get(id);
+    const config = this.sceneProps[id];
+    if (!config?.loadOnDemand || this.disposed) throw new Error(`Deferred model unavailable: ${id}`);
+    const pending = loadModelProp({
+      url: config.url,
+      name: config.modelName,
+      targetWidth: config.targetWidth,
+      anisotropy: Math.min(PERFORMANCE.modelAnisotropy, this.renderer.capabilities.getMaxAnisotropy()),
+    }).then((model) => {
+      if (this.disposed) {
+        model.group.userData.dispose();
+        throw new Error('The game was closed while loading the model.');
+      }
+      this.modelProps[id] = model;
+      return model;
+    }).finally(() => this.deferredModelLoads.delete(id));
+    this.deferredModelLoads.set(id, pending);
+    return pending;
   }
 
   disposeWorld() {

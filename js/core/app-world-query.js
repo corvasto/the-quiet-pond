@@ -2,6 +2,18 @@ import * as THREE from 'three';
 import { SCENE_PROPS } from '../config/index.js';
 
 const WORLD_QUERY_METHODS = {
+  getFlightCollisionSources() {
+    const trees = [this.tree, ...(this.forest?.trees ?? [])].filter(Boolean);
+    return [
+      ...trees.map((tree) => ({ object: tree.woodMesh, branches: tree.collisionBranches })),
+      ...[
+        this.ground?.rockSurfaceMesh,
+        this.ground?.pondRockSurfaceMesh,
+        this.radioSurfaceProxy ?? this.radio?.group,
+        ...['tent', 'frog', 'streetLamp', 'lollipop', 'cat'].map((id) => this.modelProps[id]?.group),
+      ].filter(Boolean).map((object) => ({ object })),
+    ];
+  },
   setModelVisibility(id, visible) {
     const model = this.modelProps[id];
     if (!model) return false;

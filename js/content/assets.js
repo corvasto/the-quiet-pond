@@ -45,7 +45,7 @@ function defineAsset({
   placement = {},
   animation = null,
   // modes selects where the asset is included and loaded. requiredModes is a subset
-  // where a load failure stops startup; failures in other selected modes stay optional.
+  // where a load failure must be reported. Deferred assets report on first request.
   modes = ['game'],
   requiredModes = [],
   requires = null,
@@ -93,6 +93,21 @@ function defineAsset({
 }
 
 export const ASSET_CATALOG = Object.freeze({
+  bird: defineAsset({
+    file: 'bird_fly.glb',
+    label: 'Playable bird',
+    size: { width: 0.85 },
+    orientation: { yawOffsetDegrees: 0 },
+    placement: { strategy: 'playable-flight' },
+    animation: {
+      clip: 'Scene',
+      speed: 1.5,
+      // Keep the wing animation while the flight controller owns body motion.
+      removeTracks: ['Bone_01.position', 'Bone_01.quaternion', 'Bone_01.scale'],
+    },
+    runtime: { role: 'playable-flight', loadOnDemand: true },
+    requiredModes: ['game'],
+  }),
   radio: defineAsset({
     file: 'old_radio.glb',
     label: 'Old radio on woodland rock',

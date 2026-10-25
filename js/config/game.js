@@ -9,6 +9,7 @@ import {
 } from './content.js';
 import { RADIO_AUDIO_CONFIG } from './radio.js';
 import { AMBIENCE_CONFIG } from './ambience.js';
+import { BIRD_FLIGHT_CONFIG } from './bird.js';
 import {
   ANT_CAMERA_FOLLOW_CONFIG,
   ANT_MOVEMENT_CONFIG,
@@ -35,4 +36,5 @@ export const POND_GAME = Object.freeze({
   antMovementRadius: ANT_MOVEMENT_RADIUS,
   groundReservations: GAME_GROUND_RESERVATIONS,
   climbing: CLIMBING_CONFIG,
+  birdFlight: BIRD_FLIGHT_CONFIG,
 });

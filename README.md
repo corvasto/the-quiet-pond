@@ -64,6 +64,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 | C | Reset the camera behind the ant |
 | Space | Climb or get down |
 | M | Toggle Explore |
+| B or character switch | Fly as the bird after completing every objective, or return to the ant |
 | P or Escape | Pause or resume |
 
 ### Mobile
@@ -74,6 +75,8 @@ Load the game once online and let it finish caching for offline play. Menus vary
 - Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 
 See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for camera behavior, traversal, and objectives.
+
+Completing the checklist unlocks the playable bird. Flight has smooth curved steering, banking, object collision, and a minimum clearance above terrain and water. On mobile, use the joystick and look up/down to change altitude; A/B are hidden while flying. The top character switch returns to the ant. `?debug=1` makes the bird available for testing before completing the checklist.
 
 ## Explore the pond
 
@@ -106,6 +109,8 @@ build/release/      Generated minified production site (not committed)
 Settings and quality profiles live in `js/config/`. Add `?q=full`, `?q=mid`, or `?q=low` to the URL to choose the browser startup profile. You can also change quality in the in-game Settings menu (Auto, Low, Mid, Full), alongside language, chimes, FPS diagnostics, and About. Auto selects Mid on mobile and Full elsewhere. All profiles use High Quality world generation; Full is uncapped, while Mid and Low target about 20 FPS. Applying settings and reloading saves progress. See [configuration](docs/configuration.md), [architecture](docs/architecture.md), [content framework](docs/content-framework.md), and [scene customization](docs/scene-customization.md).
 
 Debug tools require `?debug=1`. Combine it with a startup profile, such as `?q=mid&debug=1`.
+
+Time preview in the debug overlay lets you apply any hour/minute, freeze the preview, and return to the game clock. The bird prepares on first selection and has no animation/physics frame callback or attached model during ant play.
 
 ## Development and verification
 

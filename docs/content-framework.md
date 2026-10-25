@@ -17,6 +17,8 @@ JavaScript registries support module-relative asset URLs, comments, frozen value
 
 Put the GLB in `assets/models/`, then add a `defineAsset()` entry to `ASSET_CATALOG` in `js/content/assets.js`.
 
+For a model used only by an optional gameplay mode, `runtime.loadOnDemand: true` defers decoding until `PondApp.loadDeferredModel(id)` is called. Keep its asset in the offline pre-cache. The bird uses this path; preparation failure is reported when selected, while ant play remains available.
+
 ```js
 acorn: defineAsset({
   file: 'acorn.glb',

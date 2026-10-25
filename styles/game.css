@@ -177,6 +177,52 @@ body.debug-ant-dragging #scene canvas {
   white-space: pre;
 }
 
+.debug-time-controls {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+  pointer-events: auto;
+  font-size: 0.8rem;
+}
+
+.debug-time-controls summary {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.debug-time-controls__row,
+.debug-time-controls__freeze {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 0;
+}
+
+.debug-time-controls__freeze span {
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.debug-time-controls input[type='time'],
+.debug-time-controls button {
+  min-height: 36px;
+  border: 1px solid #7f8770;
+  border-radius: 8px;
+  padding: 5px 9px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.debug-time-controls input[type='time'] {
+  min-width: 0;
+  flex: 1;
+}
+
+.debug-time-controls button {
+  cursor: pointer;
+}
+
 .game-brand {
   top: 25px;
   left: 30px;
@@ -594,6 +640,14 @@ body.debug-ant-dragging #scene canvas {
   display: flex;
   gap: 7px;
   align-items: center;
+}
+
+.bird-switch__short {
+  display: none;
+}
+
+body.game-bird-active .mobile-game-actions {
+  display: none;
 }
 
 .game-actions button,
@@ -1304,6 +1358,13 @@ kbd {
 }
 
 @media (max-width: 760px), (pointer: coarse), (hover: none) {
+  .bird-switch__label {
+    display: none;
+  }
+
+  .bird-switch__short {
+    display: inline;
+  }
   #scene canvas {
     touch-action: none;
   }

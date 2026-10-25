@@ -19,7 +19,7 @@
   </header>
 
   <aside id="debug-coordinates" class="debug-coordinates" aria-label="Live ant and camera values" data-i18n-aria-label="debug.coordinates.aria" hidden>
-    <span data-i18n="debug.coordinates.title">Ant position</span>
+    <span id="debug-position-label" data-i18n="debug.coordinates.title">Ant position</span>
     <output id="debug-coordinate-values" aria-live="off">x 0.000  y 0.000  z 0.000</output>
     <span data-i18n="debug.camera.position">Explore camera position</span>
     <output id="debug-camera-position" aria-live="off">x 0.000  y 0.000  z 0.000</output>
@@ -27,6 +27,16 @@
     <output id="debug-camera-target" aria-live="off">x 0.000  y 0.000  z 0.000</output>
     <span data-i18n="debug.camera.rotation">Camera orientation (degrees)</span>
     <output id="debug-camera-rotation" aria-live="off">x 0.000  y 0.000  z 0.000</output>
+    <details class="debug-time-controls">
+      <summary data-i18n="debug.time.title">Time preview</summary>
+      <label for="debug-time-input" data-i18n="debug.time.input">Time of day</label>
+      <div class="debug-time-controls__row">
+        <input id="debug-time-input" type="time" step="60" required>
+        <button id="debug-time-apply" type="button" data-i18n="debug.time.apply">Apply</button>
+      </div>
+      <label class="debug-time-controls__freeze"><input id="debug-time-freeze" type="checkbox" checked><span data-i18n="debug.time.freeze">Freeze time</span></label>
+      <button id="debug-time-reset" type="button" data-i18n="debug.time.reset">Use game clock</button>
+    </details>
   </aside>
 
   <section class="game-objective game-checklist" aria-labelledby="game-objective-title">
@@ -61,6 +71,7 @@
     <button id="pause-button" type="button" aria-expanded="false" data-i18n="ui.pause">Pause</button>
     <button id="reset-camera-button" class="reset-camera-button" type="button" aria-label="Reset camera behind the ant (C)" data-i18n-aria-label="ui.resetCamera.aria"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.5 7M4 4v6h6"/></svg><span data-i18n="ui.resetCamera">Reset view</span></button>
     <button id="explore-button" type="button" aria-pressed="false" data-i18n="ui.explore">Explore</button>
+    <button id="bird-switch-button" class="bird-switch-button" type="button" aria-pressed="false" hidden><span class="bird-switch__label">Fly as bird</span><span class="bird-switch__short" aria-hidden="true">Bird</span></button>
     <button id="settings-button" class="settings-button" type="button" aria-expanded="false" aria-controls="settings-dialog" aria-label="Settings" data-i18n-aria-label="ui.settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3v-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87L4.2 7.07l2.83-2.83.06.06A1.7 1.7 0 0 0 8.96 4 1.7 1.7 0 0 0 10 2.44V2h4v.44A1.7 1.7 0 0 0 15.04 4a1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9 1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span data-i18n="ui.settings">Settings</span></button>
     <button id="about-shortcut" class="about-shortcut" type="button" aria-label="About" data-i18n-aria-label="ui.about.button">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>
@@ -97,7 +108,8 @@
         <span id="radio-debug-hint" hidden><kbd>R</kbd> <span data-i18n="hint.radioMusic">radio music</span> <kbd>V</kbd> <span data-i18n="hint.testVoice">test voice</span></span>
       </div>
     </div>
-    <div id="explore-hint" class="game-hint__row" hidden><span data-i18n="hint.dragOrbit">Drag to orbit</span><span data-i18n="hint.rightDragPan">Right-drag to pan</span><span data-i18n="hint.wheelZoom">Scroll to zoom</span><span id="debug-relocate-hint" hidden><kbd>Shift</kbd> + <span data-i18n="hint.leftDragMoveAnt">left drag move ant</span></span><span><kbd>M</kbd> <span data-i18n="ui.antView">Ant view</span></span></div>
+    <div id="bird-hint" class="game-hint__row" hidden><span><kbd>WASD</kbd> <span data-i18n="hint.fly">fly</span></span><span><kbd>Space</kbd> <span data-i18n="hint.rise">rise</span></span><span><kbd>Ctrl</kbd> <span data-i18n="hint.descend">descend</span></span><span><kbd>B</kbd> <span data-i18n="ui.playAsAnt">Play as ant</span></span><span><kbd>M</kbd> <span data-i18n="hint.explore">explore</span></span></div>
+    <div id="explore-hint" class="game-hint__row" hidden><span data-i18n="hint.dragOrbit">Drag to orbit</span><span data-i18n="hint.rightDragPan">Right-drag to pan</span><span data-i18n="hint.wheelZoom">Scroll to zoom</span><span id="debug-relocate-hint" hidden><kbd>Shift</kbd> + <span data-i18n="hint.leftDragMoveAnt">left drag move ant</span></span><span><kbd>M</kbd> <span id="explore-return-label" data-i18n="ui.antView">Ant view</span></span></div>
   </div>
   <p id="touch-hint" class="touch-hint" data-i18n="hint.touchLook">Drag the scene to look · Pinch to zoom · ↶ Reset view</p>
 
@@ -236,6 +248,7 @@
               <ul class="game-dialog__model-credits">
                 <li><a href="https://sketchfab.com/3d-models/an-animated-cat-aec25699660043a29595f9572149d1e8" target="_blank" rel="noopener noreferrer">An Animated Cat</a> by <a href="https://sketchfab.com/Evil_Katz" target="_blank" rel="noopener noreferrer">Evil_Katz</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
                 <li><a href="https://sketchfab.com/3d-models/ant-dab7080251674ef98fc83b7604be2ffc" target="_blank" rel="noopener noreferrer">ANT</a> by <a href="https://sketchfab.com/MAXDESIGN" target="_blank" rel="noopener noreferrer">MAXDESIGN-3D</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
+                <li><a href="https://sketchfab.com/3d-models/bird-fly-a2a614daf8cd4b469859f231d5fd6514" target="_blank" rel="noopener noreferrer">bird fly</a> by <a href="https://sketchfab.com/mr.film" target="_blank" rel="noopener noreferrer">mr.film</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Rescaled, body motion removed from animation, flight playback at 1.5×.</li>
                 <li><a href="https://sketchfab.com/3d-models/giant-cockroach-4b19ed8851f74c278eef835250a82896" target="_blank" rel="noopener noreferrer">Giant Cockroach</a> by <a href="https://sketchfab.com/Drillimpact" target="_blank" rel="noopener noreferrer">Drillimpact</a> - <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></li>
                 <li><a href="https://sketchfab.com/3d-models/common-frog-d1c6eae168a04f2b96afd4b16d4cf560" target="_blank" rel="noopener noreferrer">Common Frog</a> by <a href="https://sketchfab.com/kenchoo" target="_blank" rel="noopener noreferrer">kenchoo</a> - <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a></li>
                 <li><a href="https://sketchfab.com/3d-models/generic-narcissus-flower-cf16e483ce7b4b9281b62366d9b1e52c" target="_blank" rel="noopener noreferrer">Generic narcissus flower</a> by <a href="https://sketchfab.com/assetfactory" target="_blank" rel="noopener noreferrer">assetfactory</a> - <a href="https://sketchfab.com/licenses" target="_blank" rel="noopener noreferrer">Sketchfab Standard license</a></li>

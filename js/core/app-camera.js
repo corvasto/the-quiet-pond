@@ -9,6 +9,28 @@ function easeInOut(value) {
 }
 
 const cameraMethods = {
+  setFlyingActorView(position, target, tuning) {
+    this.clearCameraOrbitMomentum();
+    this.clearAntMovement();
+    this.cameraTween = null;
+    this.activeView = 'bird';
+    this.controls.enabled = true;
+    this.controls.enableRotate = true;
+    this.controls.enablePan = false;
+    this.controls.enableZoom = true;
+    this.controls.zoomToCursor = false;
+    this.controls.autoRotate = false;
+    this.controls.minDistance = tuning.minimumDistance;
+    this.controls.maxDistance = tuning.maximumDistance;
+    this.controls.minPolarAngle = 0.18;
+    this.controls.maxPolarAngle = Math.PI - 0.18;
+    this.controls.dampingFactor = 0.055;
+    this.controls.rotateSpeed = 0.52;
+    this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+    this.camera.position.copy(position);
+    this.controls.target.copy(target);
+    this.controls.update();
+  },
   getAntCameraFacingDirection(target = new THREE.Vector3()) {
     if (!this.ant?.group?.parent) return null;
     this.ant.group.getWorldQuaternion(this.antCameraWorldQuaternion);
