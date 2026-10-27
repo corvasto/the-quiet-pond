@@ -318,6 +318,7 @@ check(getNightAmount(TIME_OF_DAY.dawnEndHour) === 0, 'Dawn must finish in daytim
 
 const gameModeSource = fs.readFileSync(path.join(projectRoot, 'js/main.js'), 'utf8');
 const gameSessionSource = fs.readFileSync(path.join(projectRoot, 'js/game/game-session.js'), 'utf8');
+const debugOverlaySource = fs.readFileSync(path.join(projectRoot, 'js/ui/debug-overlay.js'), 'utf8');
 check(!/Version \d+\.\d+\.\d+/.test(gameHtml), 'index.html contains a hardcoded app version.');
 check(!gameHtml.includes("navigator.serviceWorker.register('./service-worker.js'"), 'index.html contains an unversioned service-worker registration.');
 check(gameHtml.includes('aria-valuemax="1"'), 'index.html needs a valid initial seed progress maximum before startup.');
@@ -345,8 +346,8 @@ check(
   'The FPS diagnostic must subscribe to rendered frames only while enabled.',
 );
 check(
-  gameModeSource.includes('DEBUG_COORDINATE_UPDATE_MS = 100')
-  && gameModeSource.includes('session?.getPlayerWorldPosition()'),
+  debugOverlaySource.includes('DEBUG_COORDINATE_UPDATE_MS = 100')
+  && debugOverlaySource.includes('session?.getPlayerWorldPosition()'),
   'The debug coordinate readout must use the bounded world-position sampler.',
 );
 check(

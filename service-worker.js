@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.0.1';
+const RELEASE_VERSION = '1.0.2';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
@@ -29,6 +29,8 @@ const APP_SHELL = [
   './js/main.js',
   './js/ui/localization.js',
   './js/ui/debug-relocation.js',
+  './js/ui/debug-overlay.js',
+  './js/ui/debug-controls.js',
   './js/config/index.js',
   './js/config/app.js',
   './js/config/quality.js',

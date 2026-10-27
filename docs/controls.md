@@ -34,9 +34,7 @@ In Explore, left drag orbits, right drag pans, and wheel zooms; gameplay movemen
 
 Debug is off by default. Add `?debug=1` (or `?q=mid&debug=1`) to enable diagnostics: G toggles climb overlays, Y toggles flight (movement keys, Space up, Ctrl down), and Shift+left-drag in Explore relocates a grounded ant to valid terrain. R cycles radio music; V tests voices. Debug tools are not in the touch panel. Remove the query and reload to disable them.
 
-In the G debug overlay, Skip to offering completes seed collection and makes the offering leaf available at the burrow. This changes and autosaves the active slot. It is available during seed collection, including while carrying a seed; it is disabled once the offering is available or complete.
-
-While the debug overlay is active, select an incomplete checklist circle to complete that task. Completing seeds makes the offering available; completing the offering also completes the seeds. These shortcuts change and autosave the active slot. Tapping an open discovery card tilts it toward the touched side and makes it spring back, unless reduced motion is enabled.
+While the debug overlay is active, select an incomplete checklist circle to complete that task. Select the Seeds circle to complete seed collection and make the offering leaf available at the burrow, including while carrying a seed. Completing the offering also completes the seeds. These shortcuts change and autosave the active slot and are disabled for completed tasks. Tapping an open discovery card tilts it toward the touched side and makes it spring back, unless reduced motion is enabled.
 
 With `?debug=1`, B or the character switch also enables the playable bird immediately, without completing or changing objectives. Its debug overlay shows the bird position and collision sphere. The debug bypass is not stored in saves. Normal bird access is restored from the saved checklist; reload starts in Ant View.
 
