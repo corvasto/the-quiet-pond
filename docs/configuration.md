@@ -46,7 +46,7 @@ The bird asset uses `loadOnDemand`: normal startup skips its model decoding, ani
 
 ## Time and weather
 
-`TIME_CONFIG` starts at 10:30 and advances one game hour per 120 seconds. `WEATHER_CONFIG` sets randomized dry/rain durations and intensity. `TIME_OF_DAY` in `js/config/scene.js` sets shared dawn/dusk boundaries; decimal 0 or 24 means midnight.
+`TIME_CONFIG` starts at 10:30 and advances one game minute per real second, completing a full day in 24 minutes. `WEATHER_CONFIG` sets randomized dry/rain durations in real seconds and intensity; rain lasts 35-95 seconds. `TIME_OF_DAY` in `js/config/scene.js` sets shared dawn/dusk boundaries; decimal 0 or 24 means midnight.
 
 `DEFAULTS` sets deterministic seed, season, terrain/tree shape, wind, and environment. Habitat is fixed to Pond. `DEFAULTS.cameraFov` sets the gameplay lens (36 degrees). In `js/config/scene.js`, `CAMERA_VIEWS.explore.position` and `.target` set the Explore overview; the separate `hero` pose remains the initial and reader framing. With `?debug=1`, the debug overlay shows live camera position, target, and Euler orientation in degrees. Model transform defaults set game-prop scale and offset.
 

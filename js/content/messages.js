@@ -39,8 +39,8 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   }),
   'objective.reader': defineMessage({ en: 'Inspect the book', id: 'Periksa buku' }),
   'objective.reader.hint': defineMessage({
-    en: "Climb from the reader's left foot.",
-    id: 'Panjat dari kaki kiri pembaca.',
+    en: "Climb from the reader's right foot.",
+    id: 'Panjat dari kaki kanan pembaca.',
   }),
   'objective.companionAnt': defineMessage({ en: 'Meet another ant', id: 'Temui semut lain' }),
   'objective.radio': defineMessage({ en: 'Listen to the radio', id: 'Dengarkan radio' }),
