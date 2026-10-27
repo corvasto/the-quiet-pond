@@ -347,6 +347,11 @@ export class PondGameSession {
     return this.climbing?.isDebugEnabled() ?? false;
   }
 
+  debugSkipToOffering() {
+    if (!this.isClimbDebugAvailable() || !this.isClimbDebugEnabled()) return false;
+    return this.game?.debugSkipToOffering() ?? false;
+  }
+
   toggleFlight() {
     if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive()) return false;
     if (!this.isFlightEnabled() && !this.climbing?.exitSurfaceForDebug()) return false;
@@ -426,6 +431,10 @@ export class PondGameSession {
     this.game?.setSoundEnabled(enabled);
     this.ambienceAudio?.setEnabled(enabled);
     return this.soundEnabled;
+  }
+
+  playCardReveal() {
+    this.objectiveChime?.playCardReveal();
   }
 
   setMusicVolume(volume) {

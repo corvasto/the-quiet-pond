@@ -66,3 +66,9 @@ The bird asset uses `loadOnDemand`: normal startup skips its model decoding, ani
 Six seeds appear in two batches of three. Candidate selection validates ground, rock tops, and companion-tree perches, falling back to validated ground if an elevated anchor is unavailable. `activeCount` sets batch size; `totalCount` sets completion. Compile ground reservations before details so vegetation respects fixed content.
 
 Read [content-framework.md](content-framework.md) before adding assets or objectives. Every runtime addition needs a corresponding service-worker pre-cache entry. Keep `js/config/app.js`, package versions, and worker release aligned.
+
+## Discovery cards
+
+The Cards button beside Checklist opens the collection and pauses play. An opened card flips with a soft chime and gently floats; reduced-motion preferences disable both visual effects, and the soft chimes setting controls the sound. The collection uses a paper panel, while an opened card stands on its own and adapts to short mobile screens. Checklist completion unlocks matching cards in each save slot, including existing progress. Select a card to read it; Escape or the close button returns to play. New completions show a temporary selectable notice. Card titles and descriptions are in `js/content/messages.js`.
+
+Replace the PNG placeholders in `assets/images/discovery-cards/` with screenshots using the existing filenames. The image window is 4:3; 800 x 600 pixels is recommended. Larger images work and are centered and cropped to fit. Use scene screenshots for shelter, fireflies, seeds, and offering. After changing files, update the app, package, and service-worker versions together so offline players receive the new images, then rebuild the release. All card images are pre-cached.

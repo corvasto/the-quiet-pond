@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.0.0';
+const RELEASE_VERSION = '1.0.1';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
@@ -14,6 +14,18 @@ const APP_SHELL = [
   './assets/fonts/Indie_Flower/IndieFlower-Regular.ttf',
   './assets/fonts/fraunces.woff',
   './assets/images/ui/ant-loading.webm',
+  './assets/images/discovery-cards/seeds.png',
+  './assets/images/discovery-cards/offering.png',
+  './assets/images/discovery-cards/shelter.png',
+  './assets/images/discovery-cards/lamp.png',
+  './assets/images/discovery-cards/reader.png',
+  './assets/images/discovery-cards/companionAnt.png',
+  './assets/images/discovery-cards/radio.png',
+  './assets/images/discovery-cards/frog.png',
+  './assets/images/discovery-cards/cockroach.png',
+  './assets/images/discovery-cards/cat.png',
+  './assets/images/discovery-cards/fireflies.png',
+  './assets/images/discovery-cards/lollipop.png',
   './js/main.js',
   './js/ui/localization.js',
   './js/config/index.js',

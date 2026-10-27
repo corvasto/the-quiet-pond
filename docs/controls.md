@@ -34,6 +34,8 @@ In Explore, left drag orbits, right drag pans, and wheel zooms; gameplay movemen
 
 Debug is off by default. Add `?debug=1` (or `?q=mid&debug=1`) to enable diagnostics: G toggles climb overlays, Y toggles flight (movement keys, Space up, Ctrl down), and Shift+left-drag in Explore relocates a grounded ant to valid terrain. R cycles radio music; V tests voices. Debug tools are not in the touch panel. Remove the query and reload to disable them.
 
+In the G debug overlay, Skip to offering completes seed collection and makes the offering leaf available at the burrow. This changes and autosaves the active slot. It is available during seed collection, including while carrying a seed; it is disabled once the offering is available or complete.
+
 With `?debug=1`, B or the character switch also enables the playable bird immediately, without completing or changing objectives. Its debug overlay shows the bird position and collision sphere. The debug bypass is not stored in saves. Normal bird access is restored from the saved checklist; reload starts in Ant View.
 
 Expand Time preview in the debug overlay, enter an exact time, and press Apply. Freeze time holds that preview for inspection; uncheck it to let the preview advance. Use game clock returns to the normal simulation time. The preview drives lighting, time-based objectives, and ambient/radio time selection, while the saved clock continues separately. G hides the overlay and clears the preview. The first bird selection displays Preparing bird while its model, animation bounds, and collision data are prepared once; subsequent switches reuse them.
@@ -43,3 +45,5 @@ Settings includes Language, chimes, optional live FPS diagnostics, About, and Gr
 Apply and reload matches other primary dialog buttons. Touch/mouse suppress lingering focus outlines; keyboard restores them. Hover effects require a fine, hover-capable pointer. Native dropdowns keep normal behavior.
 
 See [gameplay.md](gameplay.md) for surface contact behavior and [verification.md](verification.md) for manual checks.
+
+Open Cards beside Checklist to view the discovery collection. Select an unlocked card to read it; use Back to return to the grid and Escape or the close button to return to play. New discoveries briefly show a notice that opens the card.

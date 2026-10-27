@@ -263,7 +263,6 @@ check(
 GAME_OBJECTIVES.forEach((objective) => {
   check(Boolean(MESSAGE_CATALOG.en[objective.labelKey]), `Objective ${objective.id} has no English label key.`);
   check(Boolean(MESSAGE_CATALOG.id[objective.labelKey]), `Objective ${objective.id} has no Indonesian label key.`);
-  check(['core', 'discovery'].includes(objective.status), `Objective ${objective.id} has an invalid status.`);
   check(['always', 'raining', 'night', 'fireflyWindow'].includes(objective.availability), `Objective ${objective.id} has an invalid availability rule.`);
   check(
     !objective.managed || ['proximity2d', 'proximity3d', 'shelter', 'pondSurface'].includes(objective.evaluator),

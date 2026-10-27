@@ -1,15 +1,39 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import * as THREE from 'three';
 
 // This process opts into debug before configuration modules are evaluated.
 globalThis.location = { search: '?debug=1' };
 const { PondGameSession } = await import('../js/game/game-session.js');
+const { SeedToBurrowGame } = await import('../js/game/seed-to-burrow.js');
+const styles = fs.readFileSync(new URL('../styles/game.css', import.meta.url), 'utf8');
+assert.match(styles, /\.debug-skip-offering\s*\{[^}]*pointer-events:\s*auto/, 'The button must receive pointer events inside the debug overlay.');
+const game = new SeedToBurrowGame({});
+game.root = new THREE.Group();
+game.offering = new THREE.Group();
+game.offering.visible = false;
+game.rebuildStoredSeeds = () => {};
+game.updateVisuals = () => {};
+assert.equal(game.debugSkipToOffering(), true);
+assert.equal(game.depositedSeedCount, game.getSnapshot().totalSeeds);
+assert.equal(game.phase, 'offeringPickup');
+assert.equal(game.offering.visible, true);
+assert.equal(game.getSaveState().offeringComplete, false);
+assert.equal(game.debugSkipToOffering(), false, 'An available offering must not be reset.');
 let lightingHour;
 let displayedHour;
 let objectiveHour;
 let radioHour;
 let ambienceHour;
 const session = new PondGameSession(null, { onTimeChange: (hour) => { displayedHour = hour; } });
+let shortcutCalls = 0;
+session.game = { debugSkipToOffering: () => { shortcutCalls += 1; return true; } };
+session.climbing = { isDebugEnabled: () => false };
+assert.equal(session.debugSkipToOffering(), false, 'The shortcut requires an open debug overlay.');
+session.climbing.isDebugEnabled = () => true;
+assert.equal(session.debugSkipToOffering(), true);
+assert.equal(shortcutCalls, 1, 'The enabled shortcut advances the game once.');
+session.climbing = null;
 session.app = {
   setSunHour: (hour) => { lightingHour = hour; },
   getAntWorldPosition: (target) => target.set(0, 0.17, 0),

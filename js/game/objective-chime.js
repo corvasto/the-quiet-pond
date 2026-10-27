@@ -66,6 +66,28 @@ export class ObjectiveChime {
     });
   }
 
+  playCardReveal() {
+    if (!this.enabled || !this.context || this.context.state !== 'running') return;
+    const now = this.context.currentTime;
+    for (const [frequency, delay, volume, duration] of [
+      [1046.5, 0.06, 0.025, 0.24],
+      [1568, 0.18, 0.035, 0.5],
+      [2352, 0.18, 0.012, 0.3],
+    ]) {
+      const start = now + delay;
+      const oscillator = this.context.createOscillator();
+      const gain = this.context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(gain).connect(this.context.destination);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.01);
+    }
+  }
+
   dispose() {
     this.context?.close?.();
     this.context = null;
