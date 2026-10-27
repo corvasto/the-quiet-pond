@@ -1,4 +1,4 @@
-import { setupDebugAntRelocation } from './ui/debug-relocation.js';
+import { createDebugControls } from './ui/debug-controls.js';
 import { PondGameSession } from './game/game-session.js';
 import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
 import { POND_GAME } from './config/game.js';
@@ -44,24 +44,11 @@ const elements = {
   aboutTitle: byId('about-title'),
   closeAboutButton: byId('close-about-button'),
   gameVersion: byId('game-version'),
-  debugCoordinates: byId('debug-coordinates'),
-  debugCoordinateValues: byId('debug-coordinate-values'),
-  debugPositionLabel: byId('debug-position-label'),
-  debugTimeInput: byId('debug-time-input'),
-  debugTimeApply: byId('debug-time-apply'),
-  debugTimeFreeze: byId('debug-time-freeze'),
-  debugTimeReset: byId('debug-time-reset'),
-  debugSkipOffering: byId('debug-skip-offering'),
-  debugCameraPosition: byId('debug-camera-position'),
-  debugCameraTarget: byId('debug-camera-target'),
-  debugCameraRotation: byId('debug-camera-rotation'),
   antHint: byId('ant-hint'),
   birdHint: byId('bird-hint'),
   exploreReturnLabel: byId('explore-return-label'),
   exploreHint: byId('explore-hint'),
   touchHint: byId('touch-hint'),
-  debugKeyHint: byId('debug-key-hint'),
-  debugRelocateHint: byId('debug-relocate-hint'),
   pauseDialog: byId('pause-dialog'),
   settingsDialog: byId('settings-dialog'),
   settingsCard: byId('settings-card'),
@@ -102,7 +89,6 @@ const elements = {
   checklistToggle: byId('checklist-toggle'),
   checklistLabel: document.querySelector('#checklist-toggle span'),
   checklistBody: byId('checklist-body'),
-  radioDebugHint: byId('radio-debug-hint'),
   languageSelect: byId('language-select'),
   movementJoystick: byId('movement-joystick'),
   movementKnob: byId('movement-knob'),
@@ -129,7 +115,6 @@ let resetMobileControls = null;
 let session = null;
 let paused = false;
 let gameReady = false;
-let debugRelocateCleanup = null;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
@@ -167,15 +152,23 @@ let saveTimeout = null;
 let suppressSaveOnUnload = false;
 let lastDisplayedGameMinute = null;
 let latestGameHour = 10.5;
-let debugCoordinateInterval = null;
-let lastDebugCoordinateText = '';
+const debugControls = createDebugControls({
+  getSession: () => session,
+  getGameHour: () => latestGameHour,
+  translate: t,
+  onToggle: () => {
+    renderChecklist(latestSnapshot?.checklist);
+    updateExploreControl();
+  },
+  updatePrompt,
+  showRadioCaption,
+});
 let performanceDiagnosticUnsubscribe = null;
 const fpsSampler = new FpsSampler({
   sampleSeconds: PERFORMANCE_DIAGNOSTIC.sampleSeconds,
   warningFps: PERFORMANCE_DIAGNOSTIC.warningFps[QUALITY_PROFILE_NAME],
   recoveryMargin: PERFORMANCE_DIAGNOSTIC.recoveryMargin,
 });
-const DEBUG_COORDINATE_UPDATE_MS = 100;
 
 function readStoredValue(key) {
   try {
@@ -509,7 +502,6 @@ function resetCameraView() {
 
 function updateGameState(snapshot) {
   latestSnapshot = snapshot;
-  elements.debugSkipOffering.disabled = !['discovering', 'carrying'].includes(snapshot.phase);
   elements.objective.textContent = t(snapshot.objective);
   const totalSeeds = Math.max(1, Number(snapshot.totalSeeds) || 1);
   const depositedSeeds = Math.min(totalSeeds, Number(snapshot.depositedSeeds) || 0);
@@ -533,20 +525,7 @@ function renderChecklist(checklist) {
     const item = document.createElement('li');
     item.className = 'game-checklist__item';
     item.classList.toggle('is-complete', task.complete);
-    if (session?.isClimbDebugEnabled()) {
-      item.classList.add('has-debug-control');
-      const control = document.createElement('button');
-      control.type = 'button';
-      control.className = 'game-checklist__debug-complete';
-      control.disabled = task.complete;
-      control.setAttribute('aria-label', t('debug.completeObjective', { task: t(task.label) }));
-      control.textContent = task.complete ? '✓' : '';
-      control.addEventListener('click', (event) => {
-        event.stopPropagation();
-        session?.debugCompleteObjective(task.id);
-      });
-      item.append(control);
-    }
+    debugControls.appendChecklistControl(item, task);
     const copy = document.createElement('span');
     copy.className = 'game-checklist__copy';
     const label = document.createElement('span');
@@ -706,59 +685,6 @@ function updatePrompt(prompt) {
   elements.prompt.textContent = t(prompt);
 }
 
-function renderDebugCoordinates() {
-  const position = session?.getPlayerWorldPosition();
-  if (!position || !elements.debugCoordinateValues) return;
-  const camera = session?.getCameraDebugValues();
-  if (!camera) return;
-  elements.debugPositionLabel.textContent = t(session.isBirdActive() ? 'debug.bird.position' : 'debug.coordinates.title');
-  const formatVector = (value) => `x ${value.x.toFixed(3)}  y ${value.y.toFixed(3)}  z ${value.z.toFixed(3)}`;
-  const formatRotation = (value) => formatVector({
-    x: value.x * 180 / Math.PI,
-    y: value.y * 180 / Math.PI,
-    z: value.z * 180 / Math.PI,
-  });
-  const text = [
-    formatVector(position),
-    formatVector(camera.position),
-    formatVector(camera.target),
-    formatRotation(camera.rotation),
-  ].join('|');
-  if (text === lastDebugCoordinateText) return;
-  lastDebugCoordinateText = text;
-  elements.debugCoordinateValues.textContent = formatVector(position);
-  elements.debugCameraPosition.textContent = formatVector(camera.position);
-  elements.debugCameraTarget.textContent = formatVector(camera.target);
-  elements.debugCameraRotation.textContent = formatRotation(camera.rotation);
-}
-
-function stopDebugCoordinates() {
-  window.clearInterval(debugCoordinateInterval);
-  debugCoordinateInterval = null;
-  lastDebugCoordinateText = '';
-  if (elements.debugCoordinates) elements.debugCoordinates.hidden = true;
-}
-
-function syncDebugCoordinates() {
-  const enabled = gameReady && (session?.isClimbDebugEnabled() ?? false);
-  if (!enabled) {
-    stopDebugCoordinates();
-    return;
-  }
-  elements.debugCoordinates.hidden = false;
-  if (!elements.debugTimeInput.value) setDebugTimeInput(latestGameHour);
-  renderDebugCoordinates();
-  debugCoordinateInterval ??= window.setInterval(
-    renderDebugCoordinates,
-    DEBUG_COORDINATE_UPDATE_MS,
-  );
-}
-
-function setDebugTimeInput(hour) {
-  const minutes = Math.round(((hour % 24 + 24) % 24) * 60) % 1440;
-  elements.debugTimeInput.value = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-}
-
 let radioCaptionTimeout = null;
 let radioCaptionIsCelebration = false;
 
@@ -867,7 +793,6 @@ function updateExploreControl() {
   const birdActive = session?.isBirdActive() ?? false;
   const birdPreparing = session?.isBirdPreparing() ?? false;
   const returnLabel = birdActive ? 'ui.birdView' : 'ui.antView';
-  const debugRelocationActive = session?.canDebugRelocateAnt() ?? false;
   elements.exploreButton.textContent = t(exploreActive ? returnLabel : 'ui.explore');
   elements.exploreButton.setAttribute('aria-pressed', String(exploreActive));
   elements.exploreReturnLabel.textContent = t(returnLabel);
@@ -884,12 +809,9 @@ function updateExploreControl() {
   elements.resetCameraButton.hidden = exploreActive;
   elements.resetCameraButton.setAttribute('aria-label', t(birdActive ? 'ui.resetBirdCamera.aria' : 'ui.resetCamera.aria'));
   elements.touchHint.textContent = t(exploreActive ? 'hint.touchExplore' : birdActive ? 'hint.touchBird' : 'hint.touchLook');
-  elements.debugRelocateHint.hidden = !debugRelocationActive;
-  elements.radioDebugHint.hidden = !(session?.canDebugControlRadio() ?? false);
-  document.body.classList.toggle('debug-ant-relocate', debugRelocationActive);
   document.body.classList.toggle('game-explore-active', exploreActive);
   document.body.classList.toggle('game-bird-active', birdActive);
-  syncDebugCoordinates();
+  debugControls.sync({ ready: gameReady });
 }
 
 function setChecklistCollapsed(collapsed) {
@@ -1105,43 +1027,7 @@ window.addEventListener('keydown', (event) => {
     }
     return;
   }
-  if (event.code === 'KeyG' && !event.repeat) {
-    event.preventDefault();
-    if (session?.isClimbDebugAvailable()) session.toggleClimbDebug();
-    renderChecklist(latestSnapshot?.checklist);
-    updateExploreControl();
-    return;
-  }
-  if (event.code === 'KeyY' && !event.repeat) {
-    event.preventDefault();
-    if (session?.isClimbDebugEnabled()) {
-      const enabled = session.toggleFlight();
-      updatePrompt(enabled
-        ? 'debug.flight.enabled'
-        : 'debug.flight.disabled');
-    }
-    return;
-  }
-  if (event.code === 'KeyR' && !event.repeat) {
-    if (!session?.canDebugControlRadio()) return;
-    event.preventDefault();
-    showRadioCaption(t('debug.radio.music', { mode: session.cycleDebugRadioMusic() }), 3);
-    return;
-  }
-  if (event.code === 'KeyV' && !event.repeat) {
-    if (!session?.canDebugControlRadio()) return;
-    event.preventDefault();
-    showRadioCaption(t('debug.radio.voice', {
-      result: session.playDebugRadioAnnouncement(),
-    }), 3);
-    return;
-  }
-  if (event.code === 'KeyT' && !event.repeat && session?.canDebugControlWeather()) {
-    event.preventDefault();
-    const phase = session.toggleDebugRain();
-    showRadioCaption(t('debug.weather', { phase }), 3);
-    return;
-  }
+  if (debugControls.handleKeyDown(event)) return;
   if ((event.code === 'ControlLeft' || event.code === 'ControlRight') && (session?.isFlightEnabled() || session?.isBirdActive())) {
     event.preventDefault();
     if (canMoveAnt() && !event.repeat) {
@@ -1201,19 +1087,6 @@ elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
 elements.birdSwitchButton.addEventListener('click', toggleBird);
-elements.debugTimeApply.addEventListener('click', () => {
-  if (!elements.debugTimeInput.reportValidity()) return;
-  const [hours, minutes] = elements.debugTimeInput.value.split(':').map(Number);
-  session?.setDebugTime(hours + minutes / 60, { freeze: elements.debugTimeFreeze.checked });
-});
-elements.debugTimeFreeze.addEventListener('change', () => {
-  session?.setDebugTimeFrozen(elements.debugTimeFreeze.checked);
-});
-elements.debugTimeReset.addEventListener('click', () => {
-  session?.clearDebugTime();
-  setDebugTimeInput(latestGameHour);
-});
-elements.debugSkipOffering.addEventListener('click', () => session?.debugSkipToOffering());
 elements.resetCameraButton.addEventListener('click', resetCameraView);
 elements.restartButton.addEventListener('click', () => {
   saveActiveSlot();
@@ -1295,9 +1168,7 @@ async function startGame() {
     setChecklistCollapsed(true);
     gameReady = true;
     renderChecklist(latestSnapshot?.checklist);
-    elements.debugKeyHint.hidden = !session.isClimbDebugAvailable();
-    debugRelocateCleanup?.();
-    debugRelocateCleanup = setupDebugAntRelocation(elements.scene.querySelector('canvas'), () => session);
+    debugControls.start(elements.scene.querySelector('canvas'));
     setupMobileGameControls();
     updateExploreControl();
     saveActiveSlot();
@@ -1305,6 +1176,7 @@ async function startGame() {
     updateLoadingProgress(100);
     window.setTimeout(() => { elements.loading.hidden = true; }, 180);
   } catch (error) {
+    debugControls.dispose();
     performanceDiagnosticUnsubscribe?.();
     performanceDiagnosticUnsubscribe = null;
     session?.dispose();
@@ -1316,10 +1188,9 @@ async function startGame() {
 window.addEventListener('beforeunload', () => {
   saveActiveSlot();
   window.clearTimeout(saveTimeout);
-  stopDebugCoordinates();
+  debugControls.dispose();
   performanceDiagnosticUnsubscribe?.();
   performanceDiagnosticUnsubscribe = null;
-  debugRelocateCleanup?.();
   mobileMovementCleanup?.();
   session?.dispose();
 });

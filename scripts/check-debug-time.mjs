@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import * as THREE from 'three';
 
 // This process opts into debug before configuration modules are evaluated.
 globalThis.location = { search: '?debug=1' };
 const { PondGameSession } = await import('../js/game/game-session.js');
 const { SeedToBurrowGame } = await import('../js/game/seed-to-burrow.js');
-const styles = fs.readFileSync(new URL('../styles/game.css', import.meta.url), 'utf8');
-assert.match(styles, /\.debug-skip-offering\s*\{[^}]*pointer-events:\s*auto/, 'The button must receive pointer events inside the debug overlay.');
 const game = new SeedToBurrowGame({});
 game.root = new THREE.Group();
 game.offering = new THREE.Group();

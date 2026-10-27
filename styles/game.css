@@ -206,8 +206,7 @@ body.debug-ant-dragging #scene canvas {
 }
 
 .debug-time-controls input[type='time'],
-.debug-time-controls button,
-.debug-skip-offering {
+.debug-time-controls button {
   min-height: 36px;
   border: 1px solid #7f8770;
   border-radius: 8px;
@@ -221,13 +220,9 @@ body.debug-ant-dragging #scene canvas {
   flex: 1;
 }
 
-.debug-time-controls button,
-.debug-skip-offering {
+.debug-time-controls button {
   cursor: pointer;
 }
-
-.debug-skip-offering { margin-top: 6px; pointer-events: auto; }
-.debug-skip-offering:disabled { opacity: 0.5; cursor: default; }
 
 .game-brand {
   top: 25px;

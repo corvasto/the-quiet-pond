@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/corvasto/the-quiet-pond"><img src="https://img.shields.io/badge/Made_with-❤️-white?style=flat" alt="mwl" /></a>
-  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.0.0-2b6cb0?style=flat-square" alt="version" /></a>
+  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.0.2-2b6cb0?style=flat-square" alt="version" /></a>
   <a href="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml"><img src="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg" alt="deploy-pages" /></a>
 </p>
 
@@ -94,7 +94,7 @@ js/
   game/             Session, objectives, seeds, climbing, and audio
   generators/       Procedural terrain, vegetation, rocks, and water
   props/            Model loading, animation, placement, and collision proxies
-  ui/               Text presentation helpers
+  ui/               Localization, debug overlay, controls, and relocation input
   utils/            Shared math, timing, noise, and motion helpers
 styles/             Game interface styles
 assets/             Models, audio, and other game assets
@@ -110,11 +110,13 @@ Settings and quality profiles live in `js/config/`. Add `?q=full`, `?q=mid`, or 
 
 Debug tools require `?debug=1`. Combine it with a startup profile, such as `?q=mid&debug=1`.
 
+`js/ui/debug-overlay.js` owns the live readout and time preview controls. `js/ui/debug-controls.js` connects debug hints, checklist shortcuts, keyboard commands, and relocation input to the session's public actions. With the debug overlay active, select the Seeds checklist circle to finish seed collection and make the offering available. `js/main.js` keeps startup and top-level input routing; gameplay state stays in its controllers. See [architecture](docs/architecture.md) for ownership and cleanup.
+
 Time preview in the debug overlay lets you apply any hour/minute, freeze the preview, and return to the game clock. The bird prepares on first selection and has no animation/physics frame callback or attached model during ant play.
 
 ## Development and verification
 
-Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement and offline-shell tests. Run `npm run build:release` to generate the minified, compressed site in `build/release`. These commands do not start a server.
+Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement, debug UI, and offline-shell tests. Run `npm run build:release` to generate the minified, compressed site in `build/release`, then `npm run check:release` to validate it. These commands do not start a server.
 
 Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
 

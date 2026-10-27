@@ -2,6 +2,16 @@
 
 Use this manual checklist for browser/device behavior; validation scripts do not start a server or preview.
 
+## Debug UI refactor
+
+`npm test` includes headless debug UI checks with DOM, timer, and session stubs. They cover debug-off isolation, one 100 ms readout timer, ant/bird labels and camera degrees, localized checklist controls including seed completion, time apply/freeze/reset, G/Y/R/V/T dispatch, Shift-click/drag pointer handling, and disposal. Existing controller tests cover time preview/save separation, objective completion, offering availability, and bird behavior. These checks do not prove browser event propagation, rendered layout, audio, or device input.
+
+1. Open `index.html?debug=1`, check live ant/camera values, then toggle G off/on. Repeat in Explore and Bird View; the readout and label should follow the active character. Change language and confirm labels and checklist shortcut descriptions update.
+2. Apply, freeze/unfreeze, and reset Time preview, including while paused. Toggle G off and confirm the game clock resumes. Complete a checklist task and select the Seeds checklist circle from both empty-handed and carrying states; check the offering appears, shortcuts disable when complete, and progress survives reload.
+3. Toggle Y debug flight and return to ground. Exercise R/V radio controls and T weather; T should still work when G hides the overlay. Use B/the character switch to access the bird before checklist completion without changing progress.
+4. In Explore, Shift-click valid terrain, then Shift-drag. Check the ant relocates while the camera stays still; normal orbit/pan/zoom should work afterward. Release Shift, cancel the pointer, and switch views during a drag to check input recovery. Relocation must be unavailable while controlling the bird.
+5. Reload without `debug=1`. Confirm no debug overlay, hints, checklist completion buttons, or debug actions appear; check normal movement, climbing, dialogs, saves, radio/weather, and the earned bird unlock. Repeat in the generated release and offline after the version 1.0.2 worker activates.
+
 ## Movement and view
 
 1. Open `index.html?q=full`; test W/A/S/D separately. Travel should match screen directions without forced arcs, and the ant should turn smoothly.

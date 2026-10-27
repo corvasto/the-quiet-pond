@@ -14,7 +14,7 @@
 | `js/game/` | Progress, traversal, objectives, radio, and game session |
 | `js/generators/` | Deterministic geometry and world layout |
 | `js/props/` | Model loading, placement, animation, and surface proxies |
-| `js/ui/` | Localized presentation helpers |
+| `js/ui/` | Localization, debug presentation, and debug control adapters |
 | `js/utils/` | Math, time, noise, and movement integration |
 
 Core never imports gameplay controllers. The session injects settings and connects controllers through public world queries and frame listeners. Generators accept explicit settings and return geometry, anchors, and query data.
@@ -56,4 +56,14 @@ Keyboard and analog input drive camera-relative ground motion with acceleration/
 
 `npm run check` validates dependency paths, settings, content, versions, and cache coverage. `npm test` exercises movement and offline requests headlessly. Use [verification.md](verification.md) for visual, input, traversal, and device checks.
 
-Debug input and overlay orchestration remains in `js/main.js`; `js/ui/debug-relocation.js` owns the canvas pointer handling for debug relocation. Gameplay debug actions remain with their game controllers.
+## Debug UI ownership
+
+`js/main.js` creates the debug UI, passes session/time/translation accessors and HUD callbacks, routes keyboard events after dialog and editable-target checks, and forwards readiness. Startup attaches canvas input; unload and startup failure dispose the UI. Normal movement, bird switching, pause, and save handling remain in main and the session.
+
+| Module | Responsibility |
+| --- | --- |
+| `js/ui/debug-overlay.js` | Ant/bird and camera readouts, 100 ms polling, and time preview inputs |
+| `js/ui/debug-controls.js` | Debug hints, checklist completion buttons, G/Y/R/V/T command dispatch, and overlay/relocation lifecycle |
+| `js/ui/debug-relocation.js` | Shift-click/drag canvas pointer ownership and relocation listener cleanup |
+
+The UI calls public session methods; gameplay actions and their guards stay in `js/game/` controllers. Time preview does not alter the saved clock, while checklist shortcuts follow the existing autosave path. The Seeds checklist shortcut makes the offering available through the seed controller. Core never imports game or UI modules. The readout starts only after startup with debug enabled, runs at 10 Hz without a frame subscription, writes changed values only, and stops when G hides it or the UI is disposed. Disposal also removes time preview and relocation listeners. Both new UI modules are in the service-worker pre-cache and are bundled into the production release.
