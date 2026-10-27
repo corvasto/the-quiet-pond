@@ -3,7 +3,6 @@ function defineObjective(definition) {
     throw new TypeError('Objective definitions require id and labelKey.');
   }
   return Object.freeze({
-    status: 'discovery',
     evaluator: null,
     availability: 'always',
     hintKey: null,
@@ -18,13 +17,11 @@ export const GAME_OBJECTIVES = Object.freeze([
   defineObjective({
     id: 'seeds',
     labelKey: 'objective.seed.find',
-    status: 'core',
     managed: false,
   }),
   defineObjective({
     id: 'offering',
     labelKey: 'objective.offering',
-    status: 'core',
     managed: false,
   }),
   defineObjective({

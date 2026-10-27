@@ -1,3 +1,4 @@
+import { setupDebugAntRelocation } from './ui/debug-relocation.js';
 import { PondGameSession } from './game/game-session.js';
 import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
 import { POND_GAME } from './config/game.js';
@@ -50,6 +51,7 @@ const elements = {
   debugTimeApply: byId('debug-time-apply'),
   debugTimeFreeze: byId('debug-time-freeze'),
   debugTimeReset: byId('debug-time-reset'),
+  debugSkipOffering: byId('debug-skip-offering'),
   debugCameraPosition: byId('debug-camera-position'),
   debugCameraTarget: byId('debug-camera-target'),
   debugCameraRotation: byId('debug-camera-rotation'),
@@ -87,6 +89,14 @@ const elements = {
   performanceDiagnosticEnabled: byId('performance-diagnostic-enabled'),
   fpsValue: byId('fps-value'),
   fpsWarning: byId('fps-warning'),
+  cardsButton: byId('cards-button'),
+  cardsDialog: byId('cards-dialog'),
+  cardsTitle: byId('cards-title'),
+  cardsClose: byId('cards-close'),
+  cardsGrid: byId('cards-grid'),
+  cardsDetail: byId('cards-detail'),
+  cardsCount: byId('cards-count'),
+  cardNotice: byId('card-notice'),
   checklist: byId('game-checklist-list'),
   checklistPanel: document.querySelector('.game-checklist'),
   checklistToggle: byId('checklist-toggle'),
@@ -141,6 +151,11 @@ elements.musicVolumeValue.value = `${Math.round(musicVolume * 100)}%`;
 elements.musicVolumeValue.textContent = `${Math.round(musicVolume * 100)}%`;
 let performanceDiagnosticEnabled = readStoredValue(PERFORMANCE_DIAGNOSTIC_KEY) === '1';
 let latestSnapshot = null;
+let knownCompletedCards = null;
+let selectedCardId = null;
+let noticeCardId = null;
+let cardNoticeTimeout = null;
+let cardsPausedGame = false;
 let latestPrompt = '';
 let mobileMovementCleanup = null;
 let aboutPausedGame = false;
@@ -494,6 +509,7 @@ function resetCameraView() {
 
 function updateGameState(snapshot) {
   latestSnapshot = snapshot;
+  elements.debugSkipOffering.disabled = !['discovering', 'carrying'].includes(snapshot.phase);
   elements.objective.textContent = t(snapshot.objective);
   const totalSeeds = Math.max(1, Number(snapshot.totalSeeds) || 1);
   const depositedSeeds = Math.min(totalSeeds, Number(snapshot.depositedSeeds) || 0);
@@ -505,6 +521,7 @@ function updateGameState(snapshot) {
   elements.progressFill.style.width = `${(depositedSeeds / totalSeeds) * 100}%`;
   document.body.dataset.gamePhase = snapshot.phase;
   renderChecklist(snapshot.checklist);
+  updateCards(snapshot.checklist);
   updateExploreControl();
   requestAutosave();
 }
@@ -516,7 +533,20 @@ function renderChecklist(checklist) {
     const item = document.createElement('li');
     item.className = 'game-checklist__item';
     item.classList.toggle('is-complete', task.complete);
-    item.classList.toggle('is-active', task.status === 'active' || task.status === 'core');
+    if (session?.isClimbDebugEnabled()) {
+      item.classList.add('has-debug-control');
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = 'game-checklist__debug-complete';
+      control.disabled = task.complete;
+      control.setAttribute('aria-label', t('debug.completeObjective', { task: t(task.label) }));
+      control.textContent = task.complete ? '✓' : '';
+      control.addEventListener('click', (event) => {
+        event.stopPropagation();
+        session?.debugCompleteObjective(task.id);
+      });
+      item.append(control);
+    }
     const copy = document.createElement('span');
     copy.className = 'game-checklist__copy';
     const label = document.createElement('span');
@@ -531,6 +561,144 @@ function renderChecklist(checklist) {
     item.append(copy);
     elements.checklist.append(item);
   });
+}
+
+function updateCards(checklist) {
+  if (!checklist?.tasks) return;
+  const completed = new Set(checklist.tasks.filter((task) => task.complete).map((task) => task.id));
+  if (knownCompletedCards && gameReady) {
+    const unlocked = checklist.tasks.filter((task) => task.complete && !knownCompletedCards.has(task.id));
+    if (unlocked.length) showCardNotice(unlocked[unlocked.length - 1].id);
+  }
+  knownCompletedCards = completed;
+  if (!elements.cardsDialog.hidden) renderCards();
+}
+
+function showCardNotice(id) {
+  noticeCardId = id;
+  const image = document.createElement('img');
+  image.src = `./assets/images/discovery-cards/${id}.png`;
+  image.alt = '';
+  const text = document.createElement('span');
+  text.textContent = t('cards.notice', { name: t(`cards.${id}.title`) });
+  elements.cardNotice.replaceChildren(image, text);
+  elements.cardNotice.hidden = false;
+  window.clearTimeout(cardNoticeTimeout);
+  cardNoticeTimeout = window.setTimeout(() => { elements.cardNotice.hidden = true; }, 6000);
+}
+
+function renderCards() {
+  const tasks = latestSnapshot?.checklist?.tasks ?? [];
+  const completed = new Set(tasks.filter((task) => task.complete).map((task) => task.id));
+  elements.cardsCount.textContent = t('cards.count', { count: completed.size, total: GAME_OBJECTIVES.length });
+  elements.cardsGrid.replaceChildren();
+  elements.cardsDetail.replaceChildren();
+  const selected = GAME_OBJECTIVES.find((objective) => objective.id === selectedCardId && completed.has(objective.id));
+  elements.cardsDialog.classList.toggle('is-detail', Boolean(selected));
+  elements.cardsGrid.hidden = Boolean(selected);
+  elements.cardsDetail.hidden = !selected;
+  if (selected) {
+    const back = document.createElement('button');
+    back.className = 'cards-back';
+    back.textContent = t('cards.back');
+    back.addEventListener('click', () => { selectedCardId = null; renderCards(); elements.cardsTitle.focus(); });
+    const card = document.createElement('article');
+    card.className = 'discovery-card discovery-card--detail';
+    card.addEventListener('click', (event) => {
+      const bounds = card.getBoundingClientRect();
+      const x = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / bounds.width * 2 - 1));
+      const y = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / bounds.height * 2 - 1));
+      card.style.setProperty('--card-tilt-x', `${-y * 9}deg`);
+      card.style.setProperty('--card-tilt-y', `${x * 9}deg`);
+      card.style.setProperty('--card-rebound-x', `${y * 3.15}deg`);
+      card.style.setProperty('--card-rebound-y', `${-x * 3.15}deg`);
+      card.style.setProperty('--card-settle-x', `${-y * 1.08}deg`);
+      card.style.setProperty('--card-settle-y', `${x * 1.08}deg`);
+      card.classList.remove('is-jiggling');
+      void card.offsetWidth;
+      card.classList.add('is-jiggling');
+    });
+    const title = document.createElement('h3');
+    title.textContent = t(`cards.${selected.id}.title`);
+    const image = document.createElement('img');
+    image.src = `./assets/images/discovery-cards/${selected.id}.png`;
+    image.alt = '';
+    const description = document.createElement('p');
+    description.textContent = t(`cards.${selected.id}.description`);
+    const label = document.createElement('small');
+    label.textContent = t('cards.discovered');
+    const footer = document.createElement('div');
+    footer.className = 'discovery-card__footer';
+    const conditionLabel = document.createElement('span');
+    conditionLabel.className = 'discovery-card__condition-label';
+    conditionLabel.textContent = t('cards.discoveredBy');
+    const condition = document.createElement('span');
+    condition.className = 'discovery-card__condition';
+    condition.textContent = t(selected.id === 'seeds' ? 'cards.seeds.condition' : selected.labelKey);
+    const number = document.createElement('span');
+    number.className = 'discovery-card__number';
+    number.textContent = `✦  ${String(GAME_OBJECTIVES.indexOf(selected) + 1).padStart(2, '0')} / ${String(GAME_OBJECTIVES.length).padStart(2, '0')}`;
+    footer.append(conditionLabel, condition, number);
+    card.append(label, title, image, description, footer);
+    const stage = document.createElement('div');
+    stage.className = 'discovery-card-stage';
+    const flip = document.createElement('div');
+    flip.className = 'discovery-card-flip';
+    const cardBack = document.createElement('div');
+    cardBack.className = 'discovery-card discovery-card__back';
+    cardBack.setAttribute('aria-hidden', 'true');
+    cardBack.textContent = '✦';
+    flip.append(card, cardBack);
+    stage.append(flip);
+    elements.cardsDetail.append(back, stage);
+    return;
+  }
+  GAME_OBJECTIVES.forEach((objective, index) => {
+    const unlocked = completed.has(objective.id);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `discovery-card discovery-card--tile${unlocked ? '' : ' is-locked'}`;
+    card.disabled = !unlocked;
+    const number = document.createElement('small');
+    number.textContent = String(index + 1).padStart(2, '0');
+    const image = document.createElement('span');
+    image.className = 'discovery-card__image';
+    if (unlocked) {
+      const picture = document.createElement('img');
+      picture.src = `./assets/images/discovery-cards/${objective.id}.png`;
+      picture.alt = '';
+      picture.loading = 'lazy';
+      image.append(picture);
+    } else image.textContent = '?';
+    const title = document.createElement('strong');
+    title.textContent = unlocked ? t(`cards.${objective.id}.title`) : t('cards.locked');
+    card.append(number, image, title);
+    if (unlocked) card.addEventListener('click', () => { selectedCardId = objective.id; session?.playCardReveal(); renderCards(); elements.cardsDetail.querySelector('button').focus(); });
+    elements.cardsGrid.append(card);
+  });
+}
+
+function openCards(id = null) {
+  if (!gameReady || !elements.settingsDialog.hidden || !elements.aboutDialog.hidden) return;
+  cardsPausedGame = !paused;
+  if (cardsPausedGame) setPaused(true);
+  elements.pauseDialog.hidden = true;
+  elements.cardNotice.hidden = true;
+  window.clearTimeout(cardNoticeTimeout);
+  selectedCardId = id;
+  if (id) session?.playCardReveal();
+  elements.cardsDialog.hidden = false;
+  elements.cardsButton.setAttribute('aria-expanded', 'true');
+  renderCards();
+  requestAnimationFrame(() => elements.cardsTitle.focus({ preventScroll: true }));
+}
+
+function closeCards() {
+  elements.cardsDialog.hidden = true;
+  elements.cardsButton.setAttribute('aria-expanded', 'false');
+  if (cardsPausedGame) setPaused(false);
+  else if (paused) { elements.pauseDialog.hidden = false; requestAnimationFrame(() => elements.resumeButton.focus()); }
+  cardsPausedGame = false;
 }
 
 function updatePrompt(prompt) {
@@ -735,68 +903,6 @@ function toggleChecklist() {
   setChecklistCollapsed(!elements.checklistBody.hidden);
 }
 
-function setupDebugAntRelocation() {
-  debugRelocateCleanup?.();
-  const canvas = elements.scene.querySelector('canvas');
-  if (!canvas) return;
-  let activePointerId = null;
-
-  const finish = (event = null) => {
-    if (activePointerId === null) return;
-    if (event && event.pointerId !== undefined && event.pointerId !== activePointerId) return;
-    event?.preventDefault();
-    event?.stopImmediatePropagation();
-    if (canvas.hasPointerCapture?.(activePointerId)) {
-      canvas.releasePointerCapture(activePointerId);
-    }
-    activePointerId = null;
-    document.body.classList.remove('debug-ant-dragging');
-  };
-  const relocate = (event) => {
-    if (!session?.canDebugRelocateAnt()) return false;
-    return session.debugRelocateAnt(event.clientX, event.clientY);
-  };
-  const onPointerDown = (event) => {
-    if (
-      event.button !== 0
-      || !event.shiftKey
-      || !session?.canDebugRelocateAnt()
-    ) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    activePointerId = event.pointerId;
-    canvas.setPointerCapture?.(event.pointerId);
-    document.body.classList.add('debug-ant-dragging');
-    relocate(event);
-  };
-  const onPointerMove = (event) => {
-    if (event.pointerId !== activePointerId) return;
-    if (!event.shiftKey || !session?.canDebugRelocateAnt()) {
-      finish(event);
-      return;
-    }
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    relocate(event);
-  };
-  const onPointerEnd = (event) => finish(event);
-  const onWindowBlur = () => finish();
-
-  canvas.addEventListener('pointerdown', onPointerDown, true);
-  canvas.addEventListener('pointermove', onPointerMove, true);
-  canvas.addEventListener('pointerup', onPointerEnd, true);
-  canvas.addEventListener('pointercancel', onPointerEnd, true);
-  window.addEventListener('blur', onWindowBlur);
-  debugRelocateCleanup = () => {
-    finish();
-    canvas.removeEventListener('pointerdown', onPointerDown, true);
-    canvas.removeEventListener('pointermove', onPointerMove, true);
-    canvas.removeEventListener('pointerup', onPointerEnd, true);
-    canvas.removeEventListener('pointercancel', onPointerEnd, true);
-    window.removeEventListener('blur', onWindowBlur);
-    debugRelocateCleanup = null;
-  };
-}
 
 function toggleExplore() {
   if (!session || paused) return;
@@ -943,6 +1049,10 @@ function setupMobileGameControls() {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (!elements.cardsDialog.hidden) {
+    if (event.code === 'Escape') { event.preventDefault(); closeCards(); }
+    return;
+  }
   if (!elements.aboutDialog.hidden) {
     if (event.code === 'Escape') {
       event.preventDefault();
@@ -998,6 +1108,7 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'KeyG' && !event.repeat) {
     event.preventDefault();
     if (session?.isClimbDebugAvailable()) session.toggleClimbDebug();
+    renderChecklist(latestSnapshot?.checklist);
     updateExploreControl();
     return;
   }
@@ -1079,6 +1190,9 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && gameReady && session && !paused) setPaused(true);
 });
 
+elements.cardsButton.addEventListener('click', () => openCards());
+elements.cardsClose.addEventListener('click', closeCards);
+elements.cardNotice.addEventListener('click', () => openCards(noticeCardId));
 elements.pauseButton.addEventListener('click', togglePause);
 elements.settingsButton.addEventListener('click', openSettingsDialog);
 elements.closeSettingsButton.addEventListener('click', closeSettingsDialog);
@@ -1099,6 +1213,7 @@ elements.debugTimeReset.addEventListener('click', () => {
   session?.clearDebugTime();
   setDebugTimeInput(latestGameHour);
 });
+elements.debugSkipOffering.addEventListener('click', () => session?.debugSkipToOffering());
 elements.resetCameraButton.addEventListener('click', resetCameraView);
 elements.restartButton.addEventListener('click', () => {
   saveActiveSlot();
@@ -1121,7 +1236,7 @@ elements.performanceDiagnosticEnabled.addEventListener('change', () => {
 });
 elements.checklistToggle.addEventListener('click', toggleChecklist);
 elements.checklistPanel.addEventListener('click', (event) => {
-  if (event.target.closest('.game-checklist__toggle')) return;
+  if (event.target.closest('.game-checklist__toggle, #cards-button')) return;
   toggleChecklist();
 });
 elements.qualitySelect.value = requestedQualityProfile() ?? storedQualityPreference();
@@ -1179,8 +1294,10 @@ async function startGame() {
     syncPerformanceDiagnosticSubscription();
     setChecklistCollapsed(true);
     gameReady = true;
+    renderChecklist(latestSnapshot?.checklist);
     elements.debugKeyHint.hidden = !session.isClimbDebugAvailable();
-    setupDebugAntRelocation();
+    debugRelocateCleanup?.();
+    debugRelocateCleanup = setupDebugAntRelocation(elements.scene.querySelector('canvas'), () => session);
     setupMobileGameControls();
     updateExploreControl();
     saveActiveSlot();

@@ -37,6 +37,7 @@
       <label class="debug-time-controls__freeze"><input id="debug-time-freeze" type="checkbox" checked><span data-i18n="debug.time.freeze">Freeze time</span></label>
       <button id="debug-time-reset" type="button" data-i18n="debug.time.reset">Use game clock</button>
     </details>
+    <button id="debug-skip-offering" class="debug-skip-offering" type="button" data-i18n="debug.skipOffering">Skip to offering</button>
   </aside>
 
   <section class="game-objective game-checklist" aria-labelledby="game-objective-title">
@@ -45,6 +46,7 @@
         <span class="game-objective__eyebrow" data-i18n="ui.checklist.title">The Quiet Pond checklist</span>
         <h1 id="game-objective-title" data-i18n="objective.seed.find">Find an active seed.</h1>
       </div>
+      <button id="cards-button" class="cards-button" type="button" aria-controls="cards-dialog" aria-expanded="false" aria-label="Cards" data-i18n-aria-label="cards.button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 17h8M9 12l3-3 3 3-3 3z"/></svg><span data-i18n="cards.button">Cards</span></button>
       <button id="checklist-toggle" class="game-checklist__toggle" type="button" aria-expanded="true" aria-controls="checklist-body"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5v12H5z"/><path d="M14 3.5v5h5M8 12h7M8 15.5h5M14.8 18.5l4.3-4.3 1.5 1.5-4.3 4.3-2 .5z"/></svg><span data-i18n="ui.checklist">Checklist</span></button>
     </div>
     <div id="checklist-body" class="game-checklist__body">
@@ -112,6 +114,20 @@
     <div id="explore-hint" class="game-hint__row" hidden><span data-i18n="hint.dragOrbit">Drag to orbit</span><span data-i18n="hint.rightDragPan">Right-drag to pan</span><span data-i18n="hint.wheelZoom">Scroll to zoom</span><span id="debug-relocate-hint" hidden><kbd>Shift</kbd> + <span data-i18n="hint.leftDragMoveAnt">left drag move ant</span></span><span><kbd>M</kbd> <span id="explore-return-label" data-i18n="ui.antView">Ant view</span></span></div>
   </div>
   <p id="touch-hint" class="touch-hint" data-i18n="hint.touchLook">Drag the scene to look · Pinch to zoom · ↶ Reset view</p>
+
+  <button id="card-notice" class="card-notice" type="button" hidden aria-live="polite"></button>
+  <div id="cards-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="cards-title" hidden>
+    <div class="game-dialog__frame cards-frame">
+      <button id="cards-close" class="game-dialog__close" type="button" aria-label="Close collection" data-i18n-aria-label="cards.close">×</button>
+      <div class="game-dialog__card cards-panel">
+        <span class="game-objective__eyebrow">The Quiet Pond</span>
+        <h2 id="cards-title" tabindex="-1" data-i18n="cards.title">Pond collection</h2>
+        <p id="cards-count"></p>
+        <div id="cards-grid" class="cards-grid"></div>
+        <div id="cards-detail" class="cards-detail" hidden></div>
+      </div>
+    </div>
+  </div>
 
   <div id="pause-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden>
     <div class="game-dialog__card">

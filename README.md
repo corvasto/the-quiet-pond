@@ -34,7 +34,7 @@
 
 ---
 
-A cozy ant exploration game about a living pond. Find seeds, climb through the scenery, and discover its daily routines. A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
+A cozy ant exploration game about a living pond. Collect discovery cards as you complete the checklist. Find seeds, climb through the scenery, and discover its daily routines. A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
 
 The Quiet Pond is a hobby project I'm making with my kids, with help from OpenAI Codex for coding and development. I also review and refine the code.
 

@@ -398,6 +398,23 @@ export class SeedToBurrowGame {
     return true;
   }
 
+  debugSkipToOffering() {
+    if (!['discovering', 'carrying'].includes(this.phase) || !this.offering) return false;
+    if (this.carriedSeed?.visual) {
+      this.app.removeWorldObject(this.carriedSeed.visual);
+      disposeObject3D(this.carriedSeed.visual);
+      this.carriedSeed = null;
+      this.seed = null;
+    }
+    return this.restoreSaveState({ depositedSeeds: POND_GAME.seed.totalCount, offeringComplete: false, phase: 'offeringPickup' });
+  }
+
+  debugCompleteOffering() {
+    if (this.phase === 'complete') return false;
+    if (['discovering', 'carrying'].includes(this.phase) && !this.debugSkipToOffering()) return false;
+    return this.restoreSaveState({ depositedSeeds: POND_GAME.seed.totalCount, offeringComplete: true, phase: 'complete' });
+  }
+
   setPaused(paused) {
     this.paused = Boolean(paused);
     if (this.paused) {

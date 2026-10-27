@@ -217,6 +217,18 @@ export class PondGameObjectives {
     this.paused = Boolean(paused);
   }
 
+  debugComplete(id) {
+    const state = this.taskState[id];
+    if (!state || state.complete) return false;
+    state.complete = true;
+    state.elapsed = 0;
+    if (id === 'lollipop' && this.app.lollipop?.group?.parent) {
+      this.app.removeWorldObject(this.app.lollipop.group);
+    }
+    this.emitChange();
+    return true;
+  }
+
   getSaveState() {
     return {
       completedTaskIds: Object.entries(this.taskState)
@@ -369,7 +381,6 @@ export class PondGameObjectives {
   }
 
   buildSnapshot() {
-    const fireflyConfig = POND_GAME.objectives.fireflies ?? {};
     const debugIncompleteId = POND_GAME.debug?.enabled === true
       ? POND_GAME.debug.completeChecklistExcept
       : null;
@@ -386,17 +397,11 @@ export class PondGameObjectives {
       const label = objective.id === 'seeds'
         ? `Seeds ${this.seedSnapshot.depositedSeeds ?? 0} / ${this.seedSnapshot.totalSeeds ?? 0}`
         : objective.labelKey;
-      const available = this.isObjectiveAvailable(objective, fireflyConfig);
       return withDebugCompletion({
         id: objective.id,
         label,
         hint: objective.hintKey,
         complete: objective.managed ? this.taskState[objective.id].complete : coreComplete,
-        status: objective.status === 'core'
-          ? 'core'
-          : objective.availability === 'always'
-            ? objective.status
-            : available ? 'active' : 'waiting',
       });
     });
     const completed = tasks.filter((task) => task.complete).length;
@@ -421,12 +426,7 @@ export class PondGameObjectives {
       const { id } = MANAGED_GAME_OBJECTIVES[index];
       if (this.taskState[id].complete) completed |= (1 << index);
     }
-    const fireflyConfig = POND_GAME.objectives.fireflies ?? {};
-    const status = (this.raining ? 1 : 0)
-      | (isNight(this.hour) ? 2 : 0)
-      | (isWithinTimeWindow(this.hour, fireflyConfig.startHour, fireflyConfig.endHour) ? 4 : 0);
-    return progress + completed * 131072
-      + status * 131072 * (2 ** MANAGED_GAME_OBJECTIVES.length);
+    return progress + completed * 131072;
   }
 
   emitChange(force = false) {

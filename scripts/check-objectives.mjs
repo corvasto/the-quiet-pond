@@ -54,6 +54,10 @@ absentCompanion.taskState.companionAnt.elapsed = 0.8;
 absentCompanion.update({ delta: 0.2 });
 assert.equal(absentCompanion.taskState.companionAnt.elapsed, 0, 'A hidden companion cannot progress the meeting objective.');
 const restored = new Controller(app);
+assert.equal(restored.debugComplete('frog'), true);
+assert.equal(restored.getSaveState().completedTaskIds.includes('frog'), true, 'Debug completion is saved.');
+assert.equal(restored.debugComplete('frog'), false, 'An already completed task is not completed twice.');
+assert.equal(restored.debugComplete('unknown'), false);
 restored.restoreSaveState(objectives.getSaveState());
 assert.equal(restored.taskState.cockroach.complete, true);
 restored.restoreSaveState({ completedTaskIds: ['frog', 'cat'] });
@@ -62,11 +66,12 @@ assert.equal(restored.taskState.cockroach.complete, false, 'Old saves gain an in
 const signatures = new Set();
 for (let mask = 0; mask < 2 ** MANAGED_GAME_OBJECTIVES.length; mask++) {
   MANAGED_GAME_OBJECTIVES.forEach(({ id }, index) => { restored.taskState[id].complete = Boolean(mask & (1 << index)); });
-  for (const raining of [false, true]) {
-    restored.raining = raining;
-    const signature = restored.getSnapshotSignature();
-    assert.ok(!signatures.has(signature), 'Checklist completion and weather must have distinct cache signatures.');
-    signatures.add(signature);
-  }
+  const signature = restored.getSnapshotSignature();
+  assert.ok(!signatures.has(signature), 'Different checklist completions must have distinct cache signatures.');
+  signatures.add(signature);
 }
+restored.raining = false;
+const drySignature = restored.getSnapshotSignature();
+restored.raining = true;
+assert.equal(restored.getSnapshotSignature(), drySignature, 'Weather alone does not change checklist contents.');
 console.log('Objective checks passed: moving target, companion ant meeting, absence, pause, linger reset, completion, save compatibility, and cache signatures.');

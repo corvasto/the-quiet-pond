@@ -55,3 +55,5 @@ Keyboard and analog input drive camera-relative ground motion with acceleration/
 ## Verification
 
 `npm run check` validates dependency paths, settings, content, versions, and cache coverage. `npm test` exercises movement and offline requests headlessly. Use [verification.md](verification.md) for visual, input, traversal, and device checks.
+
+Debug input and overlay orchestration remains in `js/main.js`; `js/ui/debug-relocation.js` owns the canvas pointer handling for debug relocation. Gameplay debug actions remain with their game controllers.
