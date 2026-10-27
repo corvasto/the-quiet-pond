@@ -41,6 +41,9 @@ const elements = {
   aboutShortcut: byId('about-shortcut'),
   aboutDialog: byId('about-dialog'),
   aboutCard: byId('about-card'),
+  aboutShareButton: byId('about-share-button'),
+  aboutShareLink: byId('about-share-link'),
+  aboutShareStatus: byId('about-share-status'),
   aboutTitle: byId('about-title'),
   closeAboutButton: byId('close-about-button'),
   gameVersion: byId('game-version'),
@@ -629,7 +632,30 @@ function renderCards() {
     cardBack.textContent = '✦';
     flip.append(card, cardBack);
     stage.append(flip);
-    elements.cardsDetail.append(back, stage);
+    const carousel = document.createElement('div');
+    carousel.className = 'cards-carousel';
+    const unlockedCards = GAME_OBJECTIVES.filter((objective) => completed.has(objective.id));
+    if (unlockedCards.length > 1) {
+      const selectedIndex = unlockedCards.indexOf(selected);
+      const makeNavigation = (direction, message) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'cards-navigation';
+        button.setAttribute('aria-label', t(message));
+        button.classList.add(direction < 0 ? 'cards-navigation--previous' : 'cards-navigation--next');
+        button.addEventListener('click', () => {
+          selectedCardId = unlockedCards[(selectedIndex + direction + unlockedCards.length) % unlockedCards.length].id;
+          session?.playCardReveal();
+          renderCards();
+          elements.cardsDetail.querySelectorAll('.cards-navigation')[direction < 0 ? 0 : 1]?.focus();
+        });
+        return button;
+      };
+      carousel.append(makeNavigation(-1, 'cards.previous'), stage, makeNavigation(1, 'cards.next'));
+    } else {
+      carousel.append(stage);
+    }
+    elements.cardsDetail.append(back, carousel);
     return;
   }
   GAME_OBJECTIVES.forEach((objective, index) => {
@@ -1083,6 +1109,28 @@ elements.pauseButton.addEventListener('click', togglePause);
 elements.settingsButton.addEventListener('click', openSettingsDialog);
 elements.closeSettingsButton.addEventListener('click', closeSettingsDialog);
 elements.aboutShortcut.addEventListener('click', openAboutDialog);
+elements.aboutShareButton.addEventListener('click', async () => {
+  const url = elements.aboutShareLink.value;
+  elements.aboutShareStatus.textContent = '';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'The Quiet Pond', url });
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+    }
+  }
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(url);
+    elements.aboutShareStatus.textContent = t('ui.about.share.copied');
+  } catch {
+    elements.aboutShareStatus.textContent = t('ui.about.share.select');
+    elements.aboutShareLink.focus();
+    elements.aboutShareLink.select();
+  }
+});
+elements.aboutShareLink.addEventListener('click', () => elements.aboutShareLink.select());
 elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);

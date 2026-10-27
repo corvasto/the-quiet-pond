@@ -42,8 +42,10 @@ Expand Time preview in the debug overlay, enter an exact time, and press Apply. 
 
 Settings includes Language, chimes, optional live FPS diagnostics, About, and Graphics quality (Auto/Low/Mid/Full). Apply and reload saves progress and remembers the selection; Auto uses the device default. Pause manages resume, restart, and local save slots.
 
+About includes a share button for the game's public link. It opens the device share sheet when available, or copies the link; the link can also be selected and copied manually.
+
 Apply and reload matches other primary dialog buttons. Touch/mouse suppress lingering focus outlines; keyboard restores them. Hover effects require a fine, hover-capable pointer. Native dropdowns keep normal behavior.
 
 See [gameplay.md](gameplay.md) for surface contact behavior and [verification.md](verification.md) for manual checks.
 
-Open Cards beside Checklist to view the discovery collection. Select an unlocked card to read it; use Back to return to the grid and Escape or the close button to return to play. New discoveries briefly show a notice that opens the card.
+Open Cards beside Checklist to view the discovery collection. Select an unlocked card to read it; use the chevrons to cycle through discovered cards, Back to return to the grid, and Escape or the close button to return to play. New discoveries briefly show a notice that opens the card. On touch devices, interface text does not select on a long press; editable fields remain selectable.
