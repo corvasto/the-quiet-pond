@@ -28,6 +28,7 @@ const APP_SHELL = [
   './assets/images/discovery-cards/lollipop.png',
   './js/main.js',
   './js/ui/localization.js',
+  './js/ui/debug-relocation.js',
   './js/config/index.js',
   './js/config/app.js',
   './js/config/quality.js',

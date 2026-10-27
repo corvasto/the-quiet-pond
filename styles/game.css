@@ -145,6 +145,7 @@ body.debug-ant-dragging #scene canvas {
   z-index: 5;
 }
 
+/* Debug overlay and time controls */
 .debug-coordinates {
   /* Keep diagnostics below the time badge instead of sharing its vertical space. */
   top: 130px;
@@ -264,6 +265,7 @@ body.debug-ant-dragging #scene canvas {
   backdrop-filter: none;
 }
 
+/* Checklist and debug completion controls */
 .game-checklist__header {
   display: flex;
   justify-content: flex-end;
@@ -446,6 +448,24 @@ body.debug-ant-dragging #scene canvas {
   content: '';
   font-size: 0.58rem;
 }
+
+.game-checklist__item.has-debug-control::before { display: none; }
+.game-checklist__debug-complete {
+  display: grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(91, 82, 58, 0.72);
+  border-radius: 50%;
+  background: rgba(255, 255, 244, 0.35);
+  color: #263c31;
+  font: inherit;
+  cursor: pointer;
+}
+.game-checklist__debug-complete:disabled { background: rgba(124, 143, 92, 0.18); cursor: default; }
+.game-checklist__debug-complete:focus-visible { outline: 2px solid #354333; outline-offset: 2px; }
 
 .game-checklist__item.is-complete {
   text-decoration: line-through;
@@ -1762,6 +1782,7 @@ kbd {
     transition-duration: 0.01ms !important;
   }
 }
+/* Discovery card collection and animations */
 .cards-frame { width: min(720px, 100%); }
 .cards-panel {
   border: 1px solid rgba(117, 94, 57, 0.78);
@@ -1792,6 +1813,13 @@ kbd {
 .discovery-card-stage { perspective: 1000px; animation: card-float 4s ease-in-out 850ms infinite; }
 .discovery-card-flip { position: relative; transform-style: preserve-3d; animation: card-reveal 850ms cubic-bezier(.2, .7, .2, 1) both; }
 .discovery-card--detail { padding: 20px; backface-visibility: hidden; }
+.discovery-card--detail.is-jiggling { animation: card-jiggle 430ms ease-in-out; }
+@keyframes card-jiggle {
+  0%, 100% { transform: rotateX(0) rotateY(0); }
+  25% { transform: rotateX(var(--card-tilt-x)) rotateY(var(--card-tilt-y)); }
+  55% { transform: rotateX(var(--card-rebound-x)) rotateY(var(--card-rebound-y)); }
+  80% { transform: rotateX(var(--card-settle-x)) rotateY(var(--card-settle-y)); }
+}
 .discovery-card__back { position: absolute; inset: 0; display: grid; place-items: center; backface-visibility: hidden; transform: rotateY(180deg); background: radial-gradient(ellipse, #647e60, #28483b); color: #e7d49d; font-size: 4rem; }
 @keyframes card-reveal {
   0% { transform: rotateY(180deg) scale(.68); }
@@ -1800,7 +1828,7 @@ kbd {
   100% { transform: rotateY(0deg) scale(1); }
 }
 @keyframes card-float { 0%, 100% { transform: translateY(0) rotate(-.35deg); } 50% { transform: translateY(-3px) rotate(.35deg); } }
-@media (prefers-reduced-motion: reduce) { .discovery-card-stage, .discovery-card-flip { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .discovery-card-stage, .discovery-card-flip, .discovery-card--detail.is-jiggling { animation: none; } }
 .discovery-card--detail small { color: #728267; text-transform: uppercase; letter-spacing: .12em; }
 .discovery-card--detail h3 { margin: 5px 0 12px; font-family: Fraunces, serif; font-size: 1.45rem; }
 .discovery-card--detail img { aspect-ratio: 4 / 3; border: 2px solid #a5a783; border-radius: 7px; }
@@ -1843,6 +1871,7 @@ kbd {
 }
 #cards-dialog.is-detail .cards-back { margin-bottom: 10px; }
 
+/* Compact landscape card layout */
 @media (max-height: 500px) and (max-width: 900px), (max-height: 500px) and (pointer: coarse) {
   #cards-dialog.is-detail { padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
   #cards-dialog.is-detail .cards-frame { width: min(690px, 100%); max-height: calc(100dvh - 16px); }

@@ -20,6 +20,10 @@ assert.equal(game.phase, 'offeringPickup');
 assert.equal(game.offering.visible, true);
 assert.equal(game.getSaveState().offeringComplete, false);
 assert.equal(game.debugSkipToOffering(), false, 'An available offering must not be reset.');
+assert.equal(game.debugCompleteOffering(), true);
+assert.equal(game.phase, 'complete');
+assert.equal(game.getSaveState().offeringComplete, true);
+assert.equal(game.debugCompleteOffering(), false);
 let lightingHour;
 let displayedHour;
 let objectiveHour;
@@ -30,9 +34,12 @@ let shortcutCalls = 0;
 session.game = { debugSkipToOffering: () => { shortcutCalls += 1; return true; } };
 session.climbing = { isDebugEnabled: () => false };
 assert.equal(session.debugSkipToOffering(), false, 'The shortcut requires an open debug overlay.');
+assert.equal(session.debugCompleteObjective('seeds'), false, 'Checklist shortcuts require the debug overlay.');
 session.climbing.isDebugEnabled = () => true;
 assert.equal(session.debugSkipToOffering(), true);
 assert.equal(shortcutCalls, 1, 'The enabled shortcut advances the game once.');
+assert.equal(session.debugCompleteObjective('seeds'), true);
+assert.equal(shortcutCalls, 2);
 session.climbing = null;
 session.app = {
   setSunHour: (hour) => { lightingHour = hour; },

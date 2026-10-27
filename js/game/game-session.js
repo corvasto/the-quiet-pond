@@ -352,6 +352,13 @@ export class PondGameSession {
     return this.game?.debugSkipToOffering() ?? false;
   }
 
+  debugCompleteObjective(id) {
+    if (!this.isClimbDebugAvailable() || !this.isClimbDebugEnabled()) return false;
+    if (id === 'seeds') return this.game?.debugSkipToOffering() ?? false;
+    if (id === 'offering') return this.game?.debugCompleteOffering() ?? false;
+    return this.objectives?.debugComplete(id) ?? false;
+  }
+
   toggleFlight() {
     if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive()) return false;
     if (!this.isFlightEnabled() && !this.climbing?.exitSurfaceForDebug()) return false;

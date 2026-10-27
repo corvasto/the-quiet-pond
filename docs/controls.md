@@ -36,6 +36,8 @@ Debug is off by default. Add `?debug=1` (or `?q=mid&debug=1`) to enable diagnost
 
 In the G debug overlay, Skip to offering completes seed collection and makes the offering leaf available at the burrow. This changes and autosaves the active slot. It is available during seed collection, including while carrying a seed; it is disabled once the offering is available or complete.
 
+While the debug overlay is active, select an incomplete checklist circle to complete that task. Completing seeds makes the offering available; completing the offering also completes the seeds. These shortcuts change and autosave the active slot. Tapping an open discovery card tilts it toward the touched side and makes it spring back, unless reduced motion is enabled.
+
 With `?debug=1`, B or the character switch also enables the playable bird immediately, without completing or changing objectives. Its debug overlay shows the bird position and collision sphere. The debug bypass is not stored in saves. Normal bird access is restored from the saved checklist; reload starts in Ant View.
 
 Expand Time preview in the debug overlay, enter an exact time, and press Apply. Freeze time holds that preview for inspection; uncheck it to let the preview advance. Use game clock returns to the normal simulation time. The preview drives lighting, time-based objectives, and ambient/radio time selection, while the saved clock continues separately. G hides the overlay and clears the preview. The first bird selection displays Preparing bird while its model, animation bounds, and collision data are prepared once; subsequent switches reuse them.

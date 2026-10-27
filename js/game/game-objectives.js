@@ -217,6 +217,18 @@ export class PondGameObjectives {
     this.paused = Boolean(paused);
   }
 
+  debugComplete(id) {
+    const state = this.taskState[id];
+    if (!state || state.complete) return false;
+    state.complete = true;
+    state.elapsed = 0;
+    if (id === 'lollipop' && this.app.lollipop?.group?.parent) {
+      this.app.removeWorldObject(this.app.lollipop.group);
+    }
+    this.emitChange();
+    return true;
+  }
+
   getSaveState() {
     return {
       completedTaskIds: Object.entries(this.taskState)

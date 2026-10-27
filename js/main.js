@@ -1,3 +1,4 @@
+import { setupDebugAntRelocation } from './ui/debug-relocation.js';
 import { PondGameSession } from './game/game-session.js';
 import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
 import { POND_GAME } from './config/game.js';
@@ -532,6 +533,20 @@ function renderChecklist(checklist) {
     const item = document.createElement('li');
     item.className = 'game-checklist__item';
     item.classList.toggle('is-complete', task.complete);
+    if (session?.isClimbDebugEnabled()) {
+      item.classList.add('has-debug-control');
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = 'game-checklist__debug-complete';
+      control.disabled = task.complete;
+      control.setAttribute('aria-label', t('debug.completeObjective', { task: t(task.label) }));
+      control.textContent = task.complete ? '✓' : '';
+      control.addEventListener('click', (event) => {
+        event.stopPropagation();
+        session?.debugCompleteObjective(task.id);
+      });
+      item.append(control);
+    }
     const copy = document.createElement('span');
     copy.className = 'game-checklist__copy';
     const label = document.createElement('span');
@@ -589,6 +604,20 @@ function renderCards() {
     back.addEventListener('click', () => { selectedCardId = null; renderCards(); elements.cardsTitle.focus(); });
     const card = document.createElement('article');
     card.className = 'discovery-card discovery-card--detail';
+    card.addEventListener('click', (event) => {
+      const bounds = card.getBoundingClientRect();
+      const x = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / bounds.width * 2 - 1));
+      const y = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / bounds.height * 2 - 1));
+      card.style.setProperty('--card-tilt-x', `${-y * 9}deg`);
+      card.style.setProperty('--card-tilt-y', `${x * 9}deg`);
+      card.style.setProperty('--card-rebound-x', `${y * 3.15}deg`);
+      card.style.setProperty('--card-rebound-y', `${-x * 3.15}deg`);
+      card.style.setProperty('--card-settle-x', `${-y * 1.08}deg`);
+      card.style.setProperty('--card-settle-y', `${x * 1.08}deg`);
+      card.classList.remove('is-jiggling');
+      void card.offsetWidth;
+      card.classList.add('is-jiggling');
+    });
     const title = document.createElement('h3');
     title.textContent = t(`cards.${selected.id}.title`);
     const image = document.createElement('img');
@@ -874,68 +903,6 @@ function toggleChecklist() {
   setChecklistCollapsed(!elements.checklistBody.hidden);
 }
 
-function setupDebugAntRelocation() {
-  debugRelocateCleanup?.();
-  const canvas = elements.scene.querySelector('canvas');
-  if (!canvas) return;
-  let activePointerId = null;
-
-  const finish = (event = null) => {
-    if (activePointerId === null) return;
-    if (event && event.pointerId !== undefined && event.pointerId !== activePointerId) return;
-    event?.preventDefault();
-    event?.stopImmediatePropagation();
-    if (canvas.hasPointerCapture?.(activePointerId)) {
-      canvas.releasePointerCapture(activePointerId);
-    }
-    activePointerId = null;
-    document.body.classList.remove('debug-ant-dragging');
-  };
-  const relocate = (event) => {
-    if (!session?.canDebugRelocateAnt()) return false;
-    return session.debugRelocateAnt(event.clientX, event.clientY);
-  };
-  const onPointerDown = (event) => {
-    if (
-      event.button !== 0
-      || !event.shiftKey
-      || !session?.canDebugRelocateAnt()
-    ) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    activePointerId = event.pointerId;
-    canvas.setPointerCapture?.(event.pointerId);
-    document.body.classList.add('debug-ant-dragging');
-    relocate(event);
-  };
-  const onPointerMove = (event) => {
-    if (event.pointerId !== activePointerId) return;
-    if (!event.shiftKey || !session?.canDebugRelocateAnt()) {
-      finish(event);
-      return;
-    }
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    relocate(event);
-  };
-  const onPointerEnd = (event) => finish(event);
-  const onWindowBlur = () => finish();
-
-  canvas.addEventListener('pointerdown', onPointerDown, true);
-  canvas.addEventListener('pointermove', onPointerMove, true);
-  canvas.addEventListener('pointerup', onPointerEnd, true);
-  canvas.addEventListener('pointercancel', onPointerEnd, true);
-  window.addEventListener('blur', onWindowBlur);
-  debugRelocateCleanup = () => {
-    finish();
-    canvas.removeEventListener('pointerdown', onPointerDown, true);
-    canvas.removeEventListener('pointermove', onPointerMove, true);
-    canvas.removeEventListener('pointerup', onPointerEnd, true);
-    canvas.removeEventListener('pointercancel', onPointerEnd, true);
-    window.removeEventListener('blur', onWindowBlur);
-    debugRelocateCleanup = null;
-  };
-}
 
 function toggleExplore() {
   if (!session || paused) return;
@@ -1141,6 +1108,7 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'KeyG' && !event.repeat) {
     event.preventDefault();
     if (session?.isClimbDebugAvailable()) session.toggleClimbDebug();
+    renderChecklist(latestSnapshot?.checklist);
     updateExploreControl();
     return;
   }
@@ -1326,8 +1294,10 @@ async function startGame() {
     syncPerformanceDiagnosticSubscription();
     setChecklistCollapsed(true);
     gameReady = true;
+    renderChecklist(latestSnapshot?.checklist);
     elements.debugKeyHint.hidden = !session.isClimbDebugAvailable();
-    setupDebugAntRelocation();
+    debugRelocateCleanup?.();
+    debugRelocateCleanup = setupDebugAntRelocation(elements.scene.querySelector('canvas'), () => session);
     setupMobileGameControls();
     updateExploreControl();
     saveActiveSlot();

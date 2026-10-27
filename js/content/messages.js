@@ -98,6 +98,7 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   }),
   'debug.time.title': defineMessage({ en: 'Time preview', id: 'Pratinjau waktu' }),
   'debug.skipOffering': defineMessage({ en: 'Skip to offering', id: 'Langsung ke persembahan' }),
+  'debug.completeObjective': defineMessage({ en: 'Complete: {task}', id: 'Selesaikan: {task}' }),
   'debug.time.input': defineMessage({ en: 'Time of day', id: 'Waktu' }),
   'debug.time.apply': defineMessage({ en: 'Apply', id: 'Terapkan' }),
   'debug.time.freeze': defineMessage({ en: 'Freeze time', id: 'Bekukan waktu' }),
