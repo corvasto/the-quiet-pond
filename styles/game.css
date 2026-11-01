@@ -1529,7 +1529,7 @@ kbd {
     pointer-events: none;
   }
 
-  body.game-explore-active .mobile-game-controls,
+  body.game-explore-active:not(.game-underground-active) .mobile-game-controls,
   body.game-paused .mobile-game-controls,
   body.game-paused .touch-hint {
     display: none;
@@ -1944,6 +1944,10 @@ kbd {
   border-radius: 18px; background: var(--panel); color: var(--ink); font: inherit; cursor: pointer;
 }
 .sleep-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.burrow-actions { position: fixed; z-index: 10; left: 50%; bottom: 18%; transform: translateX(-50%); display: flex; gap: 8px; }
+.burrow-actions .sleep-button { position: static; transform: none; white-space: nowrap; }
+.loading.is-burrow-loading { z-index: 110; }
+@media (max-width: 500px) { .burrow-actions { flex-direction: column; } }
 .sleep-actions button { min-height: 44px; }
 .sleep-fade { display: grid; place-items: center; color: var(--ink); font: 2.5rem var(--font-display); letter-spacing: 0.18em; position: fixed; inset: 0; z-index: 100; background: #050b0a; opacity: 0; transition: opacity 900ms ease; pointer-events: all; }
 .sleep-fade.is-dark { opacity: 1; }
@@ -1963,3 +1967,34 @@ kbd {
 
 .language-label { display: inline-flex; align-items: center; gap: 8px; }
 .language-label svg { width: 19px; height: 19px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+.underground-map { width: min(900px, calc(100vw - 28px)); height: min(850px, calc(100dvh - 28px)); max-height: calc(100dvh - 28px); box-sizing: border-box; overflow: hidden; border: 1px solid #d5bd8c; border-radius: 20px; padding: 20px; background: #f0e3c6; color: #493a2a; text-align: center; }
+.underground-map, .underground-map * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.underground-map:not([open]) { display: none; }
+.underground-map[open] { display: grid; grid-template-rows: auto auto minmax(0,1fr); gap: 8px; }
+.underground-map::backdrop { background: #101a18cc; }
+.underground-map header { padding: 0 44px; }
+.underground-map h2 { margin: 0 0 8px; font-family: var(--font-display); }
+.underground-map p { margin: 4px 0; }
+.underground-map__content { min-height: 0; overflow: hidden; border-radius: 12px; background: #e5d5b4; touch-action: none; cursor: grab; }
+.underground-map__content:active { cursor: grabbing; }
+.underground-map svg { display: block; width: 100%; height: 100%; }
+.underground-map__surface { opacity: .32; stroke-width: .07; }
+.underground-map__pond { fill: #82bec5; stroke: #377c87; }
+.underground-map__tree { fill: #829c60; stroke: #4f7544; }
+.underground-map__tunnels { fill: #ad855e; }
+.underground-map__root { fill: #624429; }
+.underground-map__entrance { fill: #ffdf76; stroke: #806225; stroke-width: .06; }
+.underground-map__player { fill: #db3536; stroke: #fff5df; stroke-width: .055; }
+.underground-map__label { fill: #493a2a; stroke: #f0e3c6; stroke-width: .055; paint-order: stroke; font: .58px sans-serif; text-anchor: middle; }
+#underground-map-close { top: 10px; right: 10px; min-width: 44px; min-height: 44px; font-size: 1.5rem; }
+body.game-underground-active.game-explore-active .mobile-game-controls { display: none; }
+@media (pointer: coarse) { body.game-underground-active .burrow-actions { bottom: calc(env(safe-area-inset-bottom) + 52px); } }
+@media (max-height: 500px) {
+  .underground-map { padding: 12px; }
+  .underground-map[open] { gap: 4px; }
+  .underground-map h2 { font-size: 1.15rem; margin: 0; }
+  .underground-map p { font-size: .85rem; }
+}
+
+.underground-map__surface-image { pointer-events: none; }

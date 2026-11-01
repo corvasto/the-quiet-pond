@@ -1,5 +1,7 @@
 # Game controls
 
+Near the surface burrow, press U or tap Enter burrow to visit the underground floor. At the daylight entrance, press U or tap Return outside. E and Sleep continue to open the above-ground sleep choices. Underground uses the usual movement, running, orbit, zoom, C reset, and M Explore inputs; climbing and bird switching are unavailable there. Underground Explore is labeled Map. M or Map opens a top-down floor plan and pauses movement. Pinch or scroll to zoom the map and drag to pan. the X close button, M, or Escape closes it. The walking camera stays inside the tunnels and keeps the ant visible. Return outside appears near the entrance on both desktop and mobile; U is an additional desktop shortcut. See [underground.md](underground.md).
+
 ## Play
 
 | Input | Result |

@@ -64,9 +64,11 @@ function shellPathFromFile(filePath) {
 function readAppShell() {
   const source = fs.readFileSync(path.join(projectRoot, 'service-worker.js'), 'utf8');
   const block = source.match(/const APP_SHELL = \[([\s\S]*?)\];/)?.[1] ?? '';
+  const deferredBlock = source.match(/const ON_DEMAND_SHELL = \[([\s\S]*?)\];/)?.[1] ?? '';
   return {
     source,
     entries: [...block.matchAll(/'([^']+)'/g)].map((match) => match[1]),
+    deferredEntries: [...deferredBlock.matchAll(/'([^']+)'/g)].map((match) => match[1]),
   };
 }
 
@@ -99,7 +101,7 @@ function resolveModuleSpecifier(specifier, importerPath) {
   return fileURLToPath(new URL(`${importMap[prefix]}${specifier.slice(prefix.length)}`, gameHtmlUrl));
 }
 
-function collectLocalModuleDependencies(entryRelativePath) {
+function collectLocalModuleDependencies(entryRelativePath, includeDynamic = true) {
   const visited = new Set();
   const active = new Set();
   const visit = (filePath) => {
@@ -109,7 +111,9 @@ function collectLocalModuleDependencies(entryRelativePath) {
     active.add(normalized);
     const source = fs.readFileSync(normalized, 'utf8');
     const importPattern = /^\s*(?:import|export)\s+(?:[^;]*?\s+from\s+)?['"]([^'"]+)['"]/gm;
-    for (const match of source.matchAll(importPattern)) {
+    const imports = [...source.matchAll(importPattern)];
+    if (includeDynamic) imports.push(...source.matchAll(/\bimport\(\s*['"]([^'"]+)['"]\s*\)/g));
+    for (const match of imports) {
       const dependencyPath = resolveModuleSpecifier(match[1], normalized);
       check(Boolean(dependencyPath), `Unresolved module imported by ${shellPathFromFile(normalized)}: ${match[1]}`);
       if (!dependencyPath) continue;
@@ -135,14 +139,16 @@ check(manifest.name === APP_METADATA.name, 'Manifest name does not match APP_MET
 check(manifest.short_name === APP_METADATA.shortName, 'Manifest short name does not match APP_METADATA.');
 check(manifest.start_url === './index.html', 'Manifest start URL must remain index.html.');
 
-const { source: serviceWorkerSource, entries: appShellEntries } = readAppShell();
+const { source: serviceWorkerSource, entries: appShellEntries, deferredEntries } = readAppShell();
 const appShell = new Set(appShellEntries);
+const registeredShell = new Set([...appShellEntries, ...deferredEntries]);
 check(appShell.size === appShellEntries.length, 'service-worker.js APP_SHELL contains duplicate paths.');
-appShell.forEach((entry) => {
+check(registeredShell.size === appShellEntries.length + deferredEntries.length, 'Service-worker eager and on-demand entries contain duplicate paths.');
+registeredShell.forEach((entry) => {
   const diskPath = path.resolve(projectRoot, entry.replace(/^\.\//, ''));
   const insideProject = diskPath === projectRoot || diskPath.startsWith(`${projectRoot}${path.sep}`);
-  check(insideProject, `APP_SHELL path escapes the project: ${entry}`);
-  check(fs.existsSync(diskPath), `APP_SHELL path does not exist: ${entry}`);
+  check(insideProject, `Service-worker manifest path escapes the project: ${entry}`);
+  check(fs.existsSync(diskPath), `Service-worker manifest path does not exist: ${entry}`);
 });
 [
   './index.html',
@@ -163,7 +169,11 @@ check(serviceWorkerSource.includes('key.startsWith(CACHE_PREFIX)'), 'Service-wor
 const gameModules = collectLocalModuleDependencies('js/main.js');
 gameModules.forEach((filePath) => {
   const entry = shellPathFromFile(filePath);
-  check(appShell.has(entry), `Game module is not pre-cached: ${entry}`);
+  check(registeredShell.has(entry), `Game module is not registered for offline caching: ${entry}`);
+});
+collectLocalModuleDependencies('js/main.js', false).forEach((filePath) => {
+  const entry = shellPathFromFile(filePath);
+  check(appShell.has(entry), `Startup module must be eagerly pre-cached: ${entry}`);
 });
 
 Object.entries(ASSET_CATALOG).forEach(([id, descriptor]) => {

@@ -6,6 +6,50 @@ function defineMessage(translations) {
 }
 
 export const MESSAGE_DEFINITIONS = Object.freeze({
+  'underground.map.button': defineMessage({ en: 'Map', id: 'Peta' }),
+  'underground.map.title': defineMessage({ en: 'Underground - Floor 1', id: 'Bawah tanah - Lantai 1' }),
+  'underground.map.context': defineMessage({ en: 'Movement paused. Pinch or scroll to zoom. Drag to move the map.', id: 'Gerakan dijeda. Cubit atau gulir untuk zoom. Seret untuk menggeser peta.' }),
+  'underground.map.description': defineMessage({ en: 'Tunnel map with your position, heading, entrance, and surface tree and pond.', id: 'Peta lorong dengan posisi, arah, pintu masuk, pohon dan kolam di permukaan.' }),
+  'underground.map.close': defineMessage({ en: 'Close map', id: 'Tutup peta' }),
+  'underground.map.entrance': defineMessage({ en: 'Entrance / exit', id: 'Pintu masuk / keluar' }),
+  'underground.map.tree': defineMessage({ en: 'Tree above', id: 'Pohon di atas' }),
+  'underground.map.pond': defineMessage({ en: 'Pond above', id: 'Kolam di atas' }),
+  'underground.map.you': defineMessage({ en: 'You', id: 'Kamu' }),
+  'underground.enter': defineMessage({ en: 'Enter burrow', id: 'Masuk liang' }),
+  'underground.exit': defineMessage({ en: 'Return outside', id: 'Kembali keluar' }),
+  'underground.loading': defineMessage({ en: 'Following the roots below', id: 'Mengikuti akar ke bawah' }),
+  'underground.loadFailed': defineMessage({
+    en: 'The burrow could not load. Connect to the internet for your first visit, then try again at the entrance.',
+    id: 'Liang belum dapat dimuat. Hubungkan ke internet untuk kunjungan pertama, lalu coba lagi di pintu masuk.',
+  }),
+  'underground.hint': defineMessage({
+    en: 'WASD / arrows: move · Shift: run · Drag: look · C: reset · M: map · U: exit at entrance',
+    id: 'WASD / panah: bergerak · Shift: lari · Seret: lihat · C: atur kamera · M: peta · U: keluar di pintu masuk',
+  }),
+  'underground.prompt.walk': defineMessage({
+    en: 'Beneath the roots. Explore the tunnels and chambers. Return to the entrance to go outside.',
+    id: 'Di bawah akar. Jelajahi lorong dan ruang-ruangnya. Kembali ke pintu masuk untuk keluar.',
+  }),
+  'underground.prompt.explore': defineMessage({
+    en: 'The map shows your position below the surface. Close the map to continue walking.',
+    id: 'Peta menunjukkan posisimu di bawah permukaan. Tutup peta untuk melanjutkan perjalanan.',
+  }),
+  'underground.story.nest': defineMessage({
+    en: 'Beneath the roots, a small colony is making an old nest feel like home again. Every little journey helps.',
+    id: 'Di bawah akar, koloni kecil membuat sarang lama terasa seperti rumah lagi. Setiap perjalanan kecil membantu.',
+  }),
+  'underground.story.store': defineMessage({
+    en: 'Here the seeds you bring home wait in the dry earth. A little gathered above becomes plenty below.',
+    id: 'Di sini benih yang kamu bawa pulang tersimpan di tanah kering. Sedikit yang dikumpulkan di atas menjadi bekal di bawah.',
+  }),
+  'underground.story.roots': defineMessage({
+    en: 'Old roots hold the earth overhead. Above them, the pond keeps its quiet rhythm.',
+    id: 'Akar tua menyangga tanah di atas. Di atasnya, kolam terus menjalani iramanya yang tenang.',
+  }),
+  'underground.story.quiet': defineMessage({
+    en: 'The far chamber has been quiet for a long time. Now there are footsteps again, and a way back home.',
+    id: 'Ruang jauh ini sudah lama sunyi. Kini langkah kaki kembali terdengar, dan ada jalan pulang.',
+  }),
   'ui.quality.title': defineMessage({ en: 'Graphics quality', id: 'Kualitas grafis' }),
   'ui.quality.auto': defineMessage({ en: 'Auto - device recommended', id: 'Otomatis - rekomendasi perangkat' }),
   'ui.quality.low': defineMessage({ en: 'Low - ~20 FPS, lowest load', id: 'Rendah - ~20 FPS, beban teringan' }),
@@ -175,7 +219,7 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'ui.movementJoystick.aria': defineMessage({ en: 'Movement joystick', id: 'Joystick gerak' }),
   'ui.climbToggle': defineMessage({ en: 'Climb / Get down', id: 'Panjat / Turun' }),
   'ui.jumpClimb': defineMessage({ en: 'Jump / Climb', id: 'Lompat / Panjat' }),
-  'ui.jumpClimb.aria': defineMessage({ en: 'Jump or climb', id: 'Lompat atau panjat' }),
+  'ui.jumpClimb.aria': defineMessage({ en: 'Jump, climb, or get down', id: 'Lompat, panjat, atau turun' }),
   'ui.complete.title': defineMessage({ en: 'The pond has answered', id: 'Kolam telah menjawab' }),
   'ui.complete.description': defineMessage({
     en: 'The seeds are home, and the offering is remembered.',

@@ -67,13 +67,26 @@ function threeResolverPlugin() {
   };
 }
 
-function generateReleaseShell(source) {
+function generateReleaseShell(source, outputs) {
+  const outputPath = (file) => `./${path.relative(releaseDirectory, path.resolve(projectRoot, file)).replaceAll('\\', '/')}`;
+  const mainOutput = Object.keys(outputs).find((file) => outputs[file].entryPoint === 'js/main.js');
+  if (!mainOutput) throw new Error('Release bundle has no main entry point.');
+  const eagerOutputs = new Set();
+  const visit = (file) => {
+    if (eagerOutputs.has(file)) return;
+    eagerOutputs.add(file);
+    for (const dependency of outputs[file].imports) {
+      if (!dependency.external && dependency.kind !== 'dynamic-import') visit(dependency.path);
+    }
+  };
+  visit(mainOutput);
+  const onDemandPaths = Object.keys(outputs).filter((file) => !eagerOutputs.has(file)).map(outputPath);
   const shellPaths = [
     './index.html',
     './manifest.webmanifest',
     './icon.png',
     './styles/game.css',
-    './js/main.js',
+    ...[...eagerOutputs].map(outputPath),
     ...fsSyncWalk(releaseAssets)
       .filter((file) => /\.(?:glb\.gz|woff|ttf|png|gif|webm|mp3|opus|wav)$/i.test(file))
       .map((file) => `./${path.relative(releaseDirectory, file).replaceAll('\\', '/')}`),
@@ -82,6 +95,9 @@ function generateReleaseShell(source) {
   return source.replace(
     /const APP_SHELL = \[[\s\S]*?\];/,
     `const APP_SHELL = ${array};`,
+  ).replace(
+    /const ON_DEMAND_SHELL = \[[\s\S]*?\];/,
+    `const ON_DEMAND_SHELL = ${JSON.stringify(onDemandPaths, null, 2)};`,
   );
 }
 
@@ -107,11 +123,14 @@ await Promise.all([
   fs.copyFile(path.join(projectRoot, 'THIRD_PARTY_NOTICES.md'), path.join(releaseDirectory, 'THIRD_PARTY_NOTICES.md')),
 ]);
 
-await Promise.all([
+const [scriptBuild] = await Promise.all([
   esbuild.build({
     absWorkingDir: projectRoot,
     entryPoints: ['js/main.js'],
-    outfile: path.join(releaseDirectory, 'js', 'main.js'),
+    outdir: path.join(releaseDirectory, 'js'),
+    splitting: true,
+    chunkNames: 'chunks/[name]-[hash]',
+    metafile: true,
     bundle: true,
     minify: true,
     format: 'esm',
@@ -141,7 +160,7 @@ if (releaseHtml.includes('type="importmap"')) throw new Error('The import map wa
 await fs.writeFile(path.join(releaseDirectory, 'index.html'), releaseHtml);
 
 const sourceServiceWorker = await fs.readFile(path.join(projectRoot, 'service-worker.js'), 'utf8');
-const releaseServiceWorker = generateReleaseShell(sourceServiceWorker);
+const releaseServiceWorker = generateReleaseShell(sourceServiceWorker, scriptBuild.metafile.outputs);
 if (releaseServiceWorker === sourceServiceWorker) throw new Error('Could not generate the release service-worker cache list.');
 await fs.writeFile(path.join(releaseDirectory, 'service-worker.js'), releaseServiceWorker);
 await fs.writeFile(path.join(releaseDirectory, '.nojekyll'), '');

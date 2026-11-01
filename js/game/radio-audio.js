@@ -300,7 +300,7 @@ export class PondRadioAudio {
 
   playAnnouncement(key) {
     const entry = this.announcements.get(key);
-    if (!entry || !this.listener || !this.unlocked || this.disposed) return;
+    if (!entry || !this.listener || !this.unlocked || !this.enabled || this.disposed) return;
     this.releaseAudio(this.announcementAudio);
     const distance = Math.hypot(
       this.antPosition.x - this.radioPosition.x,

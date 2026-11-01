@@ -52,3 +52,30 @@ export function stepPlanarMotion(velocity, displacement, targetX, targetZ, accel
   }
   return displacement;
 }
+
+// Both surface and interior movement use the same view-relative heading rules.
+export function resolveGroundDirection(target, state, axes, forwardX, forwardZ) {
+  const inputAngle = axes.magnitude > 0 ? Math.atan2(axes.x, axes.y) : null;
+  const previous = state.antCameraInputAngle;
+  const turn = inputAngle !== null && previous != null
+    ? Math.atan2(Math.sin(inputAngle-previous), Math.cos(inputAngle-previous)) : Infinity;
+  if (inputAngle === null || Math.abs(turn) > 0.15) {
+    state.antCameraMovementYaw = 0;
+    state.antCameraInputAngle = inputAngle;
+  }
+  const length = Math.hypot(forwardX, forwardZ) || 1;
+  const yaw = -(state.antCameraMovementYaw ?? 0);
+  const x = (forwardX*Math.cos(yaw)+forwardZ*Math.sin(yaw))/length;
+  const z = (forwardZ*Math.cos(yaw)-forwardX*Math.sin(yaw))/length;
+  target.x = x*axes.y-z*axes.x;
+  target.y = 0;
+  target.z = z*axes.y+x*axes.x;
+  return target;
+}
+
+export function trackGroundOrbit(state, beforeX, beforeZ, afterX, afterZ) {
+  if (beforeX*beforeX+beforeZ*beforeZ < 1e-8 || afterX*afterX+afterZ*afterZ < 1e-8) return;
+  const turn = Math.atan2(afterX, afterZ)-Math.atan2(beforeX, beforeZ);
+  state.antCameraMovementYaw = (state.antCameraMovementYaw ?? 0)
+    + Math.atan2(Math.sin(turn), Math.cos(turn));
+}

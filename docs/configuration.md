@@ -1,5 +1,7 @@
 # Game configuration and performance
 
+Underground tuning lives in `js/config/underground.js`: floor/ceiling height, cell size, collision clearance, and camera distance/sweep settings; movement speed, running, acceleration, braking, and turning share the surface ant settings. The floor plan and worker routes live in `js/content/underground-layout.js`. These modules load on first entry. See [underground.md](underground.md) for ownership and camera constraints.
+
 Reload code-level changes. Quality is selected at startup; the world is not rebuilt during play.
 
 ## Quality profiles
@@ -25,6 +27,8 @@ The debug overlay's Time preview accepts an exact hour/minute and can freeze tha
 All profiles retain antialiasing, cat, rain, reflection, ripples, shadows, leaf wind, and fireflies. Mid/Low reduce decoration and refresh costly effects less often; Full is the visual reference. Capped profiles target 20 FPS while motion remains frame-independent within a bounded simulation step.
 
 Low quality keeps one background ant so the meeting objective remains available. Mid and Full show all configured background companions. Add or remove companion spawn locations in `SCENE_PROPS.ant.backgroundWanderers` in `js/content/assets.js`; Mid and Full follow that list automatically.
+
+Mid and Full include a small animated rice fish that swims within the pond contour. It occasionally rises to the surface during the day and swims deeper at night. Low skips its model and animation to reduce work. Its size, depth, shore margin, and swimming speed are in `js/content/assets.js`.
 
 The optional Settings diagnostic samples rendered FPS in 0.75-second windows and stores its preference as `the-quiet-pond-performance-diagnostic`. Its callback is subscribed only while enabled. Warnings start below 30 FPS in Full and 14 FPS in Mid/Low, which target 20 but commonly report about 18 after browser scheduling. A 2 FPS recovery margin prevents flicker; long hidden-tab gaps reset sampling to avoid false lows.
 

@@ -285,6 +285,7 @@ export class PondApp {
     this.antWasOnWater = false;
     this.modelPropInstances = [];
     this.genericModelMixers = [];
+    this.pondFish = null;
     this.worldAdditions = new Set();
     this.gameGroundBlockers = new Map();
     this.frameUpdateListeners = new Set();
@@ -541,6 +542,7 @@ export class PondApp {
       mixer.uncacheRoot(mixer.getRoot());
     });
     this.genericModelMixers = [];
+    this.pondFish = null;
     Object.values(this.modelProps).forEach((model) => {
       model?.group.removeFromParent();
     });
@@ -853,6 +855,7 @@ export class PondApp {
     }
     this.placeScatteredModelProps(ground, world);
     this.placeFixedModelProps(ground, world);
+    this.placePondFish(ground, world);
     this.placeStreetLamp(ground, world);
     this.buildModelGroundColliders();
     if (this.placeCockroach(heroPosition, ground)) world.add(this.cockroach.group);
@@ -990,6 +993,11 @@ export class PondApp {
     this.renderer.setSize(width, height, false);
   }
 
+  // Alternate scenes own their simulation and camera; the surface stays intact.
+  setAlternateRuntime(runtime = null) {
+    this.alternateRuntime = runtime;
+  }
+
   animate() {
     if (!this.running) return;
     this.clock.update();
@@ -1011,12 +1019,20 @@ export class PondApp {
       }
     }
     const elapsed = this.clock.getElapsed();
+    if (this.alternateRuntime) {
+      this.alternateRuntime.update({ delta, elapsed });
+      this.notifyFrameUpdateListeners(delta, elapsed);
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(this.alternateRuntime.scene, this.alternateRuntime.camera);
+      return;
+    }
     this.updateAntMovement(delta);
     this.antMixer?.update(delta);
     this.catMixer?.update(delta);
     this.updateCockroach(delta);
     this.cockroachMixer?.update(delta);
     this.updateBackgroundAnts(delta);
+    this.updatePondFish(delta);
     for (const mixer of this.backgroundAntMixers) mixer.update(delta);
     for (const mixer of this.genericModelMixers) mixer.update(delta);
     this.updateStreetLampLight(elapsed);

@@ -82,6 +82,7 @@ export class AntClimbing {
     this.contactMarkerElapsed = 0;
     this.contactMarkerHoldRemaining = 0;
     this.passiveProbeCursorByRoute = new Map();
+    this.passiveRouteCursor = 0;
 
     this.antPosition = new THREE.Vector3();
     this.antHeadPosition = new THREE.Vector3();
@@ -987,6 +988,12 @@ export class AntClimbing {
       Math.round(Number(POND_GAME.climbing.passiveRouteLimit) || 1),
     );
     const routeLimit = exhaustive ? candidates.length : passiveRouteLimit;
+    const routeOffset = exhaustive || candidates.length === 0
+      ? 0
+      : this.passiveRouteCursor % candidates.length;
+    if (!exhaustive && candidates.length > 0) {
+      this.passiveRouteCursor = (routeOffset + routeLimit) % candidates.length;
+    }
     const passiveProbeLimit = Math.max(
       1,
       Math.round(Number(POND_GAME.climbing.passiveEntryProbeLimit) || 3),
@@ -994,7 +1001,7 @@ export class AntClimbing {
     this.nearbyRoute = null;
     this.nearbyContact = null;
     for (let index = 0; index < Math.min(routeLimit, candidates.length); index += 1) {
-      const route = candidates[index];
+      const route = candidates[(routeOffset + index) % candidates.length];
       const routeConfig = POND_GAME.climbing[route.configId ?? route.id] ?? {};
       const configuredMaximum = Number(routeConfig.maximumEntryProbes);
       const availableProbeCount = this.getEntryProbeCount(route);

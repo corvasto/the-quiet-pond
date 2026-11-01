@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CAMERA_VIEWS, SCENE_PROPS, getHabitatArea } from '../config/index.js';
-import { clampMotionDelta } from '../utils/player-motion.js';
+import { clampMotionDelta, trackGroundOrbit } from '../utils/player-motion.js';
 
 function easeInOut(value) {
   return value < 0.5
@@ -167,20 +167,10 @@ const cameraMethods = {
   updateAntOrbitControls(delta) {
     const beforeX = this.camera.position.x - this.controls.target.x;
     const beforeZ = this.camera.position.z - this.controls.target.z;
-    const beforeRadiusSq = beforeX * beforeX + beforeZ * beforeZ;
-    const beforeYaw = Math.atan2(beforeX, beforeZ);
     this.controls.update(delta);
-    const afterX = this.camera.position.x - this.controls.target.x;
-    const afterZ = this.camera.position.z - this.controls.target.z;
-    const afterRadiusSq = afterX * afterX + afterZ * afterZ;
-    if (beforeRadiusSq < 0.00000001 || afterRadiusSq < 0.00000001) return;
-    const afterYaw = Math.atan2(afterX, afterZ);
-    const orbitYaw = Math.atan2(
-      Math.sin(afterYaw - beforeYaw),
-      Math.cos(afterYaw - beforeYaw),
-    );
-    // Preserve the held ground heading while camera damping settles after an orbit.
-    this.antCameraMovementYaw = (this.antCameraMovementYaw ?? 0) + orbitYaw;
+    trackGroundOrbit(this, beforeX, beforeZ,
+      this.camera.position.x-this.controls.target.x,
+      this.camera.position.z-this.controls.target.z);
   },
 
   updateAntCameraAssistance(dt, travelX, travelZ) {

@@ -49,6 +49,78 @@ function createLampGlow() {
 }
 
 const propPlacementMethods = {
+  placePondFish(ground, world) {
+    const model = this.modelProps.fish;
+    const config = this.sceneProps.fish;
+    const profile = ground.pondProfile;
+    if (!model || !config || !profile) return;
+    const height = model.nativeSize.y * config.targetWidth / model.horizontalSize;
+    model.placeAt({ x: profile.center.x, y: profile.waterLevel - config.surfaceDepth - height, z: profile.center.z });
+    model.group.traverse((object) => {
+      if (object.isMesh) object.castShadow = false;
+    });
+    world.add(model.group);
+    const clip = createConfiguredAnimationClip(model.animations, config.animation, 'fish swim');
+    if (clip) {
+      const mixer = new THREE.AnimationMixer(model.group);
+      mixer.clipAction(clip).play();
+      this.genericModelMixers.push(mixer);
+    }
+    this.pondFish = {
+      model, config, profile, height, depthTimer: 5, nearSurface: false,
+      targetX: profile.center.x, targetZ: profile.center.z,
+    };
+  },
+
+  updatePondFish(delta) {
+    const fish = this.pondFish;
+    if (!fish) return;
+    const position = fish.model.group.position;
+    const night = getNightAmount(this.settings.sunHour) > 0;
+    if (night) {
+      fish.nearSurface = false;
+      fish.depthTimer = 5;
+      position.y = Math.min(position.y, fish.profile.waterLevel - fish.height - 0.01);
+    } else {
+      fish.depthTimer -= delta;
+      if (fish.depthTimer <= 0) {
+        fish.nearSurface = !fish.nearSurface;
+        fish.depthTimer = 6 + Math.random() * 6;
+      }
+    }
+    const depth = fish.nearSurface ? fish.config.daytimeSurfaceDepth : fish.config.surfaceDepth;
+    const targetY = fish.profile.waterLevel - fish.height - depth;
+    const verticalStep = fish.config.depthChangeSpeed * delta;
+    position.y += THREE.MathUtils.clamp(targetY - position.y, -verticalStep, verticalStep);
+    let dx = fish.targetX - position.x;
+    let dz = fish.targetZ - position.z;
+    let distance = Math.hypot(dx, dz);
+    if (distance < 0.03) {
+      const angle = Math.random() * Math.PI * 2;
+      const edge = fish.profile.pointAt(angle, fish.config.shoreMargin);
+      const fraction = Math.sqrt(Math.random());
+      fish.targetX = fish.profile.center.x + (edge.x - fish.profile.center.x) * fraction;
+      fish.targetZ = fish.profile.center.z + (edge.z - fish.profile.center.z) * fraction;
+      dx = fish.targetX - position.x;
+      dz = fish.targetZ - position.z;
+      distance = Math.hypot(dx, dz);
+    }
+    if (distance < 0.0001) return;
+    const step = Math.min(distance, fish.config.swimSpeed * delta);
+    const nextX = position.x + dx / distance * step;
+    const nextZ = position.z + dz / distance * step;
+    if (fish.profile.signedDistance(nextX, nextZ) > -fish.config.shoreMargin) {
+      fish.targetX = position.x;
+      fish.targetZ = position.z;
+      return;
+    }
+    position.x = nextX;
+    position.z = nextZ;
+    const targetYaw = Math.atan2(dx, dz) + THREE.MathUtils.degToRad(fish.config.yawOffset);
+    const difference = Math.atan2(Math.sin(targetYaw - fish.model.group.rotation.y), Math.cos(targetYaw - fish.model.group.rotation.y));
+    fish.model.group.rotation.y += difference * Math.min(1, delta * 3);
+  },
+
   placeRadio(anchor, heroPosition = { x: 0, z: 0 }) {
     if (!this.radio || !anchor) return;
     this.radioAnchor = anchor;
