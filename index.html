@@ -88,8 +88,7 @@
       <span class="movement-joystick__label" data-i18n="ui.move">Move</span>
     </div>
     <div class="mobile-game-actions">
-      <button id="run-button" class="mobile-game-action mobile-game-action--run" type="button" aria-label="A - Hold to run" data-i18n-aria-label="ui.holdRun.aria" aria-pressed="false"><span class="mobile-game-action__key" aria-hidden="true">A</span><span class="mobile-game-action__label" data-i18n="ui.holdRun">Hold to run</span></button>
-      <button id="climb-button" class="mobile-game-action mobile-game-action--jump" type="button" aria-label="B - Jump or climb" data-i18n-aria-label="ui.jumpClimb.aria"><span class="mobile-game-action__key" aria-hidden="true">B</span><span class="mobile-game-action__label" data-i18n="ui.jumpClimb">Jump / Climb</span></button>
+      <button id="climb-button" class="mobile-game-action mobile-game-action--jump" type="button" aria-label="Jump or climb" data-i18n-aria-label="ui.jumpClimb.aria"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
     </div>
   </section>
 
@@ -130,6 +129,21 @@
     </div>
   </div>
   <div id="sleep-fade" class="sleep-fade" aria-hidden="true" hidden><span>Zzzz...</span></div>
+  <button id="radio-control-button" class="sleep-button" type="button" hidden data-i18n="radio.control.button">Radio volume</button>
+  <div id="radio-control-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="radio-control-title" hidden>
+    <div class="game-dialog__frame radio-control-frame">
+      <button id="radio-control-close" class="game-dialog__close" type="button" aria-label="Close radio volume" data-i18n-aria-label="radio.control.close">×</button>
+      <div class="game-dialog__card radio-control-card">
+        <h2 id="radio-control-title" tabindex="-1" data-i18n="radio.control.title">Radio volume</h2>
+        <div class="radio-knob" id="radio-knob">
+          <span class="radio-knob__face" aria-hidden="true"><span class="radio-knob__marker"></span></span>
+          <input id="radio-knob-input" class="radio-knob__input" type="range" min="0" max="100" step="1" value="82" aria-label="Radio volume" data-i18n-aria-label="ui.audio.musicVolume">
+        </div>
+        <output id="radio-knob-value" for="radio-knob-input">82%</output>
+        <p class="radio-knob__hint" data-i18n="radio.control.hint">Drag around the dial to adjust</p>
+      </div>
+    </div>
+  </div>
   <div id="cards-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="cards-title" hidden>
     <div class="game-dialog__frame cards-frame">
       <button id="cards-close" class="game-dialog__close" type="button" aria-label="Close collection" data-i18n-aria-label="cards.close">×</button>
@@ -175,7 +189,7 @@
         <section class="settings-group" aria-labelledby="settings-language-title">
           <h3 id="settings-language-title" data-i18n="ui.settings.interface">Interface</h3>
           <div class="language-setting">
-            <label for="language-select" data-i18n="ui.language">Language</label>
+            <label class="language-label" for="language-select"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-2.5 2.5-3.5 5.5-3.5 9s1 6.5 3.5 9M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9"/></svg><span data-i18n="ui.language">Language</span></label>
             <span class="select-control">
               <select id="language-select" aria-label="Language" data-i18n-aria-label="ui.language">
                 <option value="en">English</option>
@@ -208,9 +222,9 @@
             </span>
           </label>
           <div class="music-volume-setting">
-            <label for="music-volume" data-i18n="ui.audio.musicVolume">Radio music volume</label>
+            <label for="music-volume" data-i18n="ui.audio.musicVolume">Radio volume</label>
             <div class="music-volume-setting__control">
-              <input id="music-volume" type="range" min="0" max="100" step="1" value="82" aria-label="Radio music volume" data-i18n-aria-label="ui.audio.musicVolume">
+              <input id="music-volume" type="range" min="0" max="100" step="1" value="82" aria-label="Radio volume" data-i18n-aria-label="ui.audio.musicVolume">
               <output id="music-volume-value" for="music-volume">82%</output>
             </div>
           </div>

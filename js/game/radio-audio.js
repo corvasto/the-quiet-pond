@@ -27,11 +27,13 @@ export class PondRadioAudio {
     this.antPosition = new THREE.Vector3();
     this.audioLoader = new THREE.AudioLoader();
     this.music = new Map();
+    this.musicLevels = new Map();
     this.staticAudio = null;
     this.announcements = new Map();
     this.musicKey = null;
     this.musicPlaying = false;
     this.announcementAudio = null;
+    this.announcementLevel = 0;
     this.unlocked = false;
     this.enabled = true;
     this.nearby = false;
@@ -176,7 +178,16 @@ export class PondRadioAudio {
 
   setMusicVolume(volume) {
     this.musicVolume = clamp01(volume);
+    this.music.forEach((audio, key) => {
+      const level = this.musicLevels.get(key) ?? 0;
+      audio.setVolume(this.unlocked && this.enabled ? level * this.musicVolume : 0);
+    });
+    this.announcementAudio?.setVolume(this.getAnnouncementVolume());
     return this.musicVolume;
+  }
+
+  getAnnouncementVolume() {
+    return clamp01(this.config.announcementVolume ?? 0.88) * this.musicVolume * this.announcementLevel;
   }
 
   setLanguage(language) {
@@ -232,13 +243,16 @@ export class PondRadioAudio {
     const fadeSeconds = Math.max(0.1, Number(this.config.crossfadeSeconds) || 2.5);
     const fadeFactor = 1 - Math.exp(-Math.max(0.016, Number(delta) || 0.016) / fadeSeconds);
     this.music.forEach((audio, key) => {
-      const target = key === musicKey && this.nearby
-        ? proximity * this.musicVolume
-        : 0;
-      const nextVolume = THREE.MathUtils.lerp(audio.getVolume(), target, fadeFactor);
-      audio.setVolume(nextVolume);
-      if (key !== musicKey && nextVolume < 0.003 && audio.isPlaying) audio.stop();
+      const target = key === musicKey && this.nearby ? proximity : 0;
+      const level = THREE.MathUtils.lerp(this.musicLevels.get(key) ?? 0, target, fadeFactor);
+      this.musicLevels.set(key, level);
+      audio.setVolume(level * this.musicVolume);
+      if (key !== musicKey && level < 0.003 && audio.isPlaying) audio.stop();
     });
+    if (this.announcementAudio) {
+      this.announcementLevel = THREE.MathUtils.lerp(this.announcementLevel, proximity, fadeFactor);
+      this.announcementAudio.setVolume(this.getAnnouncementVolume());
+    }
     if (this.staticAudio) {
       const staticConfig = this.config.static ?? {};
       const staticDistance = Number(staticConfig.distance) || 3.4;
@@ -288,12 +302,17 @@ export class PondRadioAudio {
     const entry = this.announcements.get(key);
     if (!entry || !this.listener || !this.unlocked || this.disposed) return;
     this.releaseAudio(this.announcementAudio);
+    const distance = Math.hypot(
+      this.antPosition.x - this.radioPosition.x,
+      this.antPosition.z - this.radioPosition.z,
+    );
+    this.announcementLevel = 1 - clamp01(distance / (this.config.musicDistance ?? 5.5));
     const audio = this.createRadioAudio({
       buffer: entry.buffer,
       refDistance: 0.9,
       maxDistance: this.config.announcementDistance ?? 2.8,
       rolloffFactor: 1.1,
-      volume: this.config.announcementVolume ?? 0.88,
+      volume: this.getAnnouncementVolume(),
     });
     if (!audio) return;
     audio.play();
@@ -306,7 +325,9 @@ export class PondRadioAudio {
     if (!this.enabled || !this.unlocked) return;
     const audio = this.music.get(this.musicKey);
     if (!audio?.buffer || !this.nearby) {
-      this.stopMusic();
+      let fading = false;
+      this.musicLevels.forEach((level) => { if (level >= 0.003) fading = true; });
+      if (!fading && this.musicPlaying) this.stopMusic();
       return;
     }
     if (this.musicPlaying && audio.isPlaying) return;
@@ -319,6 +340,7 @@ export class PondRadioAudio {
       if (audio.isPlaying) audio.stop();
       audio.setVolume(0);
     });
+    this.musicLevels.clear();
     this.musicPlaying = false;
   }
 

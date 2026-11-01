@@ -154,6 +154,10 @@ export class AntClimbing {
     return this.phase === 'surface' && Boolean(this.route);
   }
 
+  isOnRadio() {
+    return this.isClimbing() && this.route.id === 'radio' && !this.isOnRadioSupportSurface();
+  }
+
   isDebugEnabled() {
     return this.debugEnabled;
   }

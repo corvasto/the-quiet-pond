@@ -21,7 +21,7 @@ At the burrow, choose morning (07:00) or night (19:00). The screen fades as the 
 
 ## Touch
 
-The left joystick moves 360 degrees relative to the camera's horizontal heading. A central deadzone blocks accidental input, and distance from the center controls speed, including on diagonals. Hold Run with another finger for ground running; use Climb / Get down and camera reset as needed. Drag uncovered scene space to orbit while moving. As with keyboard movement, the ant keeps its current ground heading while the camera moves.
+The left joystick moves 360 degrees relative to the camera's horizontal heading. A central deadzone blocks accidental input, and distance from the center controls speed, including on diagonals. Push toward the outer edge to run on the ground and ease back to walk; climbing stays at walking speed. Use Climb / Get down and camera reset as needed. Drag uncovered scene space to orbit while moving. As with keyboard movement, the ant keeps its current ground heading while the camera moves.
 
 Explore hides movement controls. One finger pans; two rotate and pinch-zoom. Returning restores gameplay touch controls.
 
@@ -29,7 +29,7 @@ Explore hides movement controls. One finger pans; two rotate and pinch-zoom. Ret
 
 Complete every checklist objective to unlock the top character switch. It reads Fly as bird, then Play as ant while flying; mobile shows the shorter Bird/Ant labels. The ant keeps its position, including its current climb surface, while the bird is controlled.
 
-WASD/arrows and the mobile joystick steer relative to the camera, with gradual curved turns and banking. Look up/down while moving forward to climb/descend. Desktop also supports holding Space to rise or Ctrl to descend. C resets the view behind the bird. M enters Explore and suspends movement while the wings keep flapping. Mobile hides A/B while flying and uses the joystick plus camera gestures. Bird collision and minimum terrain/water clearance remain active in debug mode; the bird follows rising terrain at its minimum clearance instead of stopping against an invisible height barrier.
+WASD/arrows and the mobile joystick steer relative to the camera, with gradual curved turns and banking. Look up/down while moving forward to climb/descend. Desktop also supports holding Space to rise or Ctrl to descend. C resets the view behind the bird. M enters Explore and suspends movement while the wings keep flapping. Mobile hides the climb button while flying and uses the joystick plus camera gestures. Bird collision and minimum terrain/water clearance remain active in debug mode; the bird follows rising terrain at its minimum clearance instead of stopping against an invisible height barrier.
 
 ## Explore and debug
 
@@ -43,7 +43,7 @@ With `?debug=1`, B or the character switch also enables the playable bird immedi
 
 Expand Time preview in the debug overlay, enter an exact time, and press Apply. Freeze time holds that preview for inspection; uncheck it to let the preview advance. Use game clock returns to the normal simulation time. The preview drives lighting, time-based objectives, and ambient/radio time selection, while the saved clock continues separately. G hides the overlay and clears the preview. The first bird selection displays Preparing bird while its model, animation bounds, and collision data are prepared once; subsequent switches reuse them.
 
-Settings includes Language, chimes, optional live FPS diagnostics, About, and Graphics quality (Auto/Low/Mid/Full). Apply and reload saves progress and remembers the selection; Auto uses the device default. Pause manages resume, restart, and local save slots.
+Settings includes Language, chimes, radio volume, optional live FPS diagnostics, About, and Graphics quality (Auto/Low/Mid/Full). Climb onto the radio to reveal a volume button and adjust its circular dial by touch, mouse, or keyboard. The dial and Settings slider immediately change music and radio voices and are saved automatically; ambient sounds and radio static are separate. Apply and reload applies graphics quality; Auto uses the device default. Pause manages resume, restart, and local save slots.
 
 About includes a share button for the game's public link. It opens the device share sheet when available, or copies the link; the link can also be selected and copied manually.
 

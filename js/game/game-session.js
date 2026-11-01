@@ -501,6 +501,11 @@ export class PondGameSession {
     this.worldCycleUnsubscribe = this.app.onFrame((frame) => this.updateWorldCycle(frame));
   }
 
+  canAdjustRadio() {
+    return Boolean(this.app && !this.paused && !this.exploreActive && !this.isBirdActive()
+      && !this.isFlightEnabled() && this.climbing?.isOnRadio());
+  }
+
   canSleep() {
     if (!this.app || !this.game || this.paused || this.exploreActive
       || this.isBirdActive() || this.isClimbing() || this.isFlightEnabled()) return false;

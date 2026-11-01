@@ -71,14 +71,14 @@ Load the game once online and let it finish caching for offline play. Menus vary
 ### Mobile
 
 - Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
-- Tap and hold **A** to run.
-- Tap **B** to climb or get down.
+- Push the joystick toward its edge to run; ease it back to walk.
+- Tap the arrow button to climb or get down.
 - Near the burrow, tap **Sleep** to choose a wake time.
 - Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 
 See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for camera behavior, traversal, and objectives.
 
-Completing the checklist unlocks the playable bird. Flight has smooth curved steering, banking, object collision, and a minimum clearance above terrain and water. On mobile, use the joystick and look up/down to change altitude; A/B are hidden while flying. The top character switch returns to the ant. `?debug=1` makes the bird available for testing before completing the checklist.
+Completing the checklist unlocks the playable bird. Flight has smooth curved steering, banking, object collision, and a minimum clearance above terrain and water. On mobile, use the joystick and look up/down to change altitude; The climb button is hidden while flying. The top character switch returns to the ant. `?debug=1` makes the bird available for testing before completing the checklist.
 
 ## Explore the pond
 

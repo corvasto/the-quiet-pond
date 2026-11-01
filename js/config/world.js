@@ -66,6 +66,8 @@ export const ANT_MOVEMENT_CONFIG = Object.freeze({
   braking: 26,
   turnResponsiveness: 18,
   analogDeadzone: 0.12,
+  touchRunThreshold: 0.9,
+  touchWalkThreshold: 0.77,
 });
 
 // Maximum ground movement distance in world units from the habitat center.

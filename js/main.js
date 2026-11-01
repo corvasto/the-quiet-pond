@@ -12,6 +12,7 @@ import {
 } from './config/quality.js';
 import { formatSeedProgress, translate } from './ui/localization.js';
 import { FpsSampler } from './utils/fps-diagnostic.js';
+import { shouldTouchRun } from './utils/player-motion.js';
 
 const byId = (id) => document.getElementById(id);
 
@@ -26,6 +27,12 @@ document.addEventListener('keydown', () => {
 
 const elements = {
   scene: byId('scene'),
+  radioControlButton: byId('radio-control-button'),
+  radioControlDialog: byId('radio-control-dialog'),
+  radioControlTitle: byId('radio-control-title'),
+  radioKnob: byId('radio-knob'),
+  radioKnobInput: byId('radio-knob-input'),
+  radioKnobValue: byId('radio-knob-value'),
   sleepButton: byId('sleep-button'),
   sleepDialog: byId('sleep-dialog'),
   sleepTitle: byId('sleep-title'),
@@ -99,7 +106,6 @@ const elements = {
   languageSelect: byId('language-select'),
   movementJoystick: byId('movement-joystick'),
   movementKnob: byId('movement-knob'),
-  runButton: byId('run-button'),
   climbButton: byId('climb-button'),
 };
 
@@ -204,6 +210,10 @@ function readSeasonPreference() {
 function updateMusicVolume(value, persist = true) {
   musicVolume = Math.min(1, Math.max(0, Number(value) / 100 || 0));
   const percentage = Math.round(musicVolume * 100);
+  elements.musicVolume.value = String(percentage);
+  elements.radioKnobInput.value = String(percentage);
+  elements.radioKnob.style.setProperty('--knob-angle', `${-135 + percentage * 2.7}deg`);
+  elements.radioKnobValue.textContent = `${percentage}%`;
   elements.musicVolumeValue.value = `${percentage}%`;
   elements.musicVolumeValue.textContent = `${percentage}%`;
   session?.setMusicVolume(musicVolume);
@@ -482,8 +492,6 @@ function canMoveAnt() {
 function syncRunning() {
   const running = canMoveAnt() && (touchRunHeld || heldRunCodes.size > 0);
   session?.setAntRunning(running);
-  elements.runButton?.classList.toggle('is-held', running);
-  elements.runButton?.setAttribute('aria-pressed', String(running));
 }
 
 function syncMovementDirection(direction) {
@@ -713,6 +721,36 @@ function closeCards() {
   cardsPausedGame = false;
 }
 
+function updateRadioControlButton() {
+  elements.radioControlButton.hidden = !(canMoveAnt() && elements.cardsDialog.hidden && session?.canAdjustRadio());
+}
+
+function openRadioControl() {
+  if (!canMoveAnt() || !session?.canAdjustRadio()) return;
+  setPaused(true);
+  elements.pauseDialog.hidden = true;
+  elements.radioControlButton.hidden = true;
+  elements.radioControlDialog.hidden = false;
+  updateMusicVolume(musicVolume * 100, false);
+  requestAnimationFrame(() => elements.radioKnobInput.focus({ preventScroll: true }));
+}
+
+function closeRadioControl() {
+  elements.radioControlDialog.hidden = true;
+  setPaused(false);
+  updateRadioControlButton();
+}
+
+function setRadioKnobFromPointer(event) {
+  const bounds = elements.radioKnob.getBoundingClientRect();
+  const dx = event.clientX - (bounds.left + bounds.width / 2);
+  const dy = event.clientY - (bounds.top + bounds.height / 2);
+  if (Math.hypot(dx, dy) < bounds.width * 0.08) return;
+  const angle = ((Math.atan2(dx, -dy) * 180 / Math.PI - 225) % 360 + 360) % 360;
+  const value = angle <= 270 ? angle / 270 * 100 : angle < 315 ? 100 : 0;
+  updateMusicVolume(Math.round(value));
+}
+
 function updateSleepButton() {
   const available = canMoveAnt() && elements.cardsDialog.hidden && session?.canSleep();
   elements.sleepButton.hidden = !available;
@@ -779,7 +817,7 @@ function showRadioCaption(text, duration = 5, celebration = false) {
 function setPaused(nextPaused) {
   if (!session || !gameReady) return;
   paused = Boolean(nextPaused);
-  if (paused) elements.sleepButton.hidden = true;
+  if (paused) { elements.sleepButton.hidden = true; elements.radioControlButton.hidden = true; }
   clearGameInput();
   session.setPaused(paused);
   elements.pauseDialog.hidden = !paused;
@@ -936,7 +974,6 @@ function setupMobileGameControls() {
   if (!joystick || !knob) return;
 
   let activePointerId = null;
-  let runPointerId = null;
   let centerX = 0;
   let centerY = 0;
   let radius = 1;
@@ -946,7 +983,9 @@ function setupMobileGameControls() {
     const previousPointerId = activePointerId;
     activePointerId = null;
     session?.setMovementAxes(0, 0);
-    joystick.classList.remove('is-held');
+    touchRunHeld = false;
+    syncRunning();
+    joystick.classList.remove('is-held', 'is-running');
     knob.style.transform = 'translate(-50%, -50%)';
     if (previousPointerId !== null && joystick.hasPointerCapture?.(previousPointerId)) {
       joystick.releasePointerCapture(previousPointerId);
@@ -962,6 +1001,14 @@ function setupMobileGameControls() {
     const horizontal = deltaX * scale / radius;
     const forward = -deltaY * scale / radius;
     session?.setMovementAxes(horizontal, forward);
+    const canRun = !session?.isClimbing() && !session?.isBirdActive() && !session?.isFlightEnabled();
+    const nextRunning = shouldTouchRun(Math.min(1, distance / radius), touchRunHeld, canRun,
+      POND_GAME.antMovement.touchRunThreshold, POND_GAME.antMovement.touchWalkThreshold);
+    if (nextRunning !== touchRunHeld) {
+      touchRunHeld = nextRunning;
+      joystick.classList.toggle('is-running', nextRunning);
+      syncRunning();
+    }
   };
 
   const onPointerDown = (event) => {
@@ -990,27 +1037,8 @@ function setupMobileGameControls() {
     if (canMoveAnt() && session) {
       session.unlockSound();
       session.toggleClimb();
+      reset();
     }
-  };
-
-  const stopRunning = (event = null) => {
-    if (event && event.pointerId !== runPointerId) return;
-    const previousPointerId = runPointerId;
-    runPointerId = null;
-    touchRunHeld = false;
-    syncRunning();
-    if (previousPointerId !== null && elements.runButton.hasPointerCapture?.(previousPointerId)) {
-      elements.runButton.releasePointerCapture(previousPointerId);
-    }
-  };
-  const onRunPointerDown = (event) => {
-    if (!canMoveAnt() || runPointerId !== null || event.button !== 0) return;
-    event.preventDefault();
-    runPointerId = event.pointerId;
-    elements.runButton.setPointerCapture?.(runPointerId);
-    session?.unlockSound();
-    touchRunHeld = true;
-    syncRunning();
   };
 
   joystick.addEventListener('pointerdown', onPointerDown);
@@ -1019,14 +1047,7 @@ function setupMobileGameControls() {
   joystick.addEventListener('pointercancel', reset);
   joystick.addEventListener('lostpointercapture', reset);
   elements.climbButton?.addEventListener('click', onClimb);
-  elements.runButton?.addEventListener('pointerdown', onRunPointerDown);
-  elements.runButton?.addEventListener('pointerup', stopRunning);
-  elements.runButton?.addEventListener('pointercancel', stopRunning);
-  elements.runButton?.addEventListener('lostpointercapture', stopRunning);
-  resetMobileControls = () => {
-    reset();
-    stopRunning();
-  };
+  resetMobileControls = reset;
 
   mobileMovementCleanup = () => {
     resetMobileControls();
@@ -1036,10 +1057,6 @@ function setupMobileGameControls() {
     joystick.removeEventListener('pointercancel', reset);
     joystick.removeEventListener('lostpointercapture', reset);
     elements.climbButton?.removeEventListener('click', onClimb);
-    elements.runButton?.removeEventListener('pointerdown', onRunPointerDown);
-    elements.runButton?.removeEventListener('pointerup', stopRunning);
-    elements.runButton?.removeEventListener('pointercancel', stopRunning);
-    elements.runButton?.removeEventListener('lostpointercapture', stopRunning);
     resetMobileControls = null;
     mobileMovementCleanup = null;
   };
@@ -1047,6 +1064,10 @@ function setupMobileGameControls() {
 
 window.addEventListener('keydown', (event) => {
   if (sleepTransition) { event.preventDefault(); return; }
+  if (!elements.radioControlDialog.hidden) {
+    if (event.code === 'Escape') { event.preventDefault(); closeRadioControl(); }
+    return;
+  }
   if (!elements.sleepDialog.hidden) {
     if (event.code === 'Escape') { event.preventDefault(); closeSleep(); }
     return;
@@ -1161,6 +1182,19 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && gameReady && session && !paused) setPaused(true);
 });
 
+elements.radioControlButton.addEventListener('click', openRadioControl);
+byId('radio-control-close').addEventListener('click', closeRadioControl);
+elements.radioKnobInput.addEventListener('input', () => updateMusicVolume(elements.radioKnobInput.value));
+elements.radioKnobInput.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  elements.radioKnobInput.focus({ preventScroll: true });
+  elements.radioKnobInput.setPointerCapture(event.pointerId);
+  setRadioKnobFromPointer(event);
+});
+elements.radioKnobInput.addEventListener('pointermove', (event) => {
+  if (elements.radioKnobInput.hasPointerCapture(event.pointerId)) setRadioKnobFromPointer(event);
+});
 elements.sleepButton.addEventListener('click', openSleep);
 byId('sleep-close').addEventListener('click', closeSleep);
 for (const choice of ['morning', 'evening']) {
@@ -1283,6 +1317,7 @@ async function startGame() {
     debugControls.start(elements.scene.querySelector('canvas'));
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
+    session.onFrame(updateRadioControlButton);
     updateExploreControl();
     saveActiveSlot();
     renderSaveSlots();

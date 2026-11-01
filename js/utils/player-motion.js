@@ -1,3 +1,8 @@
+export function shouldTouchRun(magnitude, wasRunning, canRun, runThreshold = 0.9, walkThreshold = 0.77) {
+  if (!canRun || !Number.isFinite(magnitude)) return false;
+  return magnitude >= (wasRunning ? walkThreshold : runThreshold);
+}
+
 export function clampMovementAxis(value) {
   return Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : 0;
 }

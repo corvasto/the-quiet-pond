@@ -841,12 +841,25 @@ kbd {
   height: 44px;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid #c68d7e;
   border-radius: 50%;
-  background: #102a28;
-  color: var(--ink);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, #a56a5d 0%, #804a42 42%, #57302e 100%);
+  color: #fff3e8;
+  box-shadow: inset 0 1px 2px #f7cbb08c, inset 0 -3px 4px #2c1414a6, 0 3px 0 #3c2422, 0 7px 12px #0006;
+  text-shadow: 0 1px 2px #351a18;
   cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .game-dialog__close:hover {
+    background: linear-gradient(180deg, #ba7b6b, #90554b 42%, #663733);
+    border-color: #e1ac99;
+  }
+}
+
+.game-dialog__close:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px #361b1a99, 0 1px 0 #3c2422;
 }
 
 .game-dialog__close:focus-visible {
@@ -1525,9 +1538,9 @@ kbd {
   .mobile-game-controls {
     position: fixed;
     z-index: 6;
-    right: max(12px, env(safe-area-inset-right));
+    right: max(18px, env(safe-area-inset-right));
     bottom: calc(env(safe-area-inset-bottom) + 96px);
-    left: max(12px, env(safe-area-inset-left));
+    left: max(18px, env(safe-area-inset-left));
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -1545,14 +1558,16 @@ kbd {
 
   .movement-joystick {
     position: relative;
-    flex: 0 0 173px;
-    width: 173px;
-    height: 173px;
+    flex: 0 0 181px;
+    width: 181px;
+    height: 181px;
     border: 2px solid rgba(182, 220, 193, 0.72);
     border-radius: 50%;
     background: rgba(16, 42, 40, 0.38);
     box-shadow: inset 0 0 24px rgba(182, 220, 193, 0.09), 0 8px 24px rgba(0, 0, 0, 0.2);
   }
+
+  .movement-joystick.is-running { border-color: #f9dfa8; box-shadow: inset 0 0 24px #f0cf8860, 0 8px 24px #0003; }
 
   .movement-joystick.is-held {
     border-color: var(--sage);
@@ -1570,8 +1585,8 @@ kbd {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 60px;
-    height: 60px;
+    width: 63px;
+    height: 63px;
     border: 2px solid #d9eee0;
     border-radius: 50%;
     background: rgba(182, 220, 193, 0.64);
@@ -1594,15 +1609,15 @@ kbd {
 
   .mobile-game-actions {
     position: relative;
-    width: 184px;
-    height: 170px;
+    width: 190px;
+    height: 176px;
   }
 
   .mobile-game-action {
     position: absolute;
     display: grid;
-    width: 101px;
-    height: 101px;
+    width: 106px;
+    height: 106px;
     place-content: center;
     gap: 1px;
     padding: 8px;
@@ -1618,34 +1633,25 @@ kbd {
   }
 
   .mobile-game-action--jump {
-    right: 0;
-    top: 0;
-  }
-
-  .mobile-game-action--run {
     bottom: 0;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%);
     border-color: var(--sage);
     background: rgba(16, 42, 40, 0.68);
     color: var(--ink);
   }
 
-  .mobile-game-action__key {
-    font-family: var(--font-display);
-    font-size: 1.45rem;
-    line-height: 1;
+  .mobile-game-action--jump svg {
+    width: 32px;
+    height: 32px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
-  .mobile-game-action__label {
-    line-height: 1.05;
-  }
-
-  .mobile-game-action:active {
-    background: rgba(255, 224, 160, 0.9);
-  }
-
-  .mobile-game-action--run.is-held,
-  .mobile-game-action--run:active {
+  .mobile-game-action--jump:active {
     background: rgba(182, 220, 193, 0.9);
     color: #16372d;
   }
@@ -1699,29 +1705,31 @@ kbd {
   }
 
   .mobile-game-controls {
-    right: max(18px, env(safe-area-inset-right));
-    left: max(18px, env(safe-area-inset-left));
+    right: max(20px, env(safe-area-inset-right));
+    left: max(20px, env(safe-area-inset-left));
+    gap: 4px;
   }
 
   .movement-joystick {
-    flex-basis: 149px;
-    width: 149px;
-    height: 149px;
+    flex-basis: min(153px, 40vw);
+    width: min(153px, 40vw);
+    height: min(153px, 40vw);
   }
 
   .movement-joystick__knob {
-    width: 53px;
-    height: 53px;
+    width: 55px;
+    height: 55px;
   }
 
   .mobile-game-actions {
-    width: 170px;
-    height: 158px;
+    width: 164px;
+    min-width: 0;
+    height: 164px;
   }
 
   .mobile-game-action {
-    width: 89px;
-    height: 89px;
+    width: 93px;
+    height: 93px;
   }
 }
 
@@ -1735,9 +1743,9 @@ kbd {
   }
 
   .mobile-game-controls {
-    right: max(20px, env(safe-area-inset-right));
+    right: max(26px, env(safe-area-inset-right));
     bottom: calc(env(safe-area-inset-bottom) + 64px);
-    left: max(20px, env(safe-area-inset-left));
+    left: max(26px, env(safe-area-inset-left));
   }
 
   .performance-diagnostic {
@@ -1745,24 +1753,24 @@ kbd {
   }
 
   .movement-joystick {
-    flex-basis: 134px;
-    width: 134px;
-    height: 134px;
+    flex-basis: 140px;
+    width: 140px;
+    height: 140px;
   }
 
   .movement-joystick__knob {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
   }
 
   .mobile-game-actions {
-    width: 158px;
-    height: 139px;
+    width: 164px;
+    height: 145px;
   }
 
   .mobile-game-action {
-    width: 84px;
-    height: 84px;
+    width: 88px;
+    height: 88px;
     font-size: 0.6rem;
   }
 
@@ -1941,3 +1949,17 @@ kbd {
 .sleep-fade.is-dark { opacity: 1; }
 @media (max-height: 500px) { .sleep-card { padding: 14px 20px; } .sleep-card h2, .sleep-card p { margin: 4px 0; } }
 @media (prefers-reduced-motion: reduce) { .sleep-fade { transition-duration: 1ms; } }
+
+.radio-control-card { text-align: center; }
+.radio-control-card h2 { margin: 0 0 14px; }
+.radio-knob { --knob-angle: 86.4deg; position: relative; width: min(180px, 42vw, 38dvh); aspect-ratio: 1; margin: 0 auto; border: 4px solid #777; border-radius: 50%; background: linear-gradient(145deg, #303030, #080808 60%); box-shadow: 0 7px 15px #0009, inset 0 0 0 5px #111; touch-action: none; }
+.radio-knob__face { position: absolute; inset: 13%; border-radius: 50%; border: 2px solid #4c4c4c; background: radial-gradient(circle at 35% 30%, #353535, #111 65%); transform: rotate(var(--knob-angle)); }
+.radio-knob__marker { position: absolute; top: 8%; left: calc(50% - 2px); width: 4px; height: 19%; border-radius: 3px; background: #ddd; }
+.radio-knob__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; touch-action: none; }
+.radio-knob:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 4px; }
+#radio-knob-value { display: block; margin-top: 8px; font-size: 1.4rem; }
+.radio-knob__hint { margin: 0; color: var(--muted); }
+@media (max-height: 500px) { .radio-control-card { padding: 12px 20px; } .radio-control-card h2 { margin-bottom: 4px; } #radio-knob-value { margin-top: 2px; } }
+
+.language-label { display: inline-flex; align-items: center; gap: 8px; }
+.language-label svg { width: 19px; height: 19px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

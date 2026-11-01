@@ -4,11 +4,18 @@ import * as THREE from '../vendor/three/build/three.module.js';
 import { SCENE_PROPS } from '../js/config/index.js';
 import { ANT_CAMERA_FOLLOW_CONFIG, ANT_MOVEMENT_CONFIG } from '../js/config/world.js';
 import {
+  shouldTouchRun,
   clampMotionDelta,
   clampMovementAxis,
   resolveMovementAxes,
   stepPlanarMotion,
 } from '../js/utils/player-motion.js';
+
+assert.equal(shouldTouchRun(0.89, false, true), false);
+assert.equal(shouldTouchRun(0.9, false, true), true);
+assert.equal(shouldTouchRun(0.8, true, true), true, 'Hysteresis avoids rapid switching.');
+assert.equal(shouldTouchRun(0.76, true, true), false);
+assert.equal(shouldTouchRun(1, true, false), false, 'Climbing and flight cannot trigger running.');
 
 // Resolve the same vendored Three.js used by the HTML import map, without a
 // browser, package installation, or changes to the runtime module bodies.
