@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.0.2';
+const RELEASE_VERSION = '1.0.3';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {

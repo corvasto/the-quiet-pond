@@ -65,6 +65,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 | Space | Climb or get down |
 | M | Toggle Explore |
 | B or character switch | Fly as the bird after completing every objective, or return to the ant |
+| E near the burrow | Choose when to wake up |
 | P or Escape | Pause or resume |
 
 ### Mobile
@@ -72,6 +73,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 - Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
 - Tap and hold **A** to run.
 - Tap **B** to climb or get down.
+- Near the burrow, tap **Sleep** to choose a wake time.
 - Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 
 See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for camera behavior, traversal, and objectives.

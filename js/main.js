@@ -26,6 +26,10 @@ document.addEventListener('keydown', () => {
 
 const elements = {
   scene: byId('scene'),
+  sleepButton: byId('sleep-button'),
+  sleepDialog: byId('sleep-dialog'),
+  sleepTitle: byId('sleep-title'),
+  sleepFade: byId('sleep-fade'),
   objective: byId('game-objective-title'),
   prompt: byId('game-prompt'),
   step: byId('game-step'),
@@ -118,6 +122,7 @@ let resetMobileControls = null;
 let session = null;
 let paused = false;
 let gameReady = false;
+let sleepTransition = false;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
@@ -467,6 +472,8 @@ function isEditableTarget(target) {
 function canMoveAnt() {
   return gameReady
     && !paused
+    && !sleepTransition
+    && elements.sleepDialog.hidden
     && elements.settingsDialog.hidden
     && elements.aboutDialog.hidden
     && !session?.isExploreActive();
@@ -706,6 +713,47 @@ function closeCards() {
   cardsPausedGame = false;
 }
 
+function updateSleepButton() {
+  const available = canMoveAnt() && elements.cardsDialog.hidden && session?.canSleep();
+  elements.sleepButton.hidden = !available;
+}
+
+function openSleep() {
+  if (!canMoveAnt() || !session?.canSleep()) return;
+  setPaused(true);
+  elements.pauseDialog.hidden = true;
+  elements.sleepButton.hidden = true;
+  elements.sleepDialog.hidden = false;
+  requestAnimationFrame(() => elements.sleepTitle.focus({ preventScroll: true }));
+}
+
+function closeSleep() {
+  elements.sleepDialog.hidden = true;
+  setPaused(false);
+  updateSleepButton();
+}
+
+function beginSleep(choice) {
+  if (sleepTransition || elements.sleepDialog.hidden) return;
+  sleepTransition = true;
+  elements.sleepDialog.hidden = true;
+  elements.sleepFade.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => elements.sleepFade.classList.add('is-dark')));
+  window.setTimeout(() => {
+    session?.sleepUntil(choice);
+    saveActiveSlot();
+    window.setTimeout(() => {
+      elements.sleepFade.classList.remove('is-dark');
+      window.setTimeout(() => {
+        elements.sleepFade.hidden = true;
+        sleepTransition = false;
+        setPaused(false);
+        updateSleepButton();
+      }, 900);
+    }, 300);
+  }, 900);
+}
+
 function updatePrompt(prompt) {
   latestPrompt = prompt;
   elements.prompt.textContent = t(prompt);
@@ -731,6 +779,7 @@ function showRadioCaption(text, duration = 5, celebration = false) {
 function setPaused(nextPaused) {
   if (!session || !gameReady) return;
   paused = Boolean(nextPaused);
+  if (paused) elements.sleepButton.hidden = true;
   clearGameInput();
   session.setPaused(paused);
   elements.pauseDialog.hidden = !paused;
@@ -997,6 +1046,11 @@ function setupMobileGameControls() {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (sleepTransition) { event.preventDefault(); return; }
+  if (!elements.sleepDialog.hidden) {
+    if (event.code === 'Escape') { event.preventDefault(); closeSleep(); }
+    return;
+  }
   if (!elements.cardsDialog.hidden) {
     if (event.code === 'Escape') { event.preventDefault(); closeCards(); }
     return;
@@ -1025,6 +1079,11 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
     if (canMoveAnt() && !event.repeat) heldRunCodes.add(event.code);
     syncRunning();
+    return;
+  }
+  if (event.code === 'KeyE' && !event.repeat && session?.canSleep() && canMoveAnt()) {
+    event.preventDefault();
+    openSleep();
     return;
   }
   if (event.code === 'KeyM' && !event.repeat) {
@@ -1102,6 +1161,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && gameReady && session && !paused) setPaused(true);
 });
 
+elements.sleepButton.addEventListener('click', openSleep);
+byId('sleep-close').addEventListener('click', closeSleep);
+for (const choice of ['morning', 'evening']) {
+  byId(`sleep-${choice}`).addEventListener('click', () => beginSleep(choice));
+}
 elements.cardsButton.addEventListener('click', () => openCards());
 elements.cardsClose.addEventListener('click', closeCards);
 elements.cardNotice.addEventListener('click', () => openCards(noticeCardId));
@@ -1218,6 +1282,7 @@ async function startGame() {
     renderChecklist(latestSnapshot?.checklist);
     debugControls.start(elements.scene.querySelector('canvas'));
     setupMobileGameControls();
+    session.onFrame(updateSleepButton);
     updateExploreControl();
     saveActiveSlot();
     renderSaveSlots();

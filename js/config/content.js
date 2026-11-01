@@ -43,6 +43,12 @@ export const BURROW_CONFIG = Object.freeze({
   shelterRadius: 0.78,
 });
 
+export const SLEEP_CONFIG = Object.freeze({
+  radius: 0.9,
+  morningHour: 7,
+  eveningHour: 19,
+});
+
 export const OFFERING_CONFIG = Object.freeze({
   // Null means derive the offering from the generated pond center.
   position: null,

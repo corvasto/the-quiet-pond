@@ -501,6 +501,27 @@ export class PondGameSession {
     this.worldCycleUnsubscribe = this.app.onFrame((frame) => this.updateWorldCycle(frame));
   }
 
+  canSleep() {
+    if (!this.app || !this.game || this.paused || this.exploreActive
+      || this.isBirdActive() || this.isClimbing() || this.isFlightEnabled()) return false;
+    const position = this.getAntWorldPosition();
+    const burrow = this.game.burrowPosition;
+    if (!position || !burrow) return false;
+    const dx = position.x - burrow.x;
+    const dz = position.z - burrow.z;
+    return dx * dx + dz * dz <= POND_GAME.sleep.radius ** 2;
+  }
+
+  sleepUntil(choice) {
+    if (!this.app || !['morning', 'evening'].includes(choice)) return false;
+    const target = POND_GAME.sleep[`${choice}Hour`];
+    if (!Number.isFinite(target)) return false;
+    this.worldTimeHours = this.wrapHour(target);
+    this.debugTimeHours = null;
+    this.refreshDebugTime();
+    return true;
+  }
+
   getCurrentWorldHour() {
     return this.debugTimeHours ?? this.worldTimeHours;
   }

@@ -1929,3 +1929,15 @@ kbd {
   .discovery-card__condition-label { color: #728267; font-size: .85em; text-transform: uppercase; letter-spacing: .08em; }
   .discovery-card__number { justify-self: end; color: #7a876c; letter-spacing: .09em; font-size: .9em; }
 }
+
+.sleep-button {
+  position: fixed; z-index: 10; left: 50%; bottom: 18%; transform: translateX(-50%);
+  min-width: 110px; min-height: 48px; padding: 9px 22px; border: 1px solid var(--accent);
+  border-radius: 18px; background: var(--panel); color: var(--ink); font: inherit; cursor: pointer;
+}
+.sleep-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sleep-actions button { min-height: 44px; }
+.sleep-fade { display: grid; place-items: center; color: var(--ink); font: 2.5rem var(--font-display); letter-spacing: 0.18em; position: fixed; inset: 0; z-index: 100; background: #050b0a; opacity: 0; transition: opacity 900ms ease; pointer-events: all; }
+.sleep-fade.is-dark { opacity: 1; }
+@media (max-height: 500px) { .sleep-card { padding: 14px 20px; } .sleep-card h2, .sleep-card p { margin: 4px 0; } }
+@media (prefers-reduced-motion: reduce) { .sleep-fade { transition-duration: 1ms; } }

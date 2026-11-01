@@ -6,6 +6,7 @@ import {
   OBJECTIVE_TUNING,
   OFFERING_CONFIG,
   SEED_CONFIG,
+  SLEEP_CONFIG,
 } from './content.js';
 import { RADIO_AUDIO_CONFIG } from './radio.js';
 import { AMBIENCE_CONFIG } from './ambience.js';
@@ -23,6 +24,7 @@ import {
 export const POND_GAME = Object.freeze({
   seed: SEED_CONFIG,
   burrow: BURROW_CONFIG,
+  sleep: SLEEP_CONFIG,
   offering: OFFERING_CONFIG,
   objectives: OBJECTIVE_TUNING,
   interactions: INTERACTION_CONFIG,
