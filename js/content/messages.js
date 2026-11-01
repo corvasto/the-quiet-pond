@@ -219,7 +219,7 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'ui.movementJoystick.aria': defineMessage({ en: 'Movement joystick', id: 'Joystick gerak' }),
   'ui.climbToggle': defineMessage({ en: 'Climb / Get down', id: 'Panjat / Turun' }),
   'ui.jumpClimb': defineMessage({ en: 'Jump / Climb', id: 'Lompat / Panjat' }),
-  'ui.jumpClimb.aria': defineMessage({ en: 'Jump or climb', id: 'Lompat atau panjat' }),
+  'ui.jumpClimb.aria': defineMessage({ en: 'Jump, climb, or get down', id: 'Lompat, panjat, atau turun' }),
   'ui.complete.title': defineMessage({ en: 'The pond has answered', id: 'Kolam telah menjawab' }),
   'ui.complete.description': defineMessage({
     en: 'The seeds are home, and the offering is remembered.',
