@@ -15,7 +15,6 @@ const css = read('styles/game.css');
 const serviceWorker = read('service-worker.js');
 assert.ok(!html.includes('type="importmap"'), 'Release HTML should not need an import map.');
 assert.ok(html.includes('src="./js/main.js"'), 'Release HTML should load the bundled app.');
-assert.ok(script.length > 100_000, 'Bundled app should include the game runtime.');
 assert.ok(!/from\s+["']three(?:\/|["'])/.test(script), 'Three.js imports should be bundled.');
 assert.ok(css.includes('PatrickHand-Regular.ttf') && css.includes('IndieFlower-Regular.ttf'), 'Bundled CSS should retain the local game fonts.');
 assert.ok(css.includes('fraunces.woff'), 'Bundled CSS should retain the original title font.');
@@ -24,8 +23,25 @@ assert.ok(!css.includes('background-title.png'), 'Bundled CSS should omit the re
 const appShellBlock = serviceWorker.match(/const APP_SHELL = (\[[\s\S]*?\]);/)?.[1];
 assert.ok(appShellBlock, 'Release service worker should contain a generated app shell.');
 const appShell = JSON.parse(appShellBlock);
-for (const entry of appShell) {
+const onDemandBlock = serviceWorker.match(/const ON_DEMAND_SHELL = (\[[\s\S]*?\]);/)?.[1];
+assert.ok(onDemandBlock, 'Release service worker should register deferred feature chunks.');
+const onDemandShell = JSON.parse(onDemandBlock);
+assert.ok(onDemandShell.length > 0, 'Underground runtime should remain in deferred release chunks.');
+for (const entry of [...appShell, ...onDemandShell]) {
   assert.ok(exists(entry.replace(/^\.\//, '')), `Release cache entry should exist: ${entry}`);
+}
+for (const entry of onDemandShell) assert.ok(!appShell.includes(entry), `Deferred chunk should not be downloaded on installation: ${entry}`);
+const eagerScripts = appShell.filter((entry) => entry.endsWith('.js'));
+assert.ok(eagerScripts.reduce((size, entry) => size + read(entry).length, 0) > 100_000, 'Eager chunks should include the game and shared Three.js runtime.');
+const registeredScripts = new Set([...eagerScripts, ...onDemandShell]);
+for (const entry of registeredScripts) {
+  const code = read(entry);
+  assert.ok(!/from\s*["']three(?:\/|["'])/.test(code), `Chunk should use the bundled Three.js runtime: ${entry}`);
+  const imports = [...code.matchAll(/(?:from\s*|import\s*\(\s*)["'](\.[^"']+)["']/g)];
+  for (const dependency of imports) {
+    const dependencyPath = `./${path.posix.normalize(path.posix.join(path.posix.dirname(entry), dependency[1]))}`;
+    assert.ok(registeredScripts.has(dependencyPath), `Chunk dependency should be registered: ${dependencyPath}`);
+  }
 }
 
 const sourceModels = [];

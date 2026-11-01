@@ -1,10 +1,18 @@
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.0.4';
+const RELEASE_VERSION = '1.1.0';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
   console.info(`[the-quiet-pond] Updating ${REQUESTED_VERSION} to ${RELEASE_VERSION}.`);
 }
+// Optional feature modules are cached when requested, never during installation.
+const ON_DEMAND_SHELL = [
+  './js/config/underground.js',
+  './js/content/underground-layout.js',
+  './js/generators/underground.js',
+  './js/game/underground.js',
+  './js/core/surface-map.js',
+];
 const APP_SHELL = [
   './index.html',
   './manifest.webmanifest',
@@ -28,6 +36,7 @@ const APP_SHELL = [
   './assets/images/discovery-cards/lollipop.png',
   './js/main.js',
   './js/ui/localization.js',
+  './js/ui/underground-map.js',
   './js/ui/debug-relocation.js',
   './js/ui/debug-overlay.js',
   './js/ui/debug-controls.js',
@@ -83,6 +92,7 @@ const APP_SHELL = [
   './js/utils/noise.js',
   './js/utils/time-of-day.js',
   './js/utils/player-motion.js',
+  './js/utils/map-bounds.js',
   './js/utils/flight-motion.js',
   './js/utils/fps-diagnostic.js',
   './vendor/three/build/three.module.js',
@@ -99,6 +109,7 @@ const APP_SHELL = [
   './assets/models/bird_fly.glb',
   './assets/models/common_frog.glb',
   './assets/models/cockroach.glb',
+  './assets/models/fish.glb',
   './assets/models/generic_narcissus_flower.glb',
   './assets/models/lollipop.glb',
   './assets/models/old_radio.glb',
@@ -148,6 +159,13 @@ self.addEventListener('activate', (event) => {
       ))
       .then(() => self.clients.claim()),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'cache-underground') return;
+  // First entry may precede service-worker control. Cache the optional module
+  // group after readiness too, so the next offline visit has every dependency.
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ON_DEMAND_SHELL)));
 });
 
 self.addEventListener('fetch', (event) => {

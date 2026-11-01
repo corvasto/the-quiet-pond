@@ -289,15 +289,6 @@ export function createPondProfile({
   const surfaceRadiusX = radiusX * maximumRadiusFactor + 0.16;
   const surfaceRadiusZ = radiusZ * maximumRadiusFactor + 0.16;
 
-  const toLocal = (x, z) => {
-    const deltaX = x - center.x;
-    const deltaZ = z - center.z;
-    return {
-      x: deltaX * cosine + deltaZ * sine,
-      z: -deltaX * sine + deltaZ * cosine,
-    };
-  };
-
   const pointAt = (angle, inset = 0) => {
     const factor = Math.max(0.72, radiusFactorAt(angle));
     const localX = Math.cos(angle) * Math.max(0.2, radiusX * factor - inset);
@@ -311,12 +302,15 @@ export function createPondProfile({
   };
 
   const signedDistance = (x, z) => {
-    const local = toLocal(x, z);
-    const angle = Math.atan2(local.z / radiusZ, local.x / radiusX);
+    const deltaX = x - center.x;
+    const deltaZ = z - center.z;
+    const localX = deltaX * cosine + deltaZ * sine;
+    const localZ = -deltaX * sine + deltaZ * cosine;
+    const angle = Math.atan2(localZ / radiusZ, localX / radiusX);
     const factor = Math.max(0.72, radiusFactorAt(angle));
     const normalizedRadius = Math.hypot(
-      local.x / (radiusX * factor),
-      local.z / (radiusZ * factor),
+      localX / (radiusX * factor),
+      localZ / (radiusZ * factor),
     );
     return (normalizedRadius - 1) * Math.min(radiusX, radiusZ) * factor;
   };

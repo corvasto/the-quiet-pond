@@ -5,6 +5,7 @@ import {
   clampMovementAxis,
   resolveMovementAxes,
   stepPlanarMotion,
+  resolveGroundDirection,
 } from '../utils/player-motion.js';
 
 const antNavigationMethods = {
@@ -406,15 +407,9 @@ const antNavigationMethods = {
       return;
     }
     const axes = this.getAntMovementAxes();
-    const inputAngle = axes.magnitude > 0 ? Math.atan2(axes.x, axes.y) : null;
-    const inputTurn = inputAngle !== null && this.antCameraInputAngle != null
-      ? Math.atan2(Math.sin(inputAngle - this.antCameraInputAngle), Math.cos(inputAngle - this.antCameraInputAngle))
-      : Infinity;
-    if (inputAngle === null || Math.abs(inputTurn) > 0.15) {
-      this.antCameraMovementYaw = 0;
-      this.antCameraInputAngle = inputAngle;
-    }
     if (axes.magnitude === 0 && this.antVelocity.lengthSq() === 0) {
+      this.antCameraMovementYaw = 0;
+      this.antCameraInputAngle = null;
       this.setAntAnimationPlaying(false);
       return;
     }
@@ -427,17 +422,7 @@ const antNavigationMethods = {
       this.antForward.set(-offset.x, 0, -offset.z);
     }
     this.antForward.normalize();
-    // Keep held movement on its ground heading while the camera orbits.
-    const movementYaw = -(this.antCameraMovementYaw ?? 0);
-    const forwardX = this.antForward.x;
-    const forwardZ = this.antForward.z;
-    this.antForward.x = forwardX * Math.cos(movementYaw) + forwardZ * Math.sin(movementYaw);
-    this.antForward.z = forwardZ * Math.cos(movementYaw) - forwardX * Math.sin(movementYaw);
-    this.antRight.set(-this.antForward.z, 0, this.antForward.x);
-    this.antMoveDirection
-      .copy(this.antForward)
-      .multiplyScalar(axes.y)
-      .addScaledVector(this.antRight, axes.x);
+    resolveGroundDirection(this.antMoveDirection, this, axes, this.antForward.x, this.antForward.z);
 
     if (axes.magnitude > 0) {
       const targetYaw = Math.atan2(this.antMoveDirection.x, this.antMoveDirection.z)

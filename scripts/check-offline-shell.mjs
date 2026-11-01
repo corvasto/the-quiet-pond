@@ -60,6 +60,12 @@ for (const scope of ['https://example.test/', 'https://example.test/the-quiet-po
   await lifecycle('install');
   assert.ok(skipped);
   for (const entry of ['./index.html', './js/utils/player-motion.js']) assert.ok(installed.includes(entry));
+  const deferred = vm.runInNewContext(`${source}\nON_DEMAND_SHELL;`, { ...environment, self: { ...environment.self, addEventListener() {} } });
+  assert.ok(deferred.length > 0, 'Optional underground modules should be registered.');
+  for (const entry of deferred) {
+    assert.ok(fs.existsSync(fileURLToPath(new URL('../' + entry, import.meta.url))), entry);
+    assert.ok(!installed.includes(entry), `Optional module must not download at install: ${entry}`);
+  }
   await lifecycle('activate');
   assert.ok(claimed);
   assert.deepEqual(deleted, ['the-quiet-pond-v0.9.0']);
@@ -85,10 +91,18 @@ for (const scope of ['https://example.test/', 'https://example.test/the-quiet-po
   assert.equal(await request('game.html', 'navigate', 'POST'), undefined);
   if (scope.endsWith('/the-quiet-pond/')) assert.equal(await request('/sibling/asset.js', 'cors'), undefined);
   assert.equal((await request('missing.js', 'cors')).kind, 'network-error');
+  assert.equal((await request(deferred[0], 'cors')).kind, 'network-error', 'First entry while offline should fail without installing a partial interior.');
   online = true;
+  for (const entry of deferred) assert.equal((await request(entry, 'cors')).status, 200);
   assert.equal((await request('new.js', 'cors')).status, 200);
   online = false;
+  for (const entry of deferred) assert.equal((await request(entry, 'cors')).kind, 'downloaded', 'Entered underground modules should work offline.');
   assert.equal((await request('new.js', 'cors')).kind, 'downloaded');
+  for (const entry of deferred) cached.delete(new URL(entry, scope).href);
+  const optionalCacheTasks = [];
+  listeners.message({ data: { type: 'cache-underground' }, waitUntil(promise) { optionalCacheTasks.push(promise); } });
+  await Promise.all(optionalCacheTasks);
+  for (const entry of deferred) assert.equal((await request(entry, 'cors')).kind, entry, 'Entry notification should also cache modules loaded before worker control.');
   assert.ok(opened.every(name => name === activeCache));
 }
 console.log('Offline shell checks passed: local payload, root/subfolder routing, query fallback, isolated caches, activation, and network handling.');

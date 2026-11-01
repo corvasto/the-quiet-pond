@@ -93,6 +93,19 @@ function defineAsset({
 }
 
 export const ASSET_CATALOG = Object.freeze({
+  fish: defineAsset({
+    file: 'fish.glb',
+    label: 'Rice fish in the pond',
+    size: { width: 0.32 },
+    orientation: { yawOffsetDegrees: 90 },
+    placement: { strategy: 'pond-swimmer', anchor: 'pondProfile' },
+    animation: { clip: 'Animation', speed: 1 },
+    requires: 'pondFish',
+    runtime: {
+      role: 'pond-swimmer', swimSpeed: 0.24, shoreMargin: 1.2,
+      surfaceDepth: 0.12, daytimeSurfaceDepth: -0.025, depthChangeSpeed: 0.035,
+    },
+  }),
   bird: defineAsset({
     file: 'bird_fly.glb',
     label: 'Playable bird',

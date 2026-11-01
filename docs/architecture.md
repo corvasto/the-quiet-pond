@@ -50,6 +50,8 @@ Keyboard and analog input drive camera-relative ground motion with acceleration/
 
 ## State and offline operation
 
+Underground play uses a deferred controller with a separate scene, camera, and cloned actors. The session injects it through `PondApp.setAlternateRuntime()`, which bypasses surface simulation while keeping UI frame notifications. Surface actors and terrain stay intact, and surface controllers pause until exit. See [underground.md](underground.md) for ownership, loading, collision, and verification.
+
 `js/main.js` owns save slots and language preferences. Controllers serialize versioned progress to project-specific browser keys, not render resources. The service worker caches the shell, imports, models, and audio; it handles root/index navigation and limits cache access to this app's scope/version. See [pwa.md](pwa.md).
 
 ## Verification
@@ -67,3 +69,8 @@ Keyboard and analog input drive camera-relative ground motion with acceleration/
 | `js/ui/debug-relocation.js` | Shift-click/drag canvas pointer ownership and relocation listener cleanup |
 
 The UI calls public session methods; gameplay actions and their guards stay in `js/game/` controllers. Time preview does not alter the saved clock, while checklist shortcuts follow the existing autosave path. The Seeds checklist shortcut makes the offering available through the seed controller. Core never imports game or UI modules. The readout starts only after startup with debug enabled, runs at 10 Hz without a frame subscription, writes changed values only, and stops when G hides it or the UI is disposed. Disposal also removes time preview and relocation listeners. Both new UI modules are in the service-worker pre-cache and are bundled into the production release.
+
+
+Underground wall boundaries meet the floor, roof, and adjacent wall at shared positions. Headless geometry checks require every earth-shell edge to have exactly two incident faces, covering corner seams and roof joins. Structural roots use curved, tapered meshes with capped ends; the central root remains inside its collision footprint.
+
+Surface and underground controllers both call `resolveGroundDirection`, `trackGroundOrbit`, and `stepPlanarMotion` in `js/utils/player-motion.js`. This shares input-change handling, held-heading compensation during camera orbit, and acceleration/braking rather than copying separate heading logic. The underground camera shares surface follow responsiveness, orbit damping, rotation speed, and field of view; enclosed collision and pure-strafe camera behavior remain specific to the interior. Tests compare the actual surface and underground controllers frame by frame through input changes and manual camera orbit.

@@ -1,3 +1,4 @@
+import { renderUndergroundMap, createMapViewport, applySurfaceMap } from './ui/underground-map.js';
 import { createDebugControls } from './ui/debug-controls.js';
 import { PondGameSession } from './game/game-session.js';
 import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
@@ -37,6 +38,11 @@ const elements = {
   sleepDialog: byId('sleep-dialog'),
   sleepTitle: byId('sleep-title'),
   sleepFade: byId('sleep-fade'),
+  undergroundMap: byId('underground-map'),
+  undergroundMapContent: byId('underground-map-content'),
+  undergroundMapClose: byId('underground-map-close'),
+  burrowButton: byId('burrow-button'),
+  burrowFade: byId('burrow-fade'),
   objective: byId('game-objective-title'),
   prompt: byId('game-prompt'),
   step: byId('game-step'),
@@ -59,6 +65,7 @@ const elements = {
   closeAboutButton: byId('close-about-button'),
   gameVersion: byId('game-version'),
   antHint: byId('ant-hint'),
+  undergroundHint: byId('underground-hint'),
   birdHint: byId('bird-hint'),
   exploreReturnLabel: byId('explore-return-label'),
   exploreHint: byId('explore-hint'),
@@ -109,6 +116,8 @@ const elements = {
   climbButton: byId('climb-button'),
 };
 
+const mapViewport = createMapViewport(elements.undergroundMapContent);
+
 const antMovementKeys = new Map([
   ['KeyW', 'forward'],
   ['KeyS', 'backward'],
@@ -129,6 +138,7 @@ let session = null;
 let paused = false;
 let gameReady = false;
 let sleepTransition = false;
+let burrowTransition = false;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
@@ -483,6 +493,7 @@ function canMoveAnt() {
   return gameReady
     && !paused
     && !sleepTransition
+    && !burrowTransition
     && elements.sleepDialog.hidden
     && elements.settingsDialog.hidden
     && elements.aboutDialog.hidden
@@ -756,6 +767,63 @@ function updateSleepButton() {
   elements.sleepButton.hidden = !available;
 }
 
+function updateBurrowButton() {
+  elements.burrowButton.hidden = !canMoveAnt() || !elements.cardsDialog.hidden || !session?.canUseBurrow();
+  elements.burrowButton.textContent = t(session?.isUnderground() ? 'underground.exit' : 'underground.enter');
+}
+
+async function useBurrow() {
+  if (!canMoveAnt() || !session?.canUseBurrow() || burrowTransition) return;
+  const entering = !session.isUnderground();
+  burrowTransition = true;
+  setPaused(true);
+  elements.pauseDialog.hidden = true;
+  elements.burrowButton.hidden = true;
+  elements.burrowFade.hidden = false;
+  const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+  const fadeMs = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 900;
+  const loadingLabel = elements.loading.querySelector('[data-i18n="ui.loading"]');
+  let failed = false;
+  try {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    elements.burrowFade.classList.add('is-dark');
+    await wait(fadeMs);
+    if (entering) {
+      if (!session.underground) {
+        loadingProgressValue = 0;
+        updateLoadingProgress(0);
+        loadingLabel.textContent = t('underground.loading');
+        elements.loading.classList.add('is-burrow-loading');
+        elements.loading.hidden = false;
+        await new Promise(requestAnimationFrame);
+        await session.prepareUnderground(updateLoadingProgress);
+      }
+    }
+    session.setUndergroundActive(entering);
+    if (entering && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.active?.postMessage({ type: 'cache-underground' });
+      }).catch(() => {});
+    }
+    saveActiveSlot();
+  } catch (error) {
+    failed = true;
+    console.warn('[the-quiet-pond] Could not enter the burrow.', error);
+  } finally {
+    elements.loading.hidden = true;
+    elements.loading.classList.remove('is-burrow-loading');
+    loadingLabel.textContent = t('ui.loading');
+    elements.burrowFade.classList.remove('is-dark');
+    await wait(fadeMs);
+    elements.burrowFade.hidden = true;
+    burrowTransition = false;
+    setPaused(false);
+    updateExploreControl();
+    updateBurrowButton();
+    if (failed) showRadioCaption(t('underground.loadFailed'), 9);
+  }
+}
+
 function openSleep() {
   if (!canMoveAnt() || !session?.canSleep()) return;
   setPaused(true);
@@ -816,8 +884,9 @@ function showRadioCaption(text, duration = 5, celebration = false) {
 
 function setPaused(nextPaused) {
   if (!session || !gameReady) return;
+  if ((burrowTransition || sleepTransition) && !nextPaused) return;
   paused = Boolean(nextPaused);
-  if (paused) { elements.sleepButton.hidden = true; elements.radioControlButton.hidden = true; }
+  if (paused) { elements.sleepButton.hidden = true; elements.burrowButton.hidden = true; elements.radioControlButton.hidden = true; }
   clearGameInput();
   session.setPaused(paused);
   elements.pauseDialog.hidden = !paused;
@@ -905,11 +974,15 @@ function updateExploreControl() {
   const exploreActive = session?.isExploreActive() ?? false;
   const birdActive = session?.isBirdActive() ?? false;
   const birdPreparing = session?.isBirdPreparing() ?? false;
+  const undergroundActive = session?.isUnderground() ?? false;
   const returnLabel = birdActive ? 'ui.birdView' : 'ui.antView';
-  elements.exploreButton.textContent = t(exploreActive ? returnLabel : 'ui.explore');
+  elements.exploreButton.textContent = t(exploreActive ? returnLabel : undergroundActive ? 'underground.map.button' : 'ui.explore');
   elements.exploreButton.setAttribute('aria-pressed', String(exploreActive));
+  elements.exploreButton.setAttribute('aria-haspopup', undergroundActive ? 'dialog' : 'false');
   elements.exploreReturnLabel.textContent = t(returnLabel);
-  elements.antHint.hidden = exploreActive || birdActive;
+  elements.antHint.hidden = exploreActive || birdActive || undergroundActive;
+  elements.undergroundHint.hidden = !undergroundActive;
+  if (elements.climbButton) elements.climbButton.hidden = undergroundActive;
   elements.birdHint.hidden = exploreActive || !birdActive;
   elements.birdSwitchButton.hidden = !(session?.canPlayBird() ?? false);
   elements.birdSwitchButton.disabled = birdPreparing;
@@ -918,13 +991,33 @@ function updateExploreControl() {
   elements.birdSwitchButton.setAttribute('aria-pressed', String(birdActive));
   elements.birdSwitchButton.setAttribute('aria-label', `${elements.birdSwitchLabel.textContent} (B)`);
   elements.birdSwitchButton.title = `${elements.birdSwitchLabel.textContent} (B)`;
-  elements.exploreHint.hidden = !exploreActive;
+  elements.exploreHint.hidden = !exploreActive || undergroundActive;
   elements.resetCameraButton.hidden = exploreActive;
   elements.resetCameraButton.setAttribute('aria-label', t(birdActive ? 'ui.resetBirdCamera.aria' : 'ui.resetCamera.aria'));
   elements.touchHint.textContent = t(exploreActive ? 'hint.touchExplore' : birdActive ? 'hint.touchBird' : 'hint.touchLook');
   document.body.classList.toggle('game-explore-active', exploreActive);
   document.body.classList.toggle('game-bird-active', birdActive);
+  document.body.classList.toggle('game-underground-active', undergroundActive);
   debugControls.sync({ ready: gameReady });
+  if (undergroundActive && exploreActive) {
+    const mapData=session.getUndergroundMapData();
+    elements.undergroundMapContent.innerHTML = renderUndergroundMap(mapData, t);
+    if (!elements.undergroundMap.open) elements.undergroundMap.showModal();
+    mapViewport.reset(mapData.position);
+    const mapSession=session;
+    const root=elements.undergroundMapContent.querySelector('svg');
+    const capture=session.prepareUndergroundMapSurface?.();
+    capture?.then((snapshot) => {
+      if (session===mapSession && elements.undergroundMap.open
+        && root===elements.undergroundMapContent.querySelector('svg')) {
+        applySurfaceMap(elements.undergroundMapContent,snapshot);
+      }
+    }).catch((error) => console.warn('[the-quiet-pond] Could not update the surface map.',error));
+    requestAnimationFrame(() => elements.undergroundMapClose.focus());
+  } else if (elements.undergroundMap.open) {
+    mapViewport.clear();
+    elements.undergroundMap.close();
+  }
 }
 
 function setChecklistCollapsed(collapsed) {
@@ -947,7 +1040,14 @@ function toggleExplore() {
     return;
   }
   updateExploreControl();
-  requestAnimationFrame(() => session?.focusScene());
+  if (!elements.undergroundMap.open) requestAnimationFrame(() => session?.focusScene());
+}
+
+function closeUndergroundMap() {
+  clearGameInput();
+  session?.setExploreActive(false);
+  updateExploreControl();
+  requestAnimationFrame(() => paused ? elements.resumeButton.focus() : session?.focusScene());
 }
 
 async function toggleBird() {
@@ -1063,7 +1163,13 @@ function setupMobileGameControls() {
 }
 
 window.addEventListener('keydown', (event) => {
-  if (sleepTransition) { event.preventDefault(); return; }
+  if (elements.undergroundMap.open) {
+    if ((event.code === 'Escape' || event.code === 'KeyM') && !event.repeat) {
+      event.preventDefault(); closeUndergroundMap();
+    }
+    return;
+  }
+  if (sleepTransition || burrowTransition) { event.preventDefault(); return; }
   if (!elements.radioControlDialog.hidden) {
     if (event.code === 'Escape') { event.preventDefault(); closeRadioControl(); }
     return;
@@ -1097,6 +1203,11 @@ window.addEventListener('keydown', (event) => {
     return;
   }
   if (isEditableTarget(event.target)) return;
+  if (event.code === 'KeyU' && !event.repeat && canMoveAnt() && session?.canUseBurrow()) {
+    event.preventDefault();
+    useBurrow();
+    return;
+  }
   if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
     if (canMoveAnt() && !event.repeat) heldRunCodes.add(event.code);
     syncRunning();
@@ -1196,6 +1307,7 @@ elements.radioKnobInput.addEventListener('pointermove', (event) => {
   if (elements.radioKnobInput.hasPointerCapture(event.pointerId)) setRadioKnobFromPointer(event);
 });
 elements.sleepButton.addEventListener('click', openSleep);
+elements.burrowButton.addEventListener('click', useBurrow);
 byId('sleep-close').addEventListener('click', closeSleep);
 for (const choice of ['morning', 'evening']) {
   byId(`sleep-${choice}`).addEventListener('click', () => beginSleep(choice));
@@ -1232,6 +1344,8 @@ elements.aboutShareLink.addEventListener('click', () => elements.aboutShareLink.
 elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
+elements.undergroundMapClose.addEventListener('click', closeUndergroundMap);
+elements.undergroundMap.addEventListener('cancel', (event) => { event.preventDefault(); closeUndergroundMap(); });
 elements.birdSwitchButton.addEventListener('click', toggleBird);
 elements.resetCameraButton.addEventListener('click', resetCameraView);
 elements.restartButton.addEventListener('click', () => {
@@ -1317,6 +1431,7 @@ async function startGame() {
     debugControls.start(elements.scene.querySelector('canvas'));
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
+    session.onFrame(updateBurrowButton);
     session.onFrame(updateRadioControlButton);
     updateExploreControl();
     saveActiveSlot();
@@ -1334,6 +1449,7 @@ async function startGame() {
 }
 
 window.addEventListener('beforeunload', () => {
+  mapViewport.dispose();
   saveActiveSlot();
   window.clearTimeout(saveTimeout);
   debugControls.dispose();

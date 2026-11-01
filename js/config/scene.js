@@ -56,7 +56,7 @@ export const DEFAULTS = Object.freeze({
   tentScale: 1,
   tentRotation: 0,
   tentOffsetX: 0,
-  tentOffsetY: 0,
+  tentOffsetY: -0.2,
   tentOffsetZ: 0,
 });
 
