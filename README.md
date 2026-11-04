@@ -130,7 +130,7 @@ Time preview in the debug overlay lets you apply any hour/minute, freeze the pre
 
 Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement, debug UI, and offline-shell tests. Run `npm run build:release` to generate the minified, compressed site in `build/release`, then `npm run check:release` to validate it. These commands do not start a server.
 
-Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
+Ground collisions follow tree and rock mesh footprints at ant body height, with sliding around angled edges and validated climb landings. Tree climbing checks exposed bark locally and probes ahead at branch-to-trunk junctions; generated wood closes buried attachment ends for reliable solid collision checks. Touching rocks share climb surfaces, including the radio support cluster. Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
 
 ## Credits
 

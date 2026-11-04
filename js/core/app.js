@@ -353,10 +353,13 @@ export class PondApp {
     this.antPoseYawQuaternion = new THREE.Quaternion();
     this.antPoseUp = new THREE.Vector3(0, 1, 0);
     this.rockSurfaceLocal = new THREE.Vector3();
+    this.surfaceBackfaceMesh = null;
+    this.surfaceInstanceMesh = null;
     this.surfaceRaycaster = new THREE.Raycaster();
     this.surfaceRayOrigin = new THREE.Vector3();
     this.surfaceRayDirection = new THREE.Vector3();
     this.surfaceRayNormalMatrix = new THREE.Matrix3();
+    this.surfaceRayFaceNormal = new THREE.Vector3();
     this.surfaceRayInstanceMatrix = new THREE.Matrix4();
     this.antMotionLocked = false;
     this.draggablePondStone = null;
@@ -610,6 +613,9 @@ export class PondApp {
     this.frameUpdateListeners.clear();
     this.controls.removeEventListener('start', this.onCameraManualStart);
     this.controls.removeEventListener('end', this.onCameraManualEnd);
+    this.surfaceBackfaceMesh?.material.dispose();
+    this.surfaceBackfaceMesh = null;
+    this.surfaceInstanceMesh = null;
     this.controls.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
@@ -778,7 +784,7 @@ export class PondApp {
       const footprint = createObjectGroundFootprint(sourceTree.woodMesh, {
         cellSize: 0.05,
         baseHeight: ground.heightAt(position.x, position.z),
-        maximumHeightAboveBase: 0.42,
+        maximumHeightAboveBase: SCENE_PROPS.ant.collisionHeight,
       });
       return {
         ...fallback,

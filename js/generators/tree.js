@@ -1069,7 +1069,8 @@ function createRootBranches(random, trunkCenter, baseRadius, count, quality) {
       radii[radii.length - 2] = Math.min(radii[radii.length - 2] * 0.12, 0.002);
       radii[radii.length - 1] = 0.0005;
     }
-    roots.push({ points, radii, capStart: false, capEnd: true, kind: 'root' });
+    // Buried ends still need caps for solid-volume collision queries.
+    roots.push({ points, radii, capStart: true, capEnd: true, kind: 'root' });
   }
 
   return roots;
@@ -1171,7 +1172,8 @@ function generateSkeleton(config, random) {
       radii[radii.length - 2] = Math.min(radii[radii.length - 2] * 0.12, 0.002);
       radii[radii.length - 1] = 0.0005;
     }
-    branches.push({ points: samples, radii, capStart: false, capEnd: true, kind: 'branch' });
+    // Close the attachment end even though it is hidden inside the parent wood.
+    branches.push({ points: samples, radii, capStart: true, capEnd: true, kind: 'branch' });
     limbCount += 1;
 
     const tip = samples[samples.length - 1];

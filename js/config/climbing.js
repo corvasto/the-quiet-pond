@@ -55,6 +55,8 @@ export const CLIMBING_CONFIG = Object.freeze({
     rootBridgeRadiusPadding: 0.24,
     rootBridgeMaximumDistance: 0.24,
     validateExteriorContacts: true,
+    localExteriorValidation: true,
+    useForwardWallProbe: true,
     exteriorContactTolerance: 0.035,
     maximumExteriorCorrectionDistance: 0.12,
     entryDirectionAngleOffsetsDegrees: Object.freeze([0, -18, 18, -36, 36]),
@@ -64,6 +66,8 @@ export const CLIMBING_CONFIG = Object.freeze({
     useForwardDownProbe: true,
   }),
   rock: Object.freeze({
+    maximumConnectedRocks: 8,
+    useForwardWallProbe: true,
     minimumUsableRadius: 0.06,
     entryPadding: 0.18,
     surfaceProbeDistance: 0.24,

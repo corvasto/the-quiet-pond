@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
-import { PERFORMANCE, SEASONS } from '../config/index.js';
+import { createObjectGroundFootprint } from '../props/model-surface-proxy.js';
+import { PERFORMANCE, SCENE_PROPS, SEASONS } from '../config/index.js';
 import { SeededRandom } from '../utils/random.js';
 
 const TAU = Math.PI * 2;
@@ -385,6 +386,9 @@ export function createPondFeatures({
   const shorelineRockFootprints = [];
   const shorelineRockAnchors = [];
   const containsFootprint = (footprint, pointX, pointZ, padding) => {
+    if (footprint.groundFootprint) {
+      return footprint.groundFootprint.containsGroundPoint(pointX, pointZ, padding);
+    }
     if (Number.isFinite(footprint.radius)) {
       return Math.hypot(pointX - footprint.x, pointZ - footprint.z)
         <= footprint.radius + padding;
@@ -418,7 +422,14 @@ export function createPondFeatures({
     dummy.scale.set(scaleX, scaleY, scaleZ);
     dummy.updateMatrix();
     stones.setMatrixAt(index, dummy.matrix);
+    const collisionMesh = new THREE.Mesh(stones.geometry, stones.material);
+    collisionMesh.applyMatrix4(dummy.matrix);
+    const groundFootprint = createObjectGroundFootprint(collisionMesh, {
+      baseHeight: heightAt(point.x, point.z),
+      maximumHeightAboveBase: SCENE_PROPS.ant.collisionHeight,
+    });
     const footprint = Object.freeze({
+      groundFootprint,
       x: point.x,
       z: point.z,
       cosine: Math.cos(yaw),
@@ -523,53 +534,10 @@ export function createPondFeatures({
   pads.name = 'Floating lily pads';
   group.add(pads);
 
-  const draggablePoint = profile.pointAt(1.15, -0.52);
-  const draggableRadius = 0.48;
-  const draggableGeometry = new THREE.IcosahedronGeometry(1, 2);
-  const draggableMaterial = new THREE.MeshStandardMaterial({
-    name: 'Interactive pond stone',
-    color: season === 'autumn' ? '#625c50' : '#4f5e57',
-    roughness: 0.86,
-    metalness: 0.02,
-  });
-  const draggableStone = new THREE.Mesh(draggableGeometry, draggableMaterial);
-  draggableStone.position.set(
-    draggablePoint.x,
-    heightAt(draggablePoint.x, draggablePoint.z) + draggableRadius * 0.26,
-    draggablePoint.z,
-  );
-  draggableStone.rotation.set(0.12, random.range(0, TAU), -0.08);
-  draggableStone.scale.set(draggableRadius * 1.18, draggableRadius * 0.72, draggableRadius);
-  draggableStone.castShadow = true;
-  draggableStone.receiveShadow = true;
-  draggableStone.name = 'Draggable pond ripple stone';
-  draggableStone.userData.draggablePondStone = true;
-  draggableStone.userData.radius = draggableRadius;
-  draggableStone.userData.sinking = false;
-  draggableStone.userData.settledInPond = false;
-  const containsGroundPoint = (pointX, pointZ, padding = 0) => {
-    if (containsShorelineRock(pointX, pointZ, padding)) return true;
-    if (draggableStone.userData.sinking || draggableStone.userData.settledInPond) return false;
-    const yaw = draggableStone.rotation.y;
-    return containsFootprint({
-      x: draggableStone.position.x,
-      z: draggableStone.position.z,
-      cosine: Math.cos(yaw),
-      sine: Math.sin(yaw),
-      radiusX: Math.abs(draggableStone.scale.x) * 1.08,
-      radiusZ: Math.abs(draggableStone.scale.z) * 1.08,
-      radius: Math.max(
-        Math.abs(draggableStone.scale.x),
-        Math.abs(draggableStone.scale.z),
-      ) * 1.16,
-    }, pointX, pointZ, padding);
-  };
   group.userData.shorelineRockFootprints = shorelineRockFootprints;
   group.userData.shorelineRockAnchors = Object.freeze(shorelineRockAnchors);
   group.userData.shorelineRockSurfaceMesh = stones;
-  group.userData.containsGroundPoint = containsGroundPoint;
-  group.userData.interactiveStone = draggableStone;
-  group.add(draggableStone);
+  group.userData.containsGroundPoint = containsShorelineRock;
 
   return group;
 }

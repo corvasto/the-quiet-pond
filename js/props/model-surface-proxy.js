@@ -83,6 +83,27 @@ function containsHullPoint(hull, x, z, padding = 0) {
   return inside;
 }
 
+function clipPolygonHeight(points, height, keepBelow) {
+  if (!Number.isFinite(height)) return points;
+  const result = [];
+  for (let index = 0; index < points.length; index += 1) {
+    const start = points[index];
+    const end = points[(index + 1) % points.length];
+    const startInside = keepBelow ? start.y <= height : start.y >= height;
+    const endInside = keepBelow ? end.y <= height : end.y >= height;
+    if (startInside) result.push(start);
+    if (startInside !== endInside) {
+      const amount = (height - start.y) / (end.y - start.y);
+      result.push({
+        x: THREE.MathUtils.lerp(start.x, end.x, amount),
+        y: height,
+        z: THREE.MathUtils.lerp(start.z, end.z, amount),
+      });
+    }
+  }
+  return result;
+}
+
 function createProjectedTriangleFootprint(
   positions,
   indices,
@@ -99,19 +120,21 @@ function createProjectedTriangleFootprint(
   const cellWidth = sizeX / columnsX;
   const cellDepth = sizeZ / columnsZ;
   const occupied = new Uint8Array(columnsX * columnsZ);
+  const trianglesByCell = Array.from({ length: occupied.length }, () => []);
   const edgeDistance = Math.hypot(cellWidth, cellDepth) * 0.62;
   const edgeDistanceSquared = edgeDistance * edgeDistance;
+  const sign = (pointX, pointZ, left, right) => (
+    (pointX - right.x) * (left.z - right.z)
+    - (left.x - right.x) * (pointZ - right.z)
+  );
   const triangleContains = (x, z, first, second, third) => {
-    const sign = (pointX, pointZ, left, right) => (
-      (pointX - right.x) * (left.z - right.z)
-      - (left.x - right.x) * (pointZ - right.z)
-    );
     const firstSign = sign(x, z, first, second);
     const secondSign = sign(x, z, second, third);
     const thirdSign = sign(x, z, third, first);
     const hasNegative = firstSign < 0 || secondSign < 0 || thirdSign < 0;
     const hasPositive = firstSign > 0 || secondSign > 0 || thirdSign > 0;
-    return !(hasNegative && hasPositive);
+    const area = hullCross(first, second, third);
+    return Math.abs(area) > 1e-12 && !(hasNegative && hasPositive);
   };
   const vertex = (index) => ({
     x: positions[index * 3],
@@ -119,10 +142,35 @@ function createProjectedTriangleFootprint(
     z: positions[index * 3 + 2],
   });
 
+  const triangles = [];
+  const sectionRows = Array.from({ length: columnsZ }, () => []);
   for (let index = 0; index + 2 < indices.length; index += 3) {
-    const first = vertex(indices[index]);
-    const second = vertex(indices[index + 1]);
-    const third = vertex(indices[index + 2]);
+    const polygon = clipPolygonHeight(clipPolygonHeight([
+      vertex(indices[index]), vertex(indices[index + 1]), vertex(indices[index + 2]),
+    ], maximumCollisionY, true), minimumCollisionY, false);
+    // Oriented section edges close the solid where the ground clips its base.
+    if (Number.isFinite(minimumCollisionY)) {
+      for (let edge = 0; edge < polygon.length; edge += 1) {
+        const start = polygon[edge];
+        const end = polygon[(edge + 1) % polygon.length];
+        if (Math.abs(start.y - minimumCollisionY) > 1e-9
+          || Math.abs(end.y - minimumCollisionY) > 1e-9
+          || Math.abs(start.z - end.z) < 1e-12) continue;
+        const firstRow = clampCell(Math.floor(
+          (Math.min(start.z, end.z) - bounds.min.z) / cellDepth,
+        ), columnsZ);
+        const lastRow = clampCell(Math.floor(
+          (Math.max(start.z, end.z) - bounds.min.z) / cellDepth,
+        ), columnsZ);
+        for (let row = firstRow; row <= lastRow; row += 1) sectionRows[row].push([start, end]);
+      }
+    }
+    for (let corner = 1; corner + 1 < polygon.length; corner += 1) {
+      triangles.push([polygon[0], polygon[corner], polygon[corner + 1]]);
+    }
+  }
+  for (const triangle of triangles) {
+    const [first, second, third] = triangle;
     if (
       Math.min(first.y, second.y, third.y) > maximumCollisionY
       || Math.max(first.y, second.y, third.y) < minimumCollisionY
@@ -148,7 +196,11 @@ function createProjectedTriangleFootprint(
           || distanceToSegmentSquared(x, z, first, second) <= edgeDistanceSquared
           || distanceToSegmentSquared(x, z, second, third) <= edgeDistanceSquared
           || distanceToSegmentSquared(x, z, third, first) <= edgeDistanceSquared
-        ) occupied[cellZ * columnsX + cellX] = 1;
+        ) {
+          const cellIndex = cellZ * columnsX + cellX;
+          occupied[cellIndex] = 1;
+          trianglesByCell[cellIndex].push(triangle);
+        }
       }
     }
   }
@@ -161,6 +213,14 @@ function createProjectedTriangleFootprint(
       || z + safePadding < bounds.min.z
       || z - safePadding > bounds.max.z
     ) return false;
+    const sectionRow = clampCell(Math.floor((z - bounds.min.z) / cellDepth), columnsZ);
+    let winding = 0;
+    for (const [start, end] of sectionRows[sectionRow]) {
+      if ((start.z > z) === (end.z > z)) continue;
+      const crossingX = start.x + (z - start.z) * (end.x - start.x) / (end.z - start.z);
+      if (crossingX > x) winding += end.z > start.z ? 1 : -1;
+    }
+    if (winding !== 0) return true;
     const minimumX = clampCell(Math.floor(
       (x - safePadding - bounds.min.x) / cellWidth,
     ), columnsX);
@@ -176,13 +236,14 @@ function createProjectedTriangleFootprint(
     for (let cellZ = minimumZ; cellZ <= maximumZ; cellZ += 1) {
       for (let cellX = minimumX; cellX <= maximumX; cellX += 1) {
         if (!occupied[cellZ * columnsX + cellX]) continue;
-        const cellMinimumX = bounds.min.x + cellX * cellWidth;
-        const cellMaximumX = cellMinimumX + cellWidth;
-        const cellMinimumZ = bounds.min.z + cellZ * cellDepth;
-        const cellMaximumZ = cellMinimumZ + cellDepth;
-        const closestX = THREE.MathUtils.clamp(x, cellMinimumX, cellMaximumX);
-        const closestZ = THREE.MathUtils.clamp(z, cellMinimumZ, cellMaximumZ);
-        if (Math.hypot(x - closestX, z - closestZ) <= safePadding + 0.0001) return true;
+        // The grid selects candidates only. Exact edges preserve narrow gaps.
+        for (const [first, second, third] of trianglesByCell[cellZ * columnsX + cellX]) {
+          if (triangleContains(x, z, first, second, third)
+            || distanceToSegmentSquared(x, z, first, second) <= safePadding * safePadding
+            || distanceToSegmentSquared(x, z, second, third) <= safePadding * safePadding
+            || distanceToSegmentSquared(x, z, third, first) <= safePadding * safePadding
+          ) return true;
+        }
       }
     }
     return false;
@@ -246,12 +307,13 @@ export function createObjectGroundFootprint(object, {
       Math.min(firstY, secondY, thirdY) > maximumCollisionY
       || Math.max(firstY, secondY, thirdY) < minimumCollisionY
     ) continue;
-    for (const offset of [firstOffset, secondOffset, thirdOffset]) {
-      collisionBounds.expandByPoint(trianglePoint.set(
-        positions[offset],
-        positions[offset + 1],
-        positions[offset + 2],
-      ));
+    const polygon = clipPolygonHeight(clipPolygonHeight([
+      { x: positions[firstOffset], y: firstY, z: positions[firstOffset + 2] },
+      { x: positions[secondOffset], y: secondY, z: positions[secondOffset + 2] },
+      { x: positions[thirdOffset], y: thirdY, z: positions[thirdOffset + 2] },
+    ], maximumCollisionY, true), minimumCollisionY, false);
+    for (const vertex of polygon) {
+      collisionBounds.expandByPoint(trianglePoint.set(vertex.x, vertex.y, vertex.z));
     }
   }
   if (collisionBounds.isEmpty()) return null;

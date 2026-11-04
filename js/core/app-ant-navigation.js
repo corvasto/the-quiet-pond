@@ -8,6 +8,12 @@ import {
   resolveGroundDirection,
 } from '../utils/player-motion.js';
 
+const SLIDE_ANGLES = [15, -15, 30, -30, 45, -45, 60, -60, 75, -75]
+  .map((degrees) => {
+    const angle = THREE.MathUtils.degToRad(degrees);
+    return { cosine: Math.cos(angle), sine: Math.sin(angle) };
+  });
+
 const antNavigationMethods = {
   setAntPose(position, { heading = null, moving = false } = {}) {
     if (
@@ -451,8 +457,17 @@ const antNavigationMethods = {
     const nextX = startX + this.antDisplacement.x;
     const nextZ = startZ + this.antDisplacement.z;
     if (!this.moveAntTo(nextX, nextZ)) {
-      const movedX = this.moveAntTo(nextX, startZ);
-      if (!movedX) this.moveAntTo(startX, nextZ);
+      const movedX = Math.abs(nextX - startX) > 1e-10 && this.moveAntTo(nextX, startZ);
+      const movedZ = !movedX && Math.abs(nextZ - startZ) > 1e-10
+        && this.moveAntTo(startX, nextZ);
+      if (!movedX && !movedZ) {
+        // A diagonal edge can block both world axes while leaving a tangent open.
+        for (const { cosine, sine } of SLIDE_ANGLES) {
+          const slideX = (this.antDisplacement.x * cosine - this.antDisplacement.z * sine) * cosine;
+          const slideZ = (this.antDisplacement.x * sine + this.antDisplacement.z * cosine) * cosine;
+          if (this.moveAntTo(startX + slideX, startZ + slideZ)) break;
+        }
+      }
     }
     const movedX = Math.abs(this.ant.group.position.x - startX) > 0.00000001;
     const movedZ = Math.abs(this.ant.group.position.z - startZ) > 0.00000001;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { DIORAMA } from '../config/index.js';
+import { createObjectGroundFootprint } from '../props/model-surface-proxy.js';
+import { DIORAMA, SCENE_PROPS } from '../config/index.js';
 import { SeededRandom } from '../utils/random.js';
 import { createNoise2D } from '../utils/noise.js';
 
@@ -651,6 +652,12 @@ export function createRocks({
       cosine: Math.cos(yaw),
       sine: Math.sin(yaw),
     };
+    const collisionMesh = new THREE.Mesh(rockGeometry, rockMaterial);
+    collisionMesh.applyMatrix4(dummy.matrix);
+    footprint.groundFootprint = createObjectGroundFootprint(collisionMesh, {
+      baseHeight: heightAt(x, z),
+      maximumHeightAboveBase: SCENE_PROPS.ant.collisionHeight,
+    });
     footprints.push(footprint);
     rockMesh.setMatrixAt(placedCount, dummy.matrix);
     color.set(random.pick(rockPalette));
@@ -705,6 +712,9 @@ export function createRocks({
     habitatSize,
   );
   const containsGroundPoint = (pointX, pointZ, padding = 0) => footprints.some((footprint) => {
+    if (footprint.groundFootprint) {
+      return footprint.groundFootprint.containsGroundPoint(pointX, pointZ, padding);
+    }
     const deltaX = pointX - footprint.x;
     const deltaZ = pointZ - footprint.z;
     const localX = deltaX * footprint.cosine + deltaZ * footprint.sine;

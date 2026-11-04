@@ -358,4 +358,78 @@ near(climb.movementAxes.lengthSq(), 0);
 climb.setMovementAxes(1, 1);
 near(climb.movementAxes.lengthSq(), 0);
 
-console.log('Player motion checks passed: analog deadzone, frame-rate invariance, acceleration/braking, direction, collision/sliding, input reset, stable automatic and manual camera orbit, and analog climbing.');
+// Regressions for gaps, elevated tree geometry, angled edges, and climb exits.
+const { createObjectGroundFootprint } = await importRuntime('../js/props/model-surface-proxy.js');
+const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 2, 16));
+trunk.position.y = 0.9;
+const trunkFootprint = createObjectGroundFootprint(trunk, {
+  baseHeight: 0, maximumHeightAboveBase: SCENE_PROPS.ant.collisionHeight,
+});
+assert.equal(trunkFootprint.containsGroundPoint(0, 0, 0), true,
+  'A capped trunk must be solid inside, including after a climb exit.');
+assert.equal(trunkFootprint.containsGroundPoint(0.27, 0, SCENE_PROPS.ant.collisionRadius), false,
+  'Grid cells must not widen the trunk beyond its exact edge plus ant radius.');
+const taperGeometry = new THREE.BufferGeometry();
+taperGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
+  0, 0, -0.1, 0, 0, 0.1, 2, 2, 0,
+], 3));
+const taper = createObjectGroundFootprint(new THREE.Mesh(taperGeometry), {
+  baseHeight: 0, maximumHeightAboveBase: 0.1,
+});
+assert.equal(taper.containsGroundPoint(1, 0, 0.045), false,
+  'The high part of a sloping triangle must not block a ground path.');
+assert.equal(taper.containsGroundPoint(0.05, 0, 0), true);
+const buried = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.2));
+buried.position.y = -0.2;
+assert.equal(createObjectGroundFootprint(buried, {
+  baseHeight: 0, maximumHeightAboveBase: 0.1,
+}), null, 'Fully buried roots must not block ground movement.');
+const { createTree } = await importRuntime('../js/generators/tree.js');
+for (const quality of ['low', 'medium', 'high']) {
+  const tree = createTree({ seed: 'ancient-oak', quality });
+  const footprint = createObjectGroundFootprint(tree.woodMesh, {
+    baseHeight: 0, maximumHeightAboveBase: SCENE_PROPS.ant.collisionHeight,
+  });
+  assert.equal(footprint.containsGroundPoint(0, 0, 0), true,
+    `The generated ${quality} trunk must have a solid ground cross section.`);
+  tree.group.userData.dispose();
+}
+const passage = new THREE.Group();
+for (const sign of [-1, 1]) {
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 1));
+  wall.position.set(sign * 0.151, 0.05, 0);
+  passage.add(wall);
+}
+const passageFootprint = createObjectGroundFootprint(passage, {
+  baseHeight: 0, maximumHeightAboveBase: 0.1,
+});
+for (let z = -0.5; z <= 0.5; z += 0.01) {
+  assert.equal(passageFootprint.containsGroundPoint(0, z, SCENE_PROPS.ant.collisionRadius), false,
+    'A gap wider than the ant body must remain open along its length.');
+}
+assert.equal(passageFootprint.containsGroundPoint(0.02, 0, SCENE_PROPS.ant.collisionRadius), true,
+  'The ant body must still collide with the side of the passage.');
+const angled = new NavigationHarness();
+angled.canAntOccupy = (x, z) => x >= 0 && z >= 0 && Math.abs(x - z) < 1e-8;
+angled.setAntMovementKey('right', true);
+angled.updateAntMovement(0.05);
+assert.ok(angled.ant.group.position.x > 0 && angled.ant.group.position.z > 0,
+  'Sliding must find a diagonal opening even when both world axes are blocked.');
+const exit = Object.create(AntClimbing.prototype);
+exit.route = { center: new THREE.Vector3(), entryRadius: 0.2, entry: new THREE.Vector3() };
+exit.surfaceMove = new THREE.Vector3();
+exit.surfacePoint = new THREE.Vector3(0, 0.7, 0);
+exit.surfaceNormal = new THREE.Vector3(1, 0, 0);
+exit.surfaceTangent = new THREE.Vector3(0, 0, 1);
+exit.app = {
+  canAntOccupy: () => false,
+  getAntGroundPosition: (x, z, target) => target.set(x, 0, z),
+};
+assert.equal(exit.findDismountPosition(), null, 'A blocked saved entry must never be a landing fallback.');
+assert.equal(exit.finishRoute(new THREE.Vector3()), false, 'An invalid landing must not unlock ground motion.');
+exit.app.canAntOccupy = (x, z) => Math.hypot(x, z) >= 0.3;
+const safeLanding = exit.findDismountPosition();
+assert.ok(safeLanding && exit.app.canAntOccupy(safeLanding.x, safeLanding.z),
+  'Dismount must search past the trunk to a valid ground position.');
+
+console.log('Player motion checks passed: analog deadzone, frame-rate invariance, acceleration/braking, direction, collision/sliding, input reset, stable automatic and manual camera orbit, analog climbing, exact ground footprints, solid tree interiors, diagonal gaps, and safe climb exits.');

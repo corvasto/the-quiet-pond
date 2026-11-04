@@ -66,6 +66,7 @@ export class AntClimbing {
     this.app = app;
     this.onPromptChange = onPromptChange;
     this.landmarks = null;
+    this.rockSurfaceGroups = new Map();
     this.route = null;
     this.nearbyRoute = null;
     this.nearbyContact = null;
@@ -94,6 +95,10 @@ export class AntClimbing {
     this.surfaceTangent = new THREE.Vector3(0, 0, 1);
     this.surfacePose = new THREE.Vector3();
     this.surfaceCandidate = new THREE.Vector3();
+    this.surfaceForwardAttempt = {
+      origin: new THREE.Vector3(),
+      direction: new THREE.Vector3(),
+    };
     this.surfaceOrigin = new THREE.Vector3();
     this.surfaceRayDirection = new THREE.Vector3();
     this.surfaceHitPosition = new THREE.Vector3();
@@ -146,6 +151,7 @@ export class AntClimbing {
 
   start() {
     this.landmarks = this.app.getSceneLandmarks();
+    this.buildRockSurfaceGroups();
     this.setupGameplayContactMarker();
     if (this.debugEnabled) this.setupDebugOverlay();
     this.unsubscribe = this.app.onFrame((frame) => this.update(frame));
@@ -169,10 +175,9 @@ export class AntClimbing {
 
   exitSurfaceForDebug() {
     if (!this.isClimbing()) return true;
-    const landing = this.findDismountPosition() ?? this.route?.entry?.clone();
+    const landing = this.findDismountPosition();
     if (!landing) return false;
-    this.finishRoute(landing);
-    return true;
+    return this.finishRoute(landing);
   }
 
   handleAntRelocated() {
@@ -546,10 +551,11 @@ export class AntClimbing {
         this.surfaceOrigin.copy(this.route.center)
           .setY(this.surfacePoint.y + heightOffset)
           .addScaledVector(this.entryDirection, castRadius);
-        const hit = this.raycastRouteSurface(
+        let hit = this.raycastRouteSurface(
           this.surfaceOrigin,
           this.surfaceRayDirection.copy(this.entryDirection).negate(),
         );
+        hit = this.validateExteriorContact(hit);
         if (!hit || !this.isSafeContact(hit, -0.75)) continue;
         const bridgeDistance = hit.position.distanceTo(this.surfacePoint);
         if (
@@ -863,6 +869,15 @@ export class AntClimbing {
         direction: this.surfaceNormal.clone().add(direction).negate().normalize(),
       },
     ];
+    if (routeConfig.useForwardWallProbe === true
+      || (this.route?.id === 'radio' && this.surfaceRole === 'support')) {
+      // Probe ahead at concave branch joins and raised rock edges.
+      this.surfaceForwardAttempt.origin.copy(this.surfacePoint)
+        .addScaledVector(this.surfaceNormal, Math.max(0.012, distance))
+        .addScaledVector(direction, -distance);
+      this.surfaceForwardAttempt.direction.copy(direction);
+      attempts.push(this.surfaceForwardAttempt);
+    }
     if (this.surfaceNormal.y > -0.2) {
       attempts.push({
         origin: candidate.clone().addScaledVector(UP, probeDistance * 2),
@@ -923,13 +938,17 @@ export class AntClimbing {
       hit = this.validateExteriorContact(hit);
       if (this.isHiddenCompositeContact(hit)) continue;
       if (!hit || !this.isSafeContact(hit, minimumSurfaceNormalY)) continue;
-      if (this.isInsideNeighborRock(hit.position)) continue;
+      if (this.isInsideNeighborRock(hit.position, this.route, hit)) continue;
       const snapDistance = hit.position.distanceTo(candidate);
       if (snapDistance > configuredSnapDistance) continue;
+      if (attempt === this.surfaceForwardAttempt && snapDistance > distance * 2 + 0.012) continue;
       if (hit.normal.dot(this.surfaceNormal) < minimumNormalContinuity) continue;
       const advance = this.surfaceDelta.subVectors(hit.position, this.surfacePoint).dot(direction);
       if (advance < distance * 0.05) continue;
-      if (hit.position.distanceTo(this.surfacePoint) > maximumContactStepDistance) continue;
+      const stepLimit = (this.route?.kind === 'tree' || isRockRoute || this.getSurfaceRole(hit) === 'support')
+        ? Math.min(maximumContactStepDistance, Math.max(distance * 3, 0.025))
+        : maximumContactStepDistance;
+      if (hit.position.distanceTo(this.surfacePoint) > stepLimit) continue;
       const score = snapDistance + (1 - hit.normal.dot(this.surfaceNormal)) * 0.03;
       if (score >= bestScore) continue;
       bestScore = score;
@@ -1102,6 +1121,35 @@ export class AntClimbing {
     return priorityDifference || distanceDifference;
   }
 
+  buildRockSurfaceGroups() {
+    this.rockSurfaceGroups.clear();
+    const rocks = (this.landmarks?.rocks ?? []).filter((rock) => (
+      rock.surfaceObject && rock.usableRadius >= POND_GAME.climbing.rock.minimumUsableRadius
+      && POND_GAME.climbing.objects?.[rock.source === 'shoreline' ? 'shorelineRocks' : 'groundRocks'] !== false
+    ));
+    const extent = (rock) => Math.max(
+      rock.usableRadius, rock.footprint?.radius ?? 0,
+      rock.footprint?.radiusX ?? 0, rock.footprint?.radiusZ ?? 0,
+    );
+    const limit = Math.max(1, Number(POND_GAME.climbing.rock.maximumConnectedRocks) || 8);
+    for (const origin of rocks) {
+      const connected = [origin];
+      for (let index = 0; index < connected.length && connected.length < limit; index += 1) {
+        const current = connected[index];
+        for (const next of rocks) {
+          if (connected.includes(next)) continue;
+          if (horizontalDistance(current.position, next.position) > extent(current) + extent(next) + 0.03) continue;
+          connected.push(next);
+          if (connected.length >= limit) break;
+        }
+      }
+      this.rockSurfaceGroups.set(origin, connected.map((rock) => ({
+        object: rock.surfaceObject,
+        instanceId: Number.isInteger(rock.rockIndex) ? rock.rockIndex : null,
+      })));
+    }
+  }
+
   getRouteCandidates(antPosition) {
     const landmarks = this.landmarks;
     if (!landmarks || POND_GAME.climbing.enabled === false) return [];
@@ -1148,7 +1196,7 @@ export class AntClimbing {
         entryRadius: rock.usableRadius + POND_GAME.climbing.rock.entryPadding,
         surfaceObject: rock.surfaceObject,
         instanceId: Number.isInteger(rock.rockIndex) ? rock.rockIndex : null,
-        surfaces: [{
+        surfaces: this.rockSurfaceGroups.get(rock) ?? [{
           object: rock.surfaceObject,
           instanceId: Number.isInteger(rock.rockIndex) ? rock.rockIndex : null,
         }],
@@ -1189,11 +1237,10 @@ export class AntClimbing {
         center: radioCenter,
         entryRadius: radioEntryRadius,
         surfaces: [
-          ...(support ? [{
+          ...(support ? (this.rockSurfaceGroups.get(support) ?? [{
             object: support.surfaceObject,
             instanceId: Number.isInteger(support.rockIndex) ? support.rockIndex : null,
-            role: 'support',
-          }] : []),
+          }]).map((surface) => ({ ...surface, role: 'support' })) : []),
           { object: landmarks.radio.surfaceObject, instanceId: null, role: 'model' },
         ],
         allowedRocks: support ? [support] : [],
@@ -1371,7 +1418,7 @@ export class AntClimbing {
             this.recordDebugProbe(this.surfaceOrigin, hit.position, false);
             continue;
           }
-          if (this.isInsideNeighborRock(hit.position, route)) {
+          if (this.isInsideNeighborRock(hit.position, route, hit)) {
             this.recordDebugProbe(this.surfaceOrigin, hit.position, false);
             continue;
           }
@@ -1408,7 +1455,7 @@ export class AntClimbing {
     return best;
   }
 
-  raycastRouteSurface(origin, direction, route = this.route, surfaceOverride = null) {
+  raycastRouteSurface(origin, direction, route = this.route, surfaceOverride = null, includeBackfaces = false) {
     const surfaces = surfaceOverride ?? route?.surfaces ?? (route?.surfaceObject ? [{
       object: route.surfaceObject,
       instanceId: route.instanceId ?? null,
@@ -1416,10 +1463,13 @@ export class AntClimbing {
     let bestDistance = Infinity;
     let bestObject = null;
     let bestInstanceId = null;
+    let bestFrontFacing = true;
+    let bestOriginInside = false;
     for (const surface of surfaces) {
       if (!surface?.object) continue;
       const hit = this.app.raycastSurface(surface.object, origin, direction, {
         instanceId: surface.instanceId ?? null,
+        includeBackfaces,
         targetPosition: this.surfaceHitPosition,
         targetNormal: this.surfaceHitNormal,
       });
@@ -1431,12 +1481,16 @@ export class AntClimbing {
       this.raycastBestNormal.copy(hit.normal);
       bestObject = hit.object;
       bestInstanceId = hit.instanceId;
+      bestFrontFacing = hit.frontFacing;
+      bestOriginInside = hit.originInside;
     }
     return bestObject ? {
       position: this.raycastBestPosition,
       normal: this.raycastBestNormal,
       object: bestObject,
       instanceId: bestInstanceId,
+      frontFacing: bestFrontFacing,
+      originInside: bestOriginInside,
     } : null;
   }
 
@@ -1479,8 +1533,42 @@ export class AntClimbing {
     const boundsWidth = validationBounds.max.x - validationBounds.min.x;
     const boundsHeight = validationBounds.max.y - validationBounds.min.y;
     const boundsDepth = validationBounds.max.z - validationBounds.min.z;
+    const tolerance = Math.max(
+      0.008,
+      Number(routeConfig.exteriorContactTolerance) || 0.03,
+    );
+    const maximumCorrection = Math.max(
+      tolerance,
+      Number(routeConfig.maximumExteriorCorrectionDistance) || tolerance,
+    );
+    if (routeConfig.localExteriorValidation === true) {
+      // Count all crossings so overlapping wood cannot hide an enclosing trunk.
+      this.exteriorOrigin.copy(this.exteriorCandidatePosition)
+        .addScaledVector(this.exteriorDirection, 0.001);
+      const outwardHit = this.raycastRouteSurface(
+        this.exteriorOrigin, this.exteriorDirection, route,
+        sourceSurface ? [sourceSurface] : null, true,
+      );
+      if (outwardHit?.originInside) return null;
+      this.exteriorOrigin.copy(this.exteriorCandidatePosition)
+        .addScaledVector(this.exteriorDirection, POND_GAME.climbing.surfaceLift);
+      const poseHit = this.raycastRouteSurface(
+        this.exteriorOrigin, this.exteriorDirection, route,
+        sourceSurface ? [sourceSurface] : null, true,
+      );
+      if (poseHit?.originInside) return null;
+      // Keep the actual contact. Recasting a smooth normal can cross a bark ridge.
+      this.exteriorBestPosition.copy(this.exteriorCandidatePosition);
+      this.exteriorBestNormal.copy(this.exteriorCandidateNormal);
+      return {
+        position: this.exteriorBestPosition,
+        normal: this.exteriorBestNormal,
+        object: sourceSurface?.object ?? route.surfaceObject,
+        instanceId: sourceSurface?.instanceId ?? null,
+      };
+    }
     const castOffset = Math.hypot(boundsWidth, boundsHeight, boundsDepth) + 0.5;
-    this.exteriorOrigin.copy(hit.position)
+    this.exteriorOrigin.copy(this.exteriorCandidatePosition)
       .addScaledVector(this.exteriorDirection, castOffset);
     const exteriorHit = this.raycastRouteSurface(
       this.exteriorOrigin,
@@ -1491,14 +1579,6 @@ export class AntClimbing {
     if (!exteriorHit) return null;
 
     const correctionDistance = exteriorHit.position.distanceTo(this.exteriorCandidatePosition);
-    const tolerance = Math.max(
-      0.008,
-      Number(routeConfig.exteriorContactTolerance) || 0.03,
-    );
-    const maximumCorrection = Math.max(
-      tolerance,
-      Number(routeConfig.maximumExteriorCorrectionDistance) || tolerance,
-    );
     if (correctionDistance > maximumCorrection) return null;
     this.exteriorBestPosition.copy(exteriorHit.position);
     this.exteriorBestNormal.copy(exteriorHit.normal);
@@ -1558,7 +1638,7 @@ export class AntClimbing {
     return !ground || hit.position.y + 0.008 >= ground.y;
   }
 
-  isInsideNeighborRock(position, route = this.route) {
+  isInsideNeighborRock(position, route = this.route, contact = null) {
     if (!position || !this.landmarks?.rocks?.length) return false;
     const allowedRocks = route?.allowedRocks ?? [];
     const padding = Math.max(
@@ -1567,7 +1647,9 @@ export class AntClimbing {
     );
     return this.landmarks.rocks.some((rock) => {
       if (
-        allowedRocks.includes(rock)
+        (contact
+          ? contact.object === rock.surfaceObject && (contact.instanceId ?? null) === (rock.rockIndex ?? null)
+          : allowedRocks.includes(rock))
         || !containsFootprint(rock.footprint, position.x, position.z, padding)
       ) return false;
       if (rock.surfaceObject) {
@@ -1632,10 +1714,14 @@ export class AntClimbing {
         if (landing) return landing;
       }
     }
-    return this.route.entry?.clone() ?? null;
+    const entry = this.route.entry;
+    return entry && this.app.canAntOccupy(entry.x, entry.z)
+      ? this.app.getAntGroundPosition(entry.x, entry.z, new THREE.Vector3())
+      : null;
   }
 
   finishRoute(landing) {
+    if (!landing || !this.app.canAntOccupy(landing.x, landing.z)) return false;
     this.clearMovementInput();
     this.app.clearAntMovement();
     this.route = null;
@@ -1646,18 +1732,25 @@ export class AntClimbing {
     this.app.setAntAnimationPlaying(false);
     this.resetDebugTrail();
     this.refreshNearbyRoute();
+    return true;
   }
 
   dismount() {
     if (!this.route || this.phase !== 'surface' || !this.route.entry) return false;
     const landing = this.findDismountPosition();
     if (!landing) return false;
-    this.finishRoute(landing);
-    return true;
+    return this.finishRoute(landing);
   }
 
   abortRoute(message) {
-    const landing = this.route?.entry?.clone();
+    const landing = this.findDismountPosition();
+    if (!landing) {
+      this.app.setAntAnimationPlaying(false);
+      this.clearMovementInput();
+      this.app.clearAntMovement();
+      this.setPrompt(message);
+      return false;
+    }
     this.route = null;
     this.phase = 'ground';
     this.surfaceRole = null;
@@ -2039,6 +2132,7 @@ export class AntClimbing {
     this.app.setAntAnimationPlaying(false);
     this.route = null;
     this.nearbyRoute = null;
+    this.rockSurfaceGroups.clear();
     this.phase = 'ground';
     this.surfaceRole = null;
     this.clearMovementInput();

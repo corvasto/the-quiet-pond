@@ -158,6 +158,7 @@ const WORLD_QUERY_METHODS = {
 
   raycastSurface(object, origin, direction, {
     recursive = true,
+    includeBackfaces = false,
     instanceId = null,
     targetPosition = new THREE.Vector3(),
     targetNormal = new THREE.Vector3(),
@@ -177,11 +178,53 @@ const WORLD_QUERY_METHODS = {
     this.surfaceRayOrigin.copy(origin);
     object.updateWorldMatrix(true, true);
     this.surfaceRaycaster.set(this.surfaceRayOrigin, this.surfaceRayDirection);
-    const hit = this.surfaceRaycaster
-      .intersectObject(object, recursive)
-      .find((intersection) => (
-        instanceId === null || intersection.instanceId === instanceId
-      ));
+    let queryObject = object;
+    if (object.isInstancedMesh && Number.isInteger(instanceId)) {
+      // Query only the requested rock, rather than raycasting the whole collection.
+      if (!this.surfaceInstanceMesh) {
+        this.surfaceInstanceMesh = new THREE.Mesh(object.geometry, object.material);
+        this.surfaceInstanceMesh.matrixAutoUpdate = false;
+      }
+      queryObject = this.surfaceInstanceMesh;
+      queryObject.geometry = object.geometry;
+      queryObject.material = object.material;
+      object.getMatrixAt(instanceId, this.surfaceRayInstanceMatrix);
+      queryObject.matrixWorld.multiplyMatrices(object.matrixWorld, this.surfaceRayInstanceMatrix);
+    } else if (includeBackfaces && object.isMesh && !object.isSkinnedMesh && !object.isInstancedMesh) {
+      if (!this.surfaceBackfaceMesh) {
+        this.surfaceBackfaceMesh = new THREE.Mesh(
+          object.geometry,
+          new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
+        );
+        this.surfaceBackfaceMesh.matrixAutoUpdate = false;
+      }
+      queryObject = this.surfaceBackfaceMesh;
+      queryObject.geometry = object.geometry;
+      queryObject.matrixWorld.copy(object.matrixWorld);
+    }
+    const intersections = this.surfaceRaycaster
+      .intersectObject(queryObject, queryObject === object && recursive);
+    let winding = 0;
+    if (includeBackfaces && queryObject === this.surfaceBackfaceMesh) {
+      this.surfaceRayNormalMatrix.getNormalMatrix(queryObject.matrixWorld);
+      let lastEntryDistance = -Infinity;
+      let lastExitDistance = -Infinity;
+      for (const intersection of intersections) {
+        const facing = this.surfaceRayFaceNormal.copy(intersection.face.normal)
+          .applyNormalMatrix(this.surfaceRayNormalMatrix).dot(this.surfaceRayDirection);
+        if (Math.abs(facing) < 1e-8) continue;
+        if (facing < 0 && intersection.distance - lastEntryDistance > 1e-7) {
+          winding -= 1;
+          lastEntryDistance = intersection.distance;
+        } else if (facing > 0 && intersection.distance - lastExitDistance > 1e-7) {
+          winding += 1;
+          lastExitDistance = intersection.distance;
+        }
+      }
+    }
+    const hit = intersections.find((intersection) => (
+      queryObject === this.surfaceInstanceMesh || instanceId === null || intersection.instanceId === instanceId
+    ));
     if (!hit) return null;
 
     const normalMatrixSource = hit.object?.matrixWorld;
@@ -201,12 +244,16 @@ const WORLD_QUERY_METHODS = {
     } else {
       targetNormal.copy(this.surfaceRayDirection).negate();
     }
+    const frontFacing = !hit.face || this.surfaceRayFaceNormal.copy(hit.face.normal)
+      .applyNormalMatrix(this.surfaceRayNormalMatrix).dot(this.surfaceRayDirection) <= 0;
     if (targetNormal.dot(this.surfaceRayDirection) > 0) targetNormal.negate();
     return {
       position: targetPosition,
       normal: targetNormal,
-      object: hit.object,
-      instanceId: hit.instanceId,
+      object: queryObject === object ? hit.object : object,
+      frontFacing,
+      originInside: winding > 0,
+      instanceId: queryObject === this.surfaceInstanceMesh ? instanceId : hit.instanceId,
     };
   },
 
