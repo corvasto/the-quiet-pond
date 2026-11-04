@@ -1,7 +1,7 @@
 {
   "name": "the-quiet-pond",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.",
   "scripts": {

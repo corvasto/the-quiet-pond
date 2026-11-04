@@ -38,6 +38,10 @@ const elements = {
   sleepDialog: byId('sleep-dialog'),
   sleepTitle: byId('sleep-title'),
   sleepFade: byId('sleep-fade'),
+  materialStore: byId('material-store'),
+  buildingActions: byId('building-actions'),
+  buildingButtons: byId('building-buttons'),
+  buildingStatus: byId('building-status'),
   undergroundMap: byId('underground-map'),
   undergroundMapContent: byId('underground-map-content'),
   undergroundMapClose: byId('underground-map-close'),
@@ -770,6 +774,51 @@ function updateSleepButton() {
   elements.sleepButton.hidden = !available;
 }
 
+let buildingUiElapsed = 0.2;
+let buildingUiSignature = '';
+function updateBuildingControls({ delta = 0.2 } = {}) {
+  buildingUiElapsed += delta;
+  if (buildingUiElapsed < 0.12) return;
+  buildingUiElapsed = 0;
+  const actions = canMoveAnt() ? session?.getBuildingActions() ?? [] : [];
+  const status = actions[0]?.reason ?? session?.getBuildingStatus() ?? '';
+  const signature = JSON.stringify([actions, status, language]);
+  if (signature === buildingUiSignature) return;
+  buildingUiSignature = signature;
+  elements.buildingActions.hidden = !actions.length;
+  elements.buildingStatus.textContent = status ? t(status) : '';
+  elements.buildingButtons.replaceChildren();
+  actions.forEach((action, index) => {
+    const button = document.createElement('button'); button.type = 'button';
+    button.textContent = t(action.label); button.disabled = Boolean(action.disabled);
+    button.dataset.primary = String(index === 0);
+    if (action.reason) button.title = t(action.reason);
+    button.addEventListener('click', () => performBuildingAction(action.id));
+    elements.buildingButtons.append(button);
+  });
+}
+function performBuildingAction(id) {
+  if (!canMoveAnt()) return;
+  const result = session?.performBuildingAction(id);
+  if (result === 'sleep') { openSleep(); return; }
+  if (result === 'storage') {
+    setPaused(true); elements.pauseDialog.hidden = true;
+    const storage = session.getMaterialStorage();
+    byId('material-store-count').textContent = t('building.count', { count: storage.leaves });
+    byId('material-store-take').disabled = storage.leaves === 0;
+    byId('material-store-build').disabled = storage.bedBuilt || storage.leaves < 2;
+    elements.materialStore.showModal();
+  } else {
+    if (result) saveActiveSlot();
+    buildingUiSignature = ''; updateBuildingControls();
+    session?.focusScene();
+  }
+}
+function closeMaterialStore() {
+  elements.materialStore.close(); setPaused(false);
+  buildingUiSignature = ''; updateBuildingControls();
+}
+
 function updateBurrowButton() {
   elements.burrowButton.hidden = !canMoveAnt() || !elements.cardsDialog.hidden || !session?.canUseBurrow();
   elements.burrowButton.textContent = t(session?.isUnderground() ? 'underground.exit' : 'underground.enter');
@@ -1166,6 +1215,10 @@ function setupMobileGameControls() {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (elements.materialStore.open) {
+    if (event.code === 'Escape') { event.preventDefault(); closeMaterialStore(); }
+    return;
+  }
   if (elements.undergroundMap.open) {
     if ((event.code === 'Escape' || event.code === 'KeyM') && !event.repeat) {
       event.preventDefault(); closeUndergroundMap();
@@ -1199,6 +1252,10 @@ window.addEventListener('keydown', (event) => {
     }
     return;
   }
+  if (event.code === 'Escape' && !event.repeat && canMoveAnt()
+    && session?.getBuildingActions().some((action) => action.id === 'cancel')) {
+    event.preventDefault(); performBuildingAction('cancel'); return;
+  }
   const pauseKey = event.code === 'Escape' || event.code === 'KeyP';
   if (pauseKey && !event.repeat && (paused || !isEditableTarget(event.target))) {
     event.preventDefault();
@@ -1206,6 +1263,11 @@ window.addEventListener('keydown', (event) => {
     return;
   }
   if (isEditableTarget(event.target)) return;
+  if (event.code === 'KeyF' && !event.repeat && canMoveAnt()) {
+    const action = session?.getBuildingActions()[0];
+    if (action) { event.preventDefault(); if (!action.disabled) performBuildingAction(action.id); }
+    return;
+  }
   if (event.code === 'KeyU' && !event.repeat && canMoveAnt() && session?.canUseBurrow()) {
     event.preventDefault();
     useBurrow();
@@ -1348,6 +1410,14 @@ elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
 elements.undergroundMapClose.addEventListener('click', closeUndergroundMap);
+byId('material-store-close').addEventListener('click', closeMaterialStore);
+elements.materialStore.addEventListener('cancel', (event) => { event.preventDefault(); closeMaterialStore(); });
+byId('material-store-take').addEventListener('click', () => {
+  if (session?.takeStoredLeaf()) saveActiveSlot(); closeMaterialStore();
+});
+byId('material-store-build').addEventListener('click', () => {
+  session?.planLeafBed(); closeMaterialStore();
+});
 elements.undergroundMap.addEventListener('cancel', (event) => { event.preventDefault(); closeUndergroundMap(); });
 elements.birdSwitchButton.addEventListener('click', toggleBird);
 elements.resetCameraButton.addEventListener('click', resetCameraView);
@@ -1435,6 +1505,7 @@ async function startGame() {
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
     session.onFrame(updateBurrowButton);
+    session.onFrame(updateBuildingControls);
     session.onFrame(updateRadioControlButton);
     updateExploreControl();
     saveActiveSlot();

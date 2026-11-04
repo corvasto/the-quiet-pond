@@ -119,6 +119,18 @@
   <div class="burrow-actions">
     <button id="burrow-button" class="sleep-button" type="button" hidden data-i18n="underground.enter">Enter burrow</button>
   </div>
+  <div id="building-actions" class="building-actions" hidden>
+    <span id="building-status" aria-live="polite"></span>
+    <div id="building-buttons"></div>
+  </div>
+  <dialog id="material-store" class="material-store" aria-labelledby="material-store-title">
+    <button id="material-store-close" class="game-dialog__close" type="button" aria-label="Close storage" data-i18n-aria-label="building.close">×</button>
+    <h2 id="material-store-title" data-i18n="building.storage">Material store</h2>
+    <p id="material-store-count"></p>
+    <p data-i18n="building.recipe">Leaf bed - 2 leaves. Choose a clear chamber floor.</p>
+    <button id="material-store-take" type="button" data-i18n="building.take">Take one leaf</button>
+    <button id="material-store-build" type="button" data-i18n="building.build">Build leaf bed</button>
+  </dialog>
   <dialog id="underground-map" class="underground-map" aria-labelledby="underground-map-title">
     <header><h2 id="underground-map-title" data-i18n="underground.map.title">Underground - Floor 1</h2></header>
     <p data-i18n="underground.map.context">Movement paused. Pinch or scroll to zoom. Drag to move the map.</p>

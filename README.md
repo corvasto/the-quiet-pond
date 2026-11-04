@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/corvasto/the-quiet-pond"><img src="https://img.shields.io/badge/Made_with-❤️-white?style=flat" alt="mwl" /></a>
-  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.1.0-2b6cb0?style=flat-square" alt="version" /></a>
+  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.2.0-2b6cb0?style=flat-square" alt="version" /></a>
   <a href="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml"><img src="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg" alt="deploy-pages" /></a>
 </p>
 
@@ -75,7 +75,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 - Push the joystick toward its edge to run; ease it back to walk.
 - Tap the arrow button to climb or get down.
 - Tap **Zz** to sleep until morning or night wherever the ant is.
-- Tap **Enter burrow** to explore below ground, then **Return outside** at the amber entrance ring. The climb button is hidden underground.
+- Tap **Enter burrow** to explore below ground, then **Return outside** at the daylight entrance. The climb button is hidden underground.
 - Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 
 See [controls](docs/controls.md) and [gameplay](docs/gameplay.md) for camera behavior, traversal, and objectives.
@@ -88,11 +88,15 @@ Gather seeds, deliver a leaf offering, and discover the pond's hidden details. P
 
 ## Beneath the roots
 
-The burrow opens onto one enclosed underground floor with light brown soil, contoured passages, low arched roofs, branching chambers, and a return loop around the surface tree's descending root. This stage focuses on the world and camera: decorative balls, pebbles, circular sticks, stored seeds, workers, and story events are absent. Broad warm lighting keeps the tunnels readable. Underground Explore becomes Map: a paused top-down tunnel plan with a red player marker, heading, exit, and a 20% top-down 3D surface reference. The image uses existing world assets and stays aligned during zoom/pan; simple pond/tree outlines are the fallback. Pinch or scroll to zoom and drag to pan. Close it with the X close button, M, or Escape. Walking keeps the ant visible and resolves obstructed camera positions to another shoulder. The entrance has a daylight opening and a Return outside touch button.
+The burrow opens onto one enclosed underground floor with light brown soil, contoured passages, low arched roofs, branching chambers, and a return loop around the surface tree's descending root. Workers roam the passages, and unlocked building materials can be stored below and used for a leaf bed. Broad warm lighting keeps the tunnels readable. Underground Explore becomes Map: a paused top-down tunnel plan with a red player marker, heading, exit, and a 20% top-down 3D surface reference. The image uses existing world assets and stays aligned during zoom/pan; simple pond/tree outlines are the fallback. Pinch or scroll to zoom and drag to pan. Close it with the X close button, M, or Escape. Walking keeps the ant visible and resolves obstructed camera positions to another shoulder. The entrance has a daylight opening and a Return outside touch button.
 
 Entry and exit use a dark fade. The existing loading screen appears while the underground code and procedural scene prepare on first entry. No new model, texture, or audio downloads are required; ants reuse the already loaded model. Underground modules and the release's separate underground chunk load on entry and cache for later offline visits. An initial offline visit requires a previous successful underground load. Surface simulation and its day/weather clock pause underground. Saves resume outside at the ant's surface position after reload.
 
 The layout uses the same X/Z units as the pond and a lower floor height. Only the authored tunnel network is walkable; it does not fill the entire surface map. See [underground implementation and verification](docs/underground.md).
+
+## Carry, store, and build
+
+Use the contextual Pick up action near a seed or unlocked building leaf. Desktop F uses the primary action; mobile has the same visible button. Carry one object, drop it on clear dry ground, or bring a building leaf to the underground material store. Leaves unlock after the seed objective. Store two leaves, choose a clear chamber floor, and confirm a two-leaf resting bed. Preview/cancel spends nothing. Storage, dropped materials, carried building leaves, and the bed persist in existing save slots. Carried seeds retain their original reload behavior. See [burrow building](docs/burrow-building.md) for controls, ownership, saves, and browser verification.
 
 ## Project structure
 

@@ -9,6 +9,7 @@ import { ObjectiveChime } from './objective-chime.js';
 import { PondRadioAudio } from './radio-audio.js';
 import { AmbienceAudio } from './ambience-audio.js';
 import { SeedToBurrowGame } from './seed-to-burrow.js';
+import { BurrowBuilding } from './burrow-building.js';
 import { BirdFlight, isBirdRewardUnlocked } from './bird-flight.js';
 
 export class PondGameSession {
@@ -64,6 +65,7 @@ export class PondGameSession {
     this.debugPosition = new THREE.Vector3();
     this.bird = null;
     this.birdPreparing = false;
+    this.colony = null;
     this.underground = null;
     this.undergroundDiscoveries = new Set(
       (Array.isArray(saveState?.underground?.discoveries) ? saveState.underground.discoveries : [])
@@ -106,6 +108,7 @@ export class PondGameSession {
     this.objectives.start();
     this.startWorldCycle();
     this.game = new SeedToBurrowGame(this.app, {
+      canCollectObject: () => !this.colony?.state.carried,
       onStateChange: (snapshot) => {
         this.latestGameSnapshot = snapshot;
         this.objectives?.setSeedSnapshot(snapshot);
@@ -129,6 +132,8 @@ export class PondGameSession {
     this.bird = this.createBirdController();
     this.bird.setDebugEnabled(this.isClimbDebugEnabled());
     this.restoreSaveState(this.saveState);
+    this.colony = new BurrowBuilding(this, this.saveState?.colony);
+    this.colony.sync();
     this.onLoadProgress(99);
     return this;
   }
@@ -146,6 +151,7 @@ export class PondGameSession {
         z: position.z,
         heading: facing ? Math.atan2(facing.x, facing.z) : null,
       },
+      colony: this.colony?.save(),
       game: this.game.getSaveState(),
       objectives: this.objectives.getSaveState(),
       underground: { discoveries: [...this.undergroundDiscoveries] },
@@ -172,8 +178,20 @@ export class PondGameSession {
     return this.isUnderground() ? this.underground.prepareMapSurface() : Promise.resolve(null);
   }
 
+  getBuildingStatus() {
+    if (this.colony?.planning) return 'building.preview';
+    if (this.colony?.state.carried) return 'building.carryLeaf';
+    if (this.game?.carriedSeed) return 'building.carrySeed';
+    return '';
+  }
+  getBuildingActions() { return this.colony?.actions() ?? []; }
+  performBuildingAction(id) { return this.colony?.act(id) ?? false; }
+  getMaterialStorage() { return { leaves: this.colony?.state.stored ?? 0, bedBuilt: Boolean(this.colony?.state.bed) }; }
+  takeStoredLeaf() { return this.colony?.take() ?? false; }
+  planLeafBed() { return this.colony?.startPlan() ?? false; }
+
   getUndergroundMapData() {
-    return this.isUnderground() ? this.underground.getMapData() : null;
+    return this.isUnderground() ? { ...this.underground.getMapData(), colony: this.colony?.markers() } : null;
   }
 
   isUnderground() {
@@ -227,13 +245,14 @@ export class PondGameSession {
       this.radioAudio?.setEnabled(true);
       this.ambienceAudio?.setEnabled(this.soundEnabled);
     }
+    this.colony?.sync();
     this.setPaused(this.paused);
     this.emitPrompt();
     return true;
   }
 
   canPlayBird() {
-    return Boolean(!this.isUnderground() && this.bird && (
+    return Boolean(!this.isUnderground() && !this.colony?.busyHands && this.bird && (
       POND_GAME.debug.enabled || isBirdRewardUnlocked(this.objectives?.getSnapshot())
     ));
   }
@@ -452,7 +471,7 @@ export class PondGameSession {
   }
 
   toggleFlight() {
-    if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive() || this.isUnderground()) return false;
+    if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive() || this.isUnderground() || this.colony?.busyHands) return false;
     if (!this.isFlightEnabled() && !this.climbing?.exitSurfaceForDebug()) return false;
     this.clearMovementInput();
     const enabled = this.app.setAntFlightEnabled(!this.app.isAntFlightEnabled(), {
@@ -764,6 +783,8 @@ export class PondGameSession {
   dispose() {
     this.worldCycleUnsubscribe?.();
     this.worldCycleUnsubscribe = null;
+    this.colony?.dispose();
+    this.colony = null;
     this.app?.setAlternateRuntime(null);
     this.underground?.dispose();
     this.underground = null;

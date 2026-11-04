@@ -54,3 +54,8 @@ Apply and reload matches other primary dialog buttons. Touch/mouse suppress ling
 See [gameplay.md](gameplay.md) for surface contact behavior and [verification.md](verification.md) for manual checks.
 
 Open Cards beside Checklist to view the discovery collection. Select an unlocked card to read it; use the chevrons to cycle through discovered cards, Back to return to the grid, and Escape or the close button to return to play. New discoveries briefly show a notice that opens the card. On touch devices, interface text does not select on a long press; editable fields remain selectable.
+
+
+## Carrying and building
+
+Seeds now require Pick up seed rather than collision pickup. Desktop F activates the primary contextual action; touch and mouse use the visible action button. Pick up, Drop here, Deposit leaf, and Material store appear only when relevant. Dropping requires dry ground or the burrow floor and is disabled while climbing/flying, on water/steep slopes, or near blocked footprints and entrances. Material leaves unlock after the seed objective. Empty-handed at the underground store, open storage to withdraw one leaf or choose a bed recipe. A bed costs two stored leaves and can be previewed on a clear chamber floor. Move to adjust the preview, select Place bed to confirm, or Cancel/Escape to stop. Rest on the finished bed opens the existing sleep choices. See [burrow-building.md](burrow-building.md).

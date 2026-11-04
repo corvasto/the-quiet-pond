@@ -2001,3 +2001,20 @@ body.game-underground-active.game-explore-active .mobile-game-controls { display
 
 .game-actions .sleep-shortcut { min-width: 44px; min-height: 44px; padding: 6px 10px; font-family: var(--font-display); font-size: 1.25rem; line-height: 1; }
 .sleep-shortcut span { font-size: 0.7em; }
+
+.building-actions { position: fixed; z-index: 12; left: 50%; bottom: calc(18% + 60px); transform: translateX(-50%); max-width: min(310px,calc(100vw - 32px)); text-align: center; user-select: none; -webkit-user-select: none; }
+#building-status:empty { display: none; }
+#building-status { display: block; padding: 5px 10px; border-radius: 10px; background: var(--panel); color: var(--ink); font-size: .85rem; }
+#building-buttons { display: flex; justify-content: center; gap: 6px; margin-top: 6px; }
+#building-buttons button, .material-store > button:not(.game-dialog__close) { min-height: 46px; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 14px; background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; }
+#building-buttons button:disabled { opacity: .65; cursor: default; }
+.material-store { width: min(400px,calc(100vw - 28px)); box-sizing: border-box; max-height: calc(100dvh - 28px); overflow: auto; padding: 24px; border: 1px solid var(--accent); border-radius: 18px; background: #f0e3c6; color: #493a2a; text-align: center; }
+.material-store:not([open]) { display: none; }
+.material-store::backdrop { background: #101a18cc; }
+.material-store, .material-store *, .building-actions * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.material-store .game-dialog__close { top: 8px; right: 8px; }
+.material-store h2 { padding: 0 24px; }
+.material-store > button:not(.game-dialog__close) { display: block; margin: 8px auto; }
+@media (hover: hover) and (pointer: fine) { #building-buttons button[data-primary="true"]::after { content: ' (F)'; } }
+@media (any-pointer: coarse) { .building-actions { bottom: calc(env(safe-area-inset-bottom) + 190px); } }
+@media (max-height: 500px) { .building-actions { bottom: 88px; } .material-store { padding: 12px 20px; } }

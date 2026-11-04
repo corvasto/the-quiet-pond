@@ -30,7 +30,7 @@ Underground Explore is now Map. It opens a native modal dialog and suspends trav
 
 The entrance has a daylight opening in its end wall. Return outside appears within 1.05 world units of the entrance in walking mode. The same visible button works on desktop and mobile; U remains an optional desktop shortcut. The map marks the entrance and has a visible close button. Mobile exit placement leaves space for the touch hint and movement controls.
 
-This stage contains the underground world and player only. Worker ants, seed piles, glowing caps, pale pebbles, circular nest fibers, entrance floor rings, and story triggers have been removed so the layout, camera, and lighting can be reviewed first. The structural tree root remains. Broad hemisphere fill, invisible room lights, and a soft camera light illuminate the light brown soil. Reloading resumes outside; re-entry starts at the underground entrance.
+The floor also supports the carrying, material store, and two-leaf bed described in [burrow-building.md](burrow-building.md). Worker ants roam the tunnels. Decorative caps, pale pebbles, circular nest fibers, entrance floor rings, and story triggers remain absent. The structural tree root remains. Broad hemisphere fill, invisible room lights, and a soft camera light illuminate the light brown soil. Reloading resumes outside; re-entry starts at the underground entrance.
 
 ## Loading and offline
 

@@ -1,7 +1,7 @@
 export const APP_METADATA = Object.freeze({
   name: 'The Quiet Pond',
   shortName: 'Quiet Pond',
-  version: '1.1.0',
+  version: '1.2.0',
   serviceWorkerCachePrefix: 'the-quiet-pond-v',
 });
 
