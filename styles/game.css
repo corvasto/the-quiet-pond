@@ -1998,3 +1998,6 @@ body.game-underground-active.game-explore-active .mobile-game-controls { display
 }
 
 .underground-map__surface-image { pointer-events: none; }
+
+.game-actions .sleep-shortcut { min-width: 44px; min-height: 44px; padding: 6px 10px; font-family: var(--font-display); font-size: 1.25rem; line-height: 1; }
+.sleep-shortcut span { font-size: 0.7em; }

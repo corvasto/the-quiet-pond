@@ -1,6 +1,6 @@
 # Beneath the roots
 
-Version 1.1.0 adds the burrow's first underground floor. Walk within the existing burrow interaction radius and press U or select Enter burrow. E and Sleep retain their above-ground sleep interaction. At the underground entrance, Return outside becomes available. Entry and exit share the sleep transition's fade style, with a separate overlay so sleep state is independent.
+Version 1.1.0 adds the burrow's first underground floor. Walk within the existing burrow interaction radius and press U or select Enter burrow. E and the Zz button allow the ant to sleep anywhere, including underground. At the underground entrance, Return outside becomes available. Entry and exit share the sleep transition's fade style, with a separate overlay so sleep state is independent.
 
 ## Ownership
 
@@ -79,3 +79,5 @@ Headless checks verify orthographic corners, world Z/image orientation, common b
 The surface image is sliced by the orthographic camera's near plane, defaulting to 2 world units above the main tree's ground height. Set `surfaceMapCutHeight` in `js/config/underground.js` to adjust it. This clips high trunks and branches, including parts of meshes that cross the cutoff, without changing surface geometry/materials or global renderer clipping state. It affects the map image only; all scenery remains intact during gameplay.
 
 Both overlay settings live in js/config/underground.js with inline comments: surfaceMapCutHeight sets the slice height relative to the tree ground level, and surfaceMapOpacity sets visibility from 0 (invisible) to 1 (solid). Reload after editing configuration. The opacity no longer needs a CSS change.
+
+Three worker ants follow routes through the burrow using the existing ant model and animations. Their movement runs only while the underground world is active and unpaused; animation updates are limited to workers near the player. `workerCount`, `workerSpeed`, and `workerAnimationDistance` are in `js/config/underground.js`. Workers share the original model geometry and materials.

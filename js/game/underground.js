@@ -55,6 +55,7 @@ export class UndergroundWorld {
     this.surfaceMapPending = null;
     this.surfaceMapAttempted = false;
     this.entryId = 0;
+    this.workers = [];
   }
 
   async start({ onProgress = () => {} } = {}) {
@@ -78,6 +79,7 @@ export class UndergroundWorld {
     this.idleClip = createFrameAnimationClip(source, { ...options, name: 'burrow idle', frames: recipe.ranges.idle });
     this.player = this.createActor(1);
     this.position = this.player.group.position;
+    this.createWorkers();
     this.cameraLight = new THREE.PointLight('#ffe8d2', 1.6, 5, 1.6);
     this.scene.add(this.cameraLight);
     this.controls = new OrbitControls(this.orbitCamera, this.app.renderer.domElement);
@@ -118,6 +120,57 @@ export class UndergroundWorld {
     const actor = { group, mixer, walk, idle, moving: null };
     this.setActorMoving(actor, false);
     return actor;
+  }
+
+  createWorkers() {
+    const routes = this.level.layout.workerRoutes;
+    for (let index = 0; index < UNDERGROUND_CONFIG.workerCount; index += 1) {
+      const route = routes[index % routes.length];
+      if (!route?.length) continue;
+      let waypoint = index % route.length;
+      for (let attempt = 0; attempt < route.length; attempt += 1) {
+        const point = route[waypoint];
+        if (this.level.layout.isWalkable(point.x, point.z, UNDERGROUND_CONFIG.antRadius)) break;
+        waypoint = (waypoint + 1) % route.length;
+      }
+      const start = route[waypoint];
+      if (!this.level.layout.isWalkable(start.x, start.z, UNDERGROUND_CONFIG.antRadius)) continue;
+      const actor = this.createActor(1);
+      actor.group.name = `Burrow worker ${index + 1}`;
+      actor.group.position.set(start.x, this.level.layout.heightAt(start.x, start.z) + SCENE_PROPS.ant.lift, start.z);
+      this.setActorMoving(actor, true);
+      this.workers.push({ actor, route, waypoint, direction: 1 });
+    }
+  }
+
+  updateWorkers(dt) {
+    const layout = this.level.layout;
+    const maxAnimationDistance = UNDERGROUND_CONFIG.workerAnimationDistance;
+    for (const worker of this.workers) {
+      const position = worker.actor.group.position;
+      const next = (worker.waypoint + worker.direction + worker.route.length) % worker.route.length;
+      const target = worker.route[next];
+      const dx = target.x - position.x;
+      const dz = target.z - position.z;
+      const distance = Math.hypot(dx, dz);
+      const step = Math.min(distance, UNDERGROUND_CONFIG.workerSpeed * dt);
+      if (distance > 0 && step > 0) {
+        const x = position.x + dx / distance * step;
+        const z = position.z + dz / distance * step;
+        if (layout.isWalkable(x, z, UNDERGROUND_CONFIG.antRadius)) {
+          position.set(x, layout.heightAt(x, z) + SCENE_PROPS.ant.lift, z);
+          worker.actor.group.rotation.y = Math.atan2(dx, dz) + THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset);
+          if (step >= distance - 1e-8) worker.waypoint = next;
+        } else {
+          worker.direction *= -1;
+        }
+      } else if (distance <= 1e-8) {
+        worker.waypoint = next;
+      }
+      const px = position.x - this.position.x;
+      const pz = position.z - this.position.z;
+      if (px * px + pz * pz <= maxAnimationDistance * maxAnimationDistance) worker.actor.mixer.update(dt);
+    }
   }
 
   setActorMoving(actor, moving) {
@@ -268,6 +321,7 @@ export class UndergroundWorld {
     if (!this.paused && !this.exploreActive) {
       this.updateMovement(dt);
       this.player.mixer.update(dt);
+      this.updateWorkers(dt);
     }
     this.updateCamera(dt);
   }
@@ -440,6 +494,8 @@ export class UndergroundWorld {
     this.deactivate();
     this.controls?.dispose();
     this.player?.mixer.stopAllAction();
+    for (const worker of this.workers) worker.actor.mixer.stopAllAction();
+    this.workers.length = 0;
     // Actor clones share the surface geometry and materials, owned by PondApp.
     this.level?.dispose();
     this.scene.clear();

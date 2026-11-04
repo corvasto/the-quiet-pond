@@ -10,6 +10,9 @@ export const UNDERGROUND_CONFIG = Object.freeze({
   surfaceMapOpacity: 0.2,
   entranceRadius: 1.05,
   antRadius: 0.075,
+  workerCount: 3,
+  workerSpeed: 0.18,
+  workerAnimationDistance: 3,
   camera: Object.freeze({
     distance: 1.1,
     minimumDistance: 0.3,

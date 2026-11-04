@@ -34,7 +34,7 @@
 
 ---
 
-A cozy ant exploration game about a living pond. Collect discovery cards as you complete the checklist. Find seeds, climb through the scenery, and discover its daily routines. A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
+A cozy ant exploration game about a living pond. Collect discovery cards as you complete the checklist. Find seeds, climb through the scenery, and discover its daily routines and the ants living underground. A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.
 
 The Quiet Pond is a hobby project I'm making with my kids, with help from OpenAI Codex for coding and development. I also review and refine the code.
 
@@ -65,7 +65,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 | Space | Climb or get down |
 | M | Toggle Explore |
 | B or character switch | Fly as the bird after completing every objective, or return to the ant |
-| E near the burrow | Choose when to wake up |
+| E or Z button | Sleep until morning or night |
 | U near the burrow / underground entrance | Enter the burrow / return outside |
 | P or Escape | Pause or resume |
 
@@ -74,7 +74,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 - Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
 - Push the joystick toward its edge to run; ease it back to walk.
 - Tap the arrow button to climb or get down.
-- Near the burrow, tap **Sleep** to choose a wake time.
+- Tap **Zz** to sleep until morning or night wherever the ant is.
 - Tap **Enter burrow** to explore below ground, then **Return outside** at the amber entrance ring. The climb button is hidden underground.
 - Drag the scene to orbit while moving, as with keyboard movement. The ant keeps its current travel heading while you swipe. Pinch to adjust camera distance.
 

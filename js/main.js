@@ -404,6 +404,9 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n-aria-label]').forEach((element) => {
     element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel));
   });
+  document.querySelectorAll('[data-i18n-title]').forEach((element) => {
+    element.title = t(element.dataset.i18nTitle);
+  });
   if (elements.gameVersion) {
     elements.gameVersion.textContent = translate('ui.version', language, { version: APP_VERSION });
   }

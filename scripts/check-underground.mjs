@@ -181,10 +181,21 @@ assert.equal(world.active, false, 'Preparation does not activate the underground
 assert.equal(world.ready, true);
 assert.equal(progress.at(-1), 100);
 assert.equal(world.player.group.children.length, 1, 'Surface attachments are excluded from the clone.');
+assert.equal(world.workers.length, 3, 'Three workers are prepared for the burrow.');
+assert.equal(new Set(world.workers.map(({ actor }) => `${actor.group.position.x},${actor.group.position.z}`)).size, 3, 'Workers start in separate locations.');
+for (const worker of world.workers) {
+  assert.equal(worker.actor.group.children[0].children[0].geometry, surfaceGeometry, 'Workers share the existing ant geometry.');
+  assert.ok(world.level.layout.isWalkable(worker.actor.group.position.x, worker.actor.group.position.z, UNDERGROUND_CONFIG.antRadius));
+}
 assert.equal(world.player.group.children[0].children[0].geometry, surfaceGeometry,
   'The existing model geometry is reused without a second download.');
 assert.equal(world.activate(), true);
 assert.equal(world.canExit(), true);
+const workerStart = world.workers[0].actor.group.position.clone();
+for (let frame = 0; frame < 60; frame += 1) world.update({ delta: 1 / 60 });
+assert.ok(world.workers[0].actor.group.position.distanceTo(workerStart) > 0.05, 'Workers walk along their routes.');
+for (const worker of world.workers) assert.ok(world.level.layout.isWalkable(worker.actor.group.position.x, worker.actor.group.position.z, UNDERGROUND_CONFIG.antRadius));
+
 world.setMovementKey('forward', true);
 for (let frame = 0; frame < 60; frame += 1) world.update({ delta: 1 / 60 });
 assert.ok(world.position.z > layout.spawn.z + 0.2, 'Forward moves into the entry tunnel.');
@@ -198,9 +209,11 @@ assert.ok(layout.containsSphere(world.camera.position.x, world.camera.position.y
 world.position.copy(layout.landmarks.nest);
 world.resetCamera();
 const pausedPosition = world.position.clone();
+const pausedWorkerPosition = world.workers[0].actor.group.position.clone();
 world.setPaused(true);
 world.update({ delta: 1 });
 assert.deepEqual(world.position.toArray(), pausedPosition.toArray());
+assert.deepEqual(world.workers[0].actor.group.position.toArray(), pausedWorkerPosition.toArray(), 'Workers pause with the game.');
 world.setPaused(false);
 world.setExploreActive(true);
 world.setMovementKey('forward', true);

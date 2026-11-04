@@ -1,6 +1,6 @@
 # Game controls
 
-Near the surface burrow, press U or tap Enter burrow to visit the underground floor. At the daylight entrance, press U or tap Return outside. E and Sleep continue to open the above-ground sleep choices. Underground uses the usual movement, running, orbit, zoom, C reset, and M Explore inputs; climbing and bird switching are unavailable there. Underground Explore is labeled Map. M or Map opens a top-down floor plan and pauses movement. Pinch or scroll to zoom the map and drag to pan. the X close button, M, or Escape closes it. The walking camera stays inside the tunnels and keeps the ant visible. Return outside appears near the entrance on both desktop and mobile; U is an additional desktop shortcut. See [underground.md](underground.md).
+Near the surface burrow, press U or tap Enter burrow to visit the underground floor. At the daylight entrance, press U or tap Return outside. E and the Zz button open sleep choices anywhere while playing as the ant. Underground uses the usual movement, running, orbit, zoom, C reset, and M Explore inputs; climbing and bird switching are unavailable there. Underground Explore is labeled Map. M or Map opens a top-down floor plan and pauses movement. Pinch or scroll to zoom the map and drag to pan. the X close button, M, or Escape closes it. The walking camera stays inside the tunnels and keeps the ant visible. Return outside appears near the entrance on both desktop and mobile; U is an additional desktop shortcut. See [underground.md](underground.md).
 
 ## Play
 
@@ -14,12 +14,12 @@ Near the surface burrow, press U or tap Enter burrow to visit the underground fl
 | Space or Climb / Get down | Enter a nearby climb surface, transfer, or find a safe landing |
 | M or Explore | Enter or leave the free world camera |
 | B or character switch | Toggle between bird and ant after the checklist is complete |
-| E or Sleep near the burrow | Rest until morning or night |
+| E or Zz | Rest until morning or night |
 | P or Escape | Pause or resume |
 
 Movement follows the view, with short acceleration/braking, normalized diagonals, and body turning independent of travel direction. The camera follows position without overriding the selected angle. Pause, Settings, About, view changes, focus loss, and pointer cancellation release movement; resume with a fresh input. Text fields, selects, and focused buttons keep native keyboard behavior.
 
-At the burrow, choose morning (07:00) or night (19:00). The screen fades as the clock advances and the result is saved. The close button or Escape returns without sleeping. The Sleep button also works on touch devices.
+Anywhere while playing as the ant, choose morning (07:00) or night (19:00). The screen fades as the clock advances and the result is saved. The close button or Escape returns without sleeping. The Zz button is available on touch devices.
 
 ## Touch
 

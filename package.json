@@ -9,7 +9,7 @@
     "check": "node scripts/validate-project.mjs",
     "check:release": "node scripts/check-release-build.mjs",
     "run:release": "npx serve build/release",
-    "test": "node scripts/check-player-motion.mjs && node scripts/check-objectives.mjs && node scripts/check-discovery-cards.mjs && node scripts/check-bird-flight.mjs && node scripts/check-debug-time.mjs && node scripts/check-radio-volume.mjs && node scripts/check-debug-ui.mjs && node scripts/check-ant-locator.mjs && node scripts/check-fps-diagnostic.mjs && node scripts/check-offline-shell.mjs && node scripts/check-underground.mjs"
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "three": "0.184.0"

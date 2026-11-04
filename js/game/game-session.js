@@ -605,14 +605,8 @@ export class PondGameSession {
   }
 
   canSleep() {
-    if (!this.app || !this.game || this.paused || this.exploreActive
-      || this.isBirdActive() || this.isClimbing() || this.isFlightEnabled() || this.isUnderground()) return false;
-    const position = this.getAntWorldPosition();
-    const burrow = this.game.burrowPosition;
-    if (!position || !burrow) return false;
-    const dx = position.x - burrow.x;
-    const dz = position.z - burrow.z;
-    return dx * dx + dz * dz <= POND_GAME.sleep.radius ** 2;
+    return Boolean(this.app && this.game && !this.paused && !this.exploreActive
+      && !this.isBirdActive() && !this.isFlightEnabled() && !this.birdPreparing);
   }
 
   sleepUntil(choice) {

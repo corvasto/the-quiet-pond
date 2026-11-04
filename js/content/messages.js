@@ -173,7 +173,7 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'radio.control.close': defineMessage({ en: 'Close radio volume', id: 'Tutup volume radio' }),
   'radio.control.hint': defineMessage({ en: 'Drag around the dial to adjust', id: 'Seret di sekitar putaran untuk mengatur' }),
   'sleep.button': defineMessage({ en: 'Sleep', id: 'Tidur' }),
-  'sleep.title': defineMessage({ en: 'Rest at the burrow', id: 'Beristirahat di liang' }),
+  'sleep.title': defineMessage({ en: 'Rest', id: 'Beristirahat' }),
   'sleep.question': defineMessage({ en: 'When would you like to wake up?', id: 'Kapan kamu ingin bangun?' }),
   'sleep.morning': defineMessage({ en: 'Morning', id: 'Pagi' }),
   'sleep.evening': defineMessage({ en: 'Night', id: 'Malam' }),
