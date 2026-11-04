@@ -60,7 +60,7 @@
 
   <div id="radio-caption" class="radio-caption" role="status" aria-live="polite" hidden></div>
 
-  <div id="game-time" class="game-time" aria-label="Time of day" data-i18n-aria-label="ui.time.aria">10:30 AM</div>
+  <div class="clock-controls">  <div id="game-time" class="game-time" aria-label="Time of day" data-i18n-aria-label="ui.time.aria">10:30 AM</div>    <button id="sleep-button" class="sleep-shortcut" type="button" hidden aria-label="Sleep (E)" data-i18n-aria-label="sleep.button" title="Sleep" data-i18n-title="sleep.button">Z<span aria-hidden="true">zz</span></button></div>
 
   <aside id="performance-diagnostic" class="performance-diagnostic" aria-label="Performance diagnostic" data-i18n-aria-label="ui.performance.aria" hidden>
     <span class="performance-diagnostic__label" data-i18n="ui.performance.title">Performance</span>
@@ -69,7 +69,7 @@
   </aside>
 
   <nav class="game-actions" aria-label="Game controls" data-i18n-aria-label="ui.controls.aria">
-    <button id="sleep-button" class="sleep-shortcut" type="button" hidden aria-label="Sleep (E)" data-i18n-aria-label="sleep.button" title="Sleep" data-i18n-title="sleep.button">Z<span aria-hidden="true">z</span></button>
+
     <button id="pause-button" type="button" aria-expanded="false" data-i18n="ui.pause">Pause</button>
     <button id="reset-camera-button" class="reset-camera-button" type="button" aria-label="Reset camera behind the ant (C)" data-i18n-aria-label="ui.resetCamera.aria"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.5 7M4 4v6h6"/></svg><span data-i18n="ui.resetCamera">Reset view</span></button>
     <button id="explore-button" type="button" aria-pressed="false" data-i18n="ui.explore">Explore</button>
@@ -116,24 +116,38 @@
   <p id="touch-hint" class="touch-hint" data-i18n="hint.touchLook">Drag the scene to look · Pinch to zoom · ↶ Reset view</p>
 
   <button id="card-notice" class="card-notice" type="button" hidden aria-live="polite"></button>
-  <div class="burrow-actions">
-    <button id="burrow-button" class="sleep-button" type="button" hidden data-i18n="underground.enter">Enter burrow</button>
-  </div>
-  <div id="building-actions" class="building-actions" hidden>
-    <span id="building-status" aria-live="polite"></span>
-    <div id="building-buttons"></div>
+  <div id="building-status" class="card-notice building-notice" role="status" aria-live="polite" hidden></div>
+  <div class="context-actions">
+    <div class="burrow-actions">
+      <button id="burrow-button" class="sleep-button" type="button" hidden data-i18n="underground.enter">Enter burrow</button>
+    </div>
+    <div id="building-actions" class="building-actions" hidden><div id="building-buttons"></div></div>
   </div>
   <dialog id="material-store" class="material-store" aria-labelledby="material-store-title">
     <button id="material-store-close" class="game-dialog__close" type="button" aria-label="Close storage" data-i18n-aria-label="building.close">×</button>
     <h2 id="material-store-title" data-i18n="building.storage">Material store</h2>
-    <p id="material-store-count"></p>
-    <p data-i18n="building.recipe">Leaf bed - 2 leaves. Choose a clear chamber floor.</p>
-    <button id="material-store-take" type="button" data-i18n="building.take">Take one leaf</button>
-    <button id="material-store-build" type="button" data-i18n="building.build">Build leaf bed</button>
+    <div class="material-store-columns">
+      <section class="material-store-stock" aria-labelledby="material-stock-title">
+        <h3 id="material-stock-title" data-i18n="building.stock">Store</h3>
+        <p class="material-store-help" data-i18n="building.withdrawHint">Select a material to carry one.</p>
+        <div id="material-store-slots" class="material-slots"></div>
+      </section>
+      <section class="material-store-builds" aria-labelledby="material-build-title">
+        <h3 id="material-build-title" data-i18n="building.buildSection">Build</h3>
+        <p class="material-store-help" data-i18n="building.buildHint">Select a build, then choose its spot.</p>
+        <div id="material-store-recipes" class="material-recipes"></div>
+      </section>
+    </div>
   </dialog>
   <dialog id="underground-map" class="underground-map" aria-labelledby="underground-map-title">
     <header><h2 id="underground-map-title" data-i18n="underground.map.title">Underground - Floor 1</h2></header>
-    <p data-i18n="underground.map.context">Movement paused. Pinch or scroll to zoom. Drag to move the map.</p>
+    <div class="underground-map__toolbar">
+      <p data-i18n="underground.map.context">Movement paused. Pinch or scroll to zoom. Drag to move the map.</p>
+      <label class="toggle-setting">
+        <input id="underground-map-labels" type="checkbox" checked>
+        <span class="toggle-setting__copy"><strong data-i18n="underground.map.showLabels">Show labels</strong></span>
+      </label>
+    </div>
     <div id="underground-map-content" class="underground-map__content"></div>
     <button id="underground-map-close" class="game-dialog__close" type="button" aria-label="Close map" data-i18n-aria-label="underground.map.close" autofocus>×</button>
   </dialog>

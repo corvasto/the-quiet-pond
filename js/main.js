@@ -1,4 +1,4 @@
-import { renderUndergroundMap, createMapViewport, applySurfaceMap } from './ui/underground-map.js';
+import { renderUndergroundMap, createMapViewport, applySurfaceMap, setMapLabelsVisible } from './ui/underground-map.js';
 import { createDebugControls } from './ui/debug-controls.js';
 import { PondGameSession } from './game/game-session.js';
 import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
@@ -15,6 +15,7 @@ import { formatSeedProgress, translate } from './ui/localization.js';
 import { FpsSampler } from './utils/fps-diagnostic.js';
 import { shouldTouchRun } from './utils/player-motion.js';
 
+import { createGameplayLayout } from './ui/gameplay-layout.js';
 const byId = (id) => document.getElementById(id);
 
 // Track actual input so touch focus stays quiet and keyboard focus remains visible.
@@ -45,6 +46,7 @@ const elements = {
   undergroundMap: byId('underground-map'),
   undergroundMapContent: byId('underground-map-content'),
   undergroundMapClose: byId('underground-map-close'),
+  undergroundMapLabels: byId('underground-map-labels'),
   burrowButton: byId('burrow-button'),
   burrowFade: byId('burrow-fade'),
   objective: byId('game-objective-title'),
@@ -138,6 +140,7 @@ const heldFlightCodes = new Set();
 let touchRunHeld = false;
 let resetMobileControls = null;
 
+const gameplayLayout = createGameplayLayout({ caption: elements.radioCaption, dock: document.querySelector('.context-actions'), hint: elements.touchHint });
 let session = null;
 let paused = false;
 let gameReady = false;
@@ -776,17 +779,35 @@ function updateSleepButton() {
 
 let buildingUiElapsed = 0.2;
 let buildingUiSignature = '';
+const buildingTouchMedia = window.matchMedia('(any-pointer: coarse)');
+const compactBuildingStatuses = new Set(['building.carrySeed', 'building.carryLeaf', 'building.carryStick', 'building.preview', 'building.needLeaves', 'building.needMaterials']);
+let buildingNoticeTimer = null;
+let lastBuildingNotice = '';
+let lastBuildingNoticeTime = -Infinity;
+function notifyBuildingStatus(status, active) {
+  if (!active) { elements.buildingStatus.hidden = true; return; }
+  if (!status || status === lastBuildingNotice) return;
+  const now = performance.now();
+  if (now - lastBuildingNoticeTime < 3500 || !elements.cardNotice.hidden) return;
+  lastBuildingNotice = status; lastBuildingNoticeTime = now;
+  const headerBottom = elements.checklistToggle.getBoundingClientRect().bottom;
+  elements.buildingStatus.style.top = `${Math.min(headerBottom + 8, window.innerHeight * 0.5)}px`;
+  elements.buildingStatus.textContent = t(status); elements.buildingStatus.hidden = false;
+  window.clearTimeout(buildingNoticeTimer);
+  buildingNoticeTimer = window.setTimeout(() => { elements.buildingStatus.hidden = true; }, 3000);
+}
 function updateBuildingControls({ delta = 0.2 } = {}) {
   buildingUiElapsed += delta;
   if (buildingUiElapsed < 0.12) return;
   buildingUiElapsed = 0;
   const actions = canMoveAnt() ? session?.getBuildingActions() ?? [] : [];
-  const status = actions[0]?.reason ?? session?.getBuildingStatus() ?? '';
+  const fullStatus = actions[0]?.reason ?? session?.getBuildingStatus() ?? '';
+  const status = buildingTouchMedia.matches && compactBuildingStatuses.has(fullStatus) ? `${fullStatus}.touch` : fullStatus;
   const signature = JSON.stringify([actions, status, language]);
   if (signature === buildingUiSignature) return;
   buildingUiSignature = signature;
   elements.buildingActions.hidden = !actions.length;
-  elements.buildingStatus.textContent = status ? t(status) : '';
+  notifyBuildingStatus(status, actions.length > 0);
   elements.buildingButtons.replaceChildren();
   actions.forEach((action, index) => {
     const button = document.createElement('button'); button.type = 'button';
@@ -803,16 +824,66 @@ function performBuildingAction(id) {
   if (result === 'sleep') { openSleep(); return; }
   if (result === 'storage') {
     setPaused(true); elements.pauseDialog.hidden = true;
-    const storage = session.getMaterialStorage();
-    byId('material-store-count').textContent = t('building.count', { count: storage.leaves });
-    byId('material-store-take').disabled = storage.leaves === 0;
-    byId('material-store-build').disabled = storage.bedBuilt || storage.leaves < 2;
+    renderMaterialStore();
     elements.materialStore.showModal();
   } else {
     if (result) saveActiveSlot();
     buildingUiSignature = ''; updateBuildingControls();
     session?.focusScene();
   }
+}
+function fillFutureMaterialSlots(container, count) {
+  for (let index = count; index < 6; index++) {
+    const slot = document.createElement('div'); slot.className = 'material-empty-slot';
+    const mark = document.createElement('span'); mark.textContent = '···'; mark.setAttribute('aria-hidden','true');
+    const label = document.createElement('span'); label.textContent = t('building.comingSoon');
+    slot.append(mark,label); container.append(slot);
+  }
+}
+function renderMaterialStore() {
+  const storage = session.getMaterialStorage();
+  const slots = byId('material-store-slots'); slots.replaceChildren();
+  for (const material of storage.materials) {
+    const card = document.createElement('button'); card.type = 'button'; card.className = 'material-slot';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox','0 0 64 64'); icon.setAttribute('aria-hidden','true');
+    icon.classList.add('material-slot-icon');
+    for (const shape of material.iconPaths ?? ['M12 32L32 12L52 32L32 52Z']) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',shape); icon.append(path);
+    }
+    const label = document.createElement('span'); label.textContent = t(material.labelKey);
+    const count = document.createElement('span'); count.className = 'material-slot-count'; count.textContent = String(material.count);
+    card.disabled = material.count === 0;
+    card.setAttribute('aria-label',t('building.withdrawMaterial',{material:t(material.labelKey),count:material.count}));
+    card.title = t('building.withdrawHint');
+    card.addEventListener('click',()=>{ if(session.takeStoredMaterial(material.id)) { saveActiveSlot(); closeMaterialStore(); } });
+    card.append(icon,label,count); slots.append(card);
+  }
+  fillFutureMaterialSlots(slots, storage.materials.length);
+  const recipes = byId('material-store-recipes'); recipes.replaceChildren();
+  for(const recipe of storage.recipes) {
+    const card = document.createElement('button'); card.type = 'button'; card.className = 'material-recipe';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    icon.setAttribute('viewBox','0 0 96 96'); icon.setAttribute('aria-hidden','true');
+    icon.classList.add('material-recipe-icon');
+    for (const shape of recipe.iconShapes ?? []) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',shape.path); path.setAttribute('fill',shape.fill); path.setAttribute('stroke',shape.stroke);
+      icon.append(path);
+    }
+    const label = document.createElement('span'); label.className = 'material-recipe-name';
+    label.textContent = t(recipe.nameKey ?? recipe.labelKey);
+    const cost = document.createElement('span'); cost.className = 'material-recipe-cost';
+    const costText = Object.entries(recipe.cost).map(([type,amount])=>`${amount} ${t(storage.materials.find((material)=>material.id===type)?.labelKey ?? type)}`).join(' + ');
+    cost.textContent = costText;
+    card.disabled = !recipe.canBuild;
+    card.setAttribute('aria-label',`${t(recipe.labelKey)}. ${cost.textContent}`);
+    card.title = recipe.canBuild ? t(recipe.labelKey) : t('building.needMaterials');
+    card.addEventListener('click',()=>{ if(session.planBuild(recipe.id)) closeMaterialStore(); else renderMaterialStore(); });
+    card.append(icon,label,cost); recipes.append(card);
+  }
+  fillFutureMaterialSlots(recipes, storage.recipes.length);
 }
 function closeMaterialStore() {
   elements.materialStore.close(); setPaused(false);
@@ -1355,7 +1426,10 @@ window.addEventListener('resize', () => resetMobileControls?.());
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) clearGameInput();
   if (document.hidden) fpsSampler.reset();
-  if (document.hidden && gameReady && session && !paused) setPaused(true);
+  if (document.hidden && gameReady && session) {
+    if (!paused) setPaused(true);
+    else saveActiveSlot();
+  }
 });
 
 elements.radioControlButton.addEventListener('click', openRadioControl);
@@ -1410,14 +1484,11 @@ elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
 elements.undergroundMapClose.addEventListener('click', closeUndergroundMap);
+elements.undergroundMapLabels.addEventListener('change', () => {
+  setMapLabelsVisible(elements.undergroundMapContent, elements.undergroundMapLabels.checked);
+});
 byId('material-store-close').addEventListener('click', closeMaterialStore);
 elements.materialStore.addEventListener('cancel', (event) => { event.preventDefault(); closeMaterialStore(); });
-byId('material-store-take').addEventListener('click', () => {
-  if (session?.takeStoredLeaf()) saveActiveSlot(); closeMaterialStore();
-});
-byId('material-store-build').addEventListener('click', () => {
-  session?.planLeafBed(); closeMaterialStore();
-});
 elements.undergroundMap.addEventListener('cancel', (event) => { event.preventDefault(); closeUndergroundMap(); });
 elements.birdSwitchButton.addEventListener('click', toggleBird);
 elements.resetCameraButton.addEventListener('click', resetCameraView);
@@ -1522,9 +1593,12 @@ async function startGame() {
   }
 }
 
+window.addEventListener('pagehide', () => saveActiveSlot());
 window.addEventListener('beforeunload', () => {
-  mapViewport.dispose();
   saveActiveSlot();
+  gameplayLayout.dispose();
+  window.clearTimeout(buildingNoticeTimer);
+  mapViewport.dispose();
   window.clearTimeout(saveTimeout);
   debugControls.dispose();
   performanceDiagnosticUnsubscribe?.();

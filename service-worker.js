@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.2.0';
+const RELEASE_VERSION = '1.2.1';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
@@ -37,6 +37,7 @@ const APP_SHELL = [
   './js/main.js',
   './js/ui/localization.js',
   './js/ui/underground-map.js',
+  './js/ui/gameplay-layout.js',
   './js/ui/debug-relocation.js',
   './js/ui/debug-overlay.js',
   './js/ui/debug-controls.js',
@@ -45,6 +46,7 @@ const APP_SHELL = [
   './js/config/quality.js',
   './js/config/scene.js',
   './js/content/assets.js',
+  './js/content/building.js',
   './js/content/messages.js',
   './js/content/objectives.js',
   './js/config/game.js',
@@ -58,6 +60,7 @@ const APP_SHELL = [
   './js/game/game-session.js',
   './js/game/burrow-building.js',
   './js/game/material-state.js',
+  './js/game/material-spawns.js',
   './js/game/game-objectives.js',
   './js/game/world-speech.js',
   './js/game/objective-chime.js',

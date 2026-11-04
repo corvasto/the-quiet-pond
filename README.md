@@ -96,7 +96,7 @@ The layout uses the same X/Z units as the pond and a lower floor height. Only th
 
 ## Carry, store, and build
 
-Use the contextual Pick up action near a seed or unlocked building leaf. Desktop F uses the primary action; mobile has the same visible button. Carry one object, drop it on clear dry ground, or bring a building leaf to the underground material store. Leaves unlock after the seed objective. Store two leaves, choose a clear chamber floor, and confirm a two-leaf resting bed. Preview/cancel spends nothing. Storage, dropped materials, carried building leaves, and the bed persist in existing save slots. Carried seeds retain their original reload behavior. See [burrow building](docs/burrow-building.md) for controls, ownership, saves, and browser verification.
+Use the contextual Pick up action near a seed or building material. Desktop F uses the primary action; mobile has the same visible button. Carry one object, drop it on clear dry ground, or bring a building leaf to the underground material store. Leaves and small sticks are scattered from the start. Store two leaves, choose a clear chamber floor, and confirm a two-leaf resting bed. Preview/cancel spends nothing. Storage, dropped materials, carried building leaves, and the bed persist in existing save slots. Carried seeds retain their original reload behavior. See [burrow building](docs/burrow-building.md) for controls, ownership, saves, and browser verification.
 
 ## Project structure
 
@@ -139,3 +139,5 @@ Ground collisions follow tree and rock mesh footprints at ant body height, with 
 ## Credits
 
 About has expandable model credits. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists asset sources and terms; [LICENSE](LICENSE) covers original project software only. Third-party assets retain their own licenses. Three.js has its own license in `vendor/three/LICENSE`.
+
+Burrow gathering is available from the start: scattered leaves and sticks can be deposited for a two-leaf bed or a three-stick decorative frame. Material and recipe definitions are in `js/content/building.js`.

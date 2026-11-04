@@ -1,5 +1,9 @@
 import { getMapBounds } from '../utils/map-bounds.js';
 
+export function setMapLabelsVisible(container, visible) {
+  container.classList.toggle('underground-map__hide-labels', !visible);
+}
+
 const escapeText = (value) => String(value).replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[character]));
@@ -29,8 +33,8 @@ export function renderUndergroundMap(data, translate) {
     ${pondCenter ? text(pondCenter, 'underground.map.pond', 0) : ''}
     <g class="underground-map__entrance" transform="translate(${layout.exit.x} ${layout.exit.z})"><rect x="-0.22" y="-0.22" width="0.44" height="0.44" rx="0.06"/></g>
     ${text(layout.exit, 'underground.map.entrance', -0.5)}
-    ${data.colony?.store ? `<g fill="#72924a"><rect x="${data.colony.store.x-0.2}" y="${data.colony.store.z-0.2}" width="0.4" height="0.4"/></g>${text(data.colony.store,'building.mapStore',-0.55)}` : ''}
-    ${data.colony?.bed ? `<g fill="#72924a"><ellipse cx="${data.colony.bed.x}" cy="${data.colony.bed.z}" rx="0.3" ry="0.2"/></g>${text(data.colony.bed,'building.mapBed',0.6)}` : ''}
+    ${data.colony?.store ? `<g fill="#8b6746"><circle cx="${data.colony.store.x}" cy="${data.colony.store.z}" r="0.25"/></g>${text(data.colony.store,'building.mapStore',-0.55)}` : ''}
+    ${(data.colony?.beds ?? (data.colony?.bed ? [data.colony.bed] : [])).map((bed) => `<g fill="#72924a"><ellipse cx="${bed.x}" cy="${bed.z}" rx="0.3" ry="0.2"/></g>${text(bed,'building.mapBed',0.6)}`).join('')}
     <g class="underground-map__player" transform="translate(${position.x} ${position.z})">
       <circle r="0.24"/><path d="M 0 -0.58 L -0.16 -0.3 L 0.16 -0.3 Z" transform="rotate(${degrees})"/>
     </g>

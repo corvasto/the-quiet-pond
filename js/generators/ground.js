@@ -1334,6 +1334,18 @@ export async function createGround({
 
   return {
     group,
+    setMaterialClearings(points) {
+      const data = grass.instanceMatrix.array;
+      if (!grass.userData.materialOriginal) grass.userData.materialOriginal = data.slice();
+      data.set(grass.userData.materialOriginal);
+      for (let i = 0; i < grassCapacity; i++) {
+        const offset = i * 16;
+        if (points.some((point) => (data[offset + 12] - point.x) ** 2 + (data[offset + 14] - point.z) ** 2 < .26 ** 2)) {
+          data[offset] = 0; data[offset + 5] = 0; data[offset + 10] = 0;
+        }
+      }
+      grass.instanceMatrix.needsUpdate = true;
+    },
     terrainSurface: terrain,
     heightAt,
     surfaceHeightAt,
