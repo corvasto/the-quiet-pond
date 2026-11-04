@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.2.1';
+const RELEASE_VERSION = '1.2.3';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
@@ -53,12 +53,14 @@ const APP_SHELL = [
   './js/config/climbing.js',
   './js/config/content.js',
   './js/config/building.js',
+  './js/config/ant-trail.js',
   './js/config/radio.js',
   './js/config/ambience.js',
   './js/config/bird.js',
   './js/config/world.js',
   './js/game/game-session.js',
   './js/game/burrow-building.js',
+  './js/game/ant-ground-trail.js',
   './js/game/material-state.js',
   './js/game/material-spawns.js',
   './js/game/game-objectives.js',

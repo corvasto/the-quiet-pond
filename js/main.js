@@ -86,6 +86,7 @@ const elements = {
   newGameButton: byId('new-game-button'),
   saveSlotList: byId('save-slot-list'),
   soundEnabled: byId('sound-enabled'),
+  antTrailsEnabled: byId('ant-trails-enabled'),
   musicVolume: byId('music-volume'),
   musicVolumeValue: byId('music-volume-value'),
   seasonSelect: byId('season-select'),
@@ -149,18 +150,21 @@ let burrowTransition = false;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
+const ANT_TRAILS_KEY = 'the-quiet-pond-ant-trails';
 const SOUND_EFFECTS_KEY = 'the-quiet-pond-soft-chimes';
 const MUSIC_VOLUME_KEY = 'the-quiet-pond-music-volume';
 const SAVE_SLOTS_KEY = 'the-quiet-pond-saves-v1';
 const ACTIVE_SAVE_SLOT_KEY = 'the-quiet-pond-active-save-slot-v1';
 let language = readStoredValue(LANGUAGE_KEY) === 'id' ? 'id' : 'en';
 let season = readSeasonPreference();
+let antTrailsEnabled = readStoredValue(ANT_TRAILS_KEY) === '1';
 let soundEffectsEnabled = readStoredValue(SOUND_EFFECTS_KEY) !== '0';
 let musicVolume = readMusicVolumePreference();
 const initialSeedTotal = Math.max(1, Number(POND_GAME.seed.totalCount) || 1);
 elements.progress.setAttribute('aria-valuemax', String(initialSeedTotal));
 elements.step.textContent = formatSeedProgress(0, initialSeedTotal, language);
 elements.soundEnabled.checked = soundEffectsEnabled;
+elements.antTrailsEnabled.checked = antTrailsEnabled;
 elements.seasonSelect.value = season;
 elements.musicVolume.value = String(Math.round(musicVolume * 100));
 elements.musicVolumeValue.value = `${Math.round(musicVolume * 100)}%`;
@@ -1497,6 +1501,16 @@ elements.restartButton.addEventListener('click', () => {
   window.location.reload();
 });
 elements.newGameButton.addEventListener('click', () => startNewGame());
+elements.antTrailsEnabled.addEventListener('change', () => {
+  antTrailsEnabled = elements.antTrailsEnabled.checked;
+  try {
+    window.localStorage.setItem(ANT_TRAILS_KEY, antTrailsEnabled ? '1' : '0');
+  } catch (error) {
+    console.warn('[the-quiet-pond] Could not store the trail preference.', error);
+  }
+  session?.setAntTrailsEnabled(antTrailsEnabled);
+});
+
 elements.soundEnabled.addEventListener('change', () => {
   soundEffectsEnabled = elements.soundEnabled.checked;
   try {
@@ -1564,6 +1578,7 @@ async function startGame() {
       language,
       season,
       soundEnabled: soundEffectsEnabled,
+      antTrailsEnabled,
       musicVolume,
       saveState: saveSlots[activeSaveSlotIndex]?.state ?? null,
     });

@@ -10,6 +10,7 @@ import { PondRadioAudio } from './radio-audio.js';
 import { AmbienceAudio } from './ambience-audio.js';
 import { SeedToBurrowGame } from './seed-to-burrow.js';
 import { MATERIAL_DEFINITIONS } from '../content/building.js';
+import { AntGroundTrail } from './ant-ground-trail.js';
 import { BurrowBuilding } from './burrow-building.js';
 import { BirdFlight, isBirdRewardUnlocked } from './bird-flight.js';
 
@@ -23,6 +24,7 @@ export class PondGameSession {
     language = 'en',
     season = DEFAULTS.season,
     soundEnabled = true,
+    antTrailsEnabled = false,
     musicVolume = POND_GAME.radioAudio.musicVolume,
     saveState = null,
   } = {}) {
@@ -35,6 +37,7 @@ export class PondGameSession {
     this.language = language === 'id' ? 'id' : 'en';
     this.season = season;
     this.soundEnabled = Boolean(soundEnabled);
+    this.antTrailsEnabled = Boolean(antTrailsEnabled);
     this.musicVolume = THREE.MathUtils.clamp(Number(musicVolume) || 0, 0, 1);
     this.app = null;
     this.game = null;
@@ -68,6 +71,7 @@ export class PondGameSession {
     this.bird = null;
     this.birdPreparing = false;
     this.colony = null;
+    this.antTrail = null;
     this.underground = null;
     this.undergroundDiscoveries = new Set(
       (Array.isArray(saveState?.underground?.discoveries) ? saveState.underground.discoveries : [])
@@ -137,6 +141,7 @@ export class PondGameSession {
     this.colony = new BurrowBuilding(this, this.saveState?.colony);
     this.colony.sync();
     await this.restoreUndergroundCheckpoint(this.saveState?.underground);
+    this.setAntTrailsEnabled(this.antTrailsEnabled);
     this.onLoadProgress(99);
     return this;
   }
@@ -568,6 +573,17 @@ export class PondGameSession {
     this.objectiveChime?.unlock();
   }
 
+  setAntTrailsEnabled(enabled) {
+    this.antTrailsEnabled = Boolean(enabled);
+    if (!this.antTrailsEnabled) {
+      this.antTrail?.dispose();
+      this.antTrail = null;
+    } else if (!this.antTrail && this.app && this.colony) {
+      this.antTrail = new AntGroundTrail(this);
+    }
+    return this.antTrailsEnabled;
+  }
+
   setSoundEnabled(enabled) {
     this.soundEnabled = Boolean(enabled);
     this.objectiveChime?.setEnabled(enabled);
@@ -802,6 +818,8 @@ export class PondGameSession {
   dispose() {
     this.worldCycleUnsubscribe?.();
     this.worldCycleUnsubscribe = null;
+    this.antTrail?.dispose();
+    this.antTrail = null;
     this.colony?.dispose();
     this.colony = null;
     this.app?.setAlternateRuntime(null);

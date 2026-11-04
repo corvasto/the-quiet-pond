@@ -42,7 +42,7 @@ for (const scope of ['https://example.test/', 'https://example.test/the-quiet-po
     },
     caches: {
       async open(name) { opened.push(name); return cache; },
-      async keys() { return ['the-quiet-pond-v0.9.0', 'the-quiet-pond-v1.2.0', 'unrelated-app-v1.2.7', activeCache, 'another-app']; },
+      async keys() { return ['the-quiet-pond-v0.9.0', 'the-quiet-pond-v1.2.0', 'the-quiet-pond-v1.2.1', 'unrelated-app-v1.2.7', activeCache, 'another-app']; },
       async delete(name) { deleted.push(name); },
       async match() { throw new Error('Cache reads must use the active app release.'); },
     },
@@ -68,7 +68,7 @@ for (const scope of ['https://example.test/', 'https://example.test/the-quiet-po
   }
   await lifecycle('activate');
   assert.ok(claimed);
-  assert.deepEqual(deleted, ['the-quiet-pond-v0.9.0','the-quiet-pond-v1.2.0']);
+  assert.deepEqual(deleted, ['the-quiet-pond-v0.9.0','the-quiet-pond-v1.2.0','the-quiet-pond-v1.2.1']);
   async function request(relative, mode = 'navigate', method = 'GET') {
     let response;
     const pending = [];

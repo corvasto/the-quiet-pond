@@ -115,6 +115,8 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'ui.settings.interface': defineMessage({ en: 'Interface', id: 'Antarmuka' }),
   'ui.settings.audio': defineMessage({ en: 'Audio', id: 'Audio' }),
   'ui.settings.performance': defineMessage({ en: 'Performance', id: 'Performa' }),
+  'ui.trails.title': defineMessage({ en: 'Ant trails', id: 'Jejak semut' }),
+  'ui.trails.description': defineMessage({ en: 'Brief footprints on dry ground. Off by default.', id: 'Jejak singkat di tanah kering. Nonaktif secara bawaan.' }),
   'ui.settings.world': defineMessage({ en: 'World', id: 'Dunia' }),
   'ui.audio.musicVolume': defineMessage({ en: 'Radio volume', id: 'Volume radio' }),
   'ui.season.title': defineMessage({ en: 'Season', id: 'Musim' }),

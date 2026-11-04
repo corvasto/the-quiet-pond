@@ -141,3 +141,5 @@ Ground collisions follow tree and rock mesh footprints at ant body height, with 
 About has expandable model credits. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists asset sources and terms; [LICENSE](LICENSE) covers original project software only. Third-party assets retain their own licenses. Three.js has its own license in `vendor/three/LICENSE`.
 
 Burrow gathering is available from the start: scattered leaves and sticks can be deposited for a two-leaf bed or a three-stick decorative frame. Material and recipe definitions are in `js/content/building.js`.
+
+Settings > World > Ant trails enables short soil marks while walking on dry surface ground. Trails default to off and the choice persists on this device. Disabled trails allocate no geometry and register no frame listener. They fade after two seconds. Tune lifetime, spacing, size, and opacity in `js/config/ant-trail.js`; `js/game/ant-ground-trail.js` owns the fixed geometry pool and its cleanup. Trails are temporary and are not saved.
