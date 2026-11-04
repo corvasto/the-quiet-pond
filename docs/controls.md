@@ -1,6 +1,6 @@
 # Game controls
 
-Near the surface burrow, press U or tap Enter burrow to visit the underground floor. At the daylight entrance, press U or tap Return outside. E and the Zz button open sleep choices anywhere while playing as the ant. Underground uses the usual movement, running, orbit, zoom, C reset, and M Explore inputs; climbing and bird switching are unavailable there. Underground Explore is labeled Map. M or Map opens a top-down floor plan and pauses movement. Pinch or scroll to zoom the map and drag to pan. the X close button, M, or Escape closes it. The walking camera stays inside the tunnels and keeps the ant visible. Return outside appears near the entrance on both desktop and mobile; U is an additional desktop shortcut. See [underground.md](underground.md).
+Near the surface burrow, press U or tap Enter burrow to visit the underground floor. At the daylight entrance, press U or tap Return outside. E and the Zzz button open sleep choices anywhere while playing as the ant. Underground uses the usual movement, running, orbit, zoom, C reset, and M Explore inputs; climbing and bird switching are unavailable there. Underground Explore is labeled Map. M or Map opens a top-down floor plan and pauses movement. Pinch or scroll to zoom the map and drag to pan. Show labels uses the Settings checkbox style and starts checked; uncheck it to hide map text while keeping markers visible. the X close button, M, or Escape closes it. The walking camera stays inside the tunnels and keeps the ant visible. Return outside appears near the entrance on both desktop and mobile; U is an additional desktop shortcut. See [underground.md](underground.md).
 
 ## Play
 
@@ -54,3 +54,14 @@ Apply and reload matches other primary dialog buttons. Touch/mouse suppress ling
 See [gameplay.md](gameplay.md) for surface contact behavior and [verification.md](verification.md) for manual checks.
 
 Open Cards beside Checklist to view the discovery collection. Select an unlocked card to read it; use the chevrons to cycle through discovered cards, Back to return to the grid, and Escape or the close button to return to play. New discoveries briefly show a notice that opens the card. On touch devices, interface text does not select on a long press; editable fields remain selectable.
+
+
+## Carrying and building
+
+Contextual carry/build actions and the burrow exit share one wrapping dock. Guidance appears briefly near the task cards when state changes instead of remaining above the buttons. Touch uses compact notifications and 44 px minimum button heights. In short landscape viewports, the shared dock sits below the central player view and above the touch hint.
+
+Seeds now require Pick up seed rather than collision pickup. Desktop F activates the primary contextual action; touch and mouse use the visible action button. Pick up, Drop here, Deposit leaf, and Material store appear only when relevant. Dropping requires dry ground or the burrow floor and is disabled while climbing/flying, on water/steep slopes, or near blocked footprints and entrances. Leaves and sticks scatter on dry surface ground from the start. Empty-handed at the underground store, open storage and select a material slot to carry one item, or select a build card to start placement. Store and Build each show six compact slots, with Coming soon in unused slots. A bed costs two stored leaves and a twig frame costs three stored sticks. Build as many copies as your materials and available floor space allow. Move to adjust the preview, select Place here to confirm, or Cancel/Escape to stop. Rest on the finished bed opens the existing sleep choices. See [burrow-building.md](burrow-building.md).
+
+Refreshing or continuing a save made underground restores the ant to its saved underground position and facing. Older saves without an underground checkpoint resume on the surface.
+
+Enable Ant trails under Settings > World to leave a subtle paired trail on surface soil that fades over two seconds. Water, rocks, climbing surfaces, flight, and the underground world do not produce soil marks. The checkbox defaults to off, applies immediately, and is remembered on this device. Switching it off removes existing marks and releases the trail geometry and frame listener.

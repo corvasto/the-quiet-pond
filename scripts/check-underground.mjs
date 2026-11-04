@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createUndergroundLayout } from '../js/content/underground-layout.js';
 import { createUnderground } from '../js/generators/underground.js';
-import { renderUndergroundMap, createMapViewport } from '../js/ui/underground-map.js';
+import { renderUndergroundMap, createMapViewport, setMapLabelsVisible } from '../js/ui/underground-map.js';
 import { UndergroundWorld } from '../js/game/underground.js';
 import { UNDERGROUND_CONFIG } from '../js/config/underground.js';
 import { installPondAntNavigationMethods } from '../js/core/app-ant-navigation.js';
@@ -190,6 +190,84 @@ for (const worker of world.workers) {
 assert.equal(world.player.group.children[0].children[0].geometry, surfaceGeometry,
   'The existing model geometry is reused without a second download.');
 assert.equal(world.activate(), true);
+world.position.copy(world.level.layout.landmarks.quiet);
+world.player.group.rotation.y = 1.1;
+world.walkLift = () => .025;
+const checkpoint = JSON.parse(JSON.stringify(world.getCheckpoint()));
+world.deactivate();
+world.activate(checkpoint);
+assert.equal(world.position.x,checkpoint.position.x);
+assert.equal(world.position.z,checkpoint.position.z);
+assert.ok(Math.abs(world.player.group.rotation.y-1.1)<1e-10);
+assert.ok(Math.abs(world.position.y-world.level.layout.heightAt(world.position.x,world.position.z)-SCENE_PROPS.ant.lift-.025)<1e-10,
+  'Checkpoint height is recomputed from the floor and any bed support.');
+assert.deepEqual(surfaceRoot.position.toArray(),surfacePosition.toArray(),'Restoring inside preserves the parked surface ant.');
+world.walkLift = null;
+world.activate({position:{x:NaN,z:Infinity},heading:Infinity});
+assert.equal(world.position.x,world.level.spawn.x,'Invalid checkpoints safely resume at the underground entrance.');
+assert.equal(world.position.z,world.level.spawn.z);
+world.activate({position:world.level.layout.treePosition});
+assert.equal(world.position.x,world.level.spawn.x,'A checkpoint inside a root cannot restore into solid geometry.');
+const restoreSession = new PondGameSession(null);
+let interiorLoads = 0, activatedCheckpoint = null;
+restoreSession.prepareUnderground = async () => {
+  interiorLoads++;
+  assert.equal(restoreSession.restoringUndergroundCheckpoint,true);
+  assert.equal(restoreSession.getSaveState(),null,'Autosave cannot overwrite the checkpoint during restoration.');
+};
+restoreSession.setUndergroundActive = (active,saved) => { activatedCheckpoint=saved; return active; };
+assert.equal(await restoreSession.restoreUndergroundCheckpoint(undefined),false);
+assert.equal(await restoreSession.restoreUndergroundCheckpoint({discoveries:['nest']}),false);
+assert.equal(await restoreSession.restoreUndergroundCheckpoint({active:false}),false);
+assert.equal(interiorLoads,0,'Surface and old saves keep the underground lazy.');
+assert.equal(await restoreSession.restoreUndergroundCheckpoint(checkpoint),true);
+assert.equal(interiorLoads,1);
+assert.equal(restoreSession.restoringUndergroundCheckpoint,false);
+assert.deepEqual(activatedCheckpoint,checkpoint);
+restoreSession.prepareUnderground = async () => { throw new Error('load failed'); };
+await assert.rejects(restoreSession.restoreUndergroundCheckpoint(checkpoint),/load failed/);
+assert.equal(restoreSession.restoringUndergroundCheckpoint,true);
+assert.equal(restoreSession.getSaveState(),null,'A failed restore preserves the existing save.');
+restoreSession.objectiveChime.dispose();
+// Exercise the real session serialization and activation route, not a mocked activation.
+let alternateRuntime = null;
+const checkpointApp = {
+  getAntWorldPosition: (target) => target.copy(surfacePosition),
+  getAntFacingDirection: (target) => target.set(0,0,1),
+  clearAntMovement() {}, setExploreTouchMode() {}, setAntLocatorActive() {},
+  controls: {enabled:true}, setView() {},
+  setAlternateRuntime(runtime) { alternateRuntime = runtime; },
+};
+const saveSession = new PondGameSession(null);
+saveSession.app = checkpointApp;
+saveSession.game = {getSaveState:()=>({}),setPaused(){}};
+saveSession.objectives = {getSaveState:()=>({}),setPaused(){}};
+saveSession.underground = world;
+world.activate(checkpoint);
+const storedSession = JSON.parse(JSON.stringify(saveSession.getSaveState()));
+assert.equal(storedSession.underground.active,true);
+assert.deepEqual(storedSession.underground.position,checkpoint.position);
+assert.equal(storedSession.ant.x,surfacePosition.x,'The surface return point is saved separately.');
+const resumedSession = new PondGameSession(null,{saveState:storedSession});
+resumedSession.app = checkpointApp; resumedSession.game = saveSession.game; resumedSession.objectives = saveSession.objectives;
+resumedSession.prepareUnderground = async () => { world.deactivate(); resumedSession.underground=world; };
+assert.equal(await resumedSession.restoreUndergroundCheckpoint(storedSession.underground),true);
+assert.equal(resumedSession.isUnderground(),true);
+assert.equal(alternateRuntime,world,'Reload activates the underground renderer as well as the saved actor.');
+assert.deepEqual({x:world.position.x,z:world.position.z},checkpoint.position);
+assert.equal(resumedSession.getSaveState().underground.active,true,'The next autosave retains the restored area.');
+saveSession.objectiveChime.dispose(); resumedSession.objectiveChime.dispose();
+const labelClasses = new Set();
+const labelContainer = {classList:{toggle(name,hidden){if(hidden)labelClasses.add(name);else labelClasses.delete(name);}}};
+const zoomBeforeLabels = viewBox;
+setMapLabelsVisible(labelContainer,false);
+assert.equal(labelClasses.has('underground-map__hide-labels'),true);
+setMapLabelsVisible(labelContainer,true);
+assert.equal(labelClasses.size,0);
+assert.equal(viewBox,zoomBeforeLabels,'Label changes leave map pan and zoom intact.');
+const pageMarkup = await readFile(new URL('../index.html',import.meta.url),'utf8');
+assert.match(pageMarkup, /id="underground-map-labels"[^>]*checked/,'Map labels default to visible.');
+world.activate();
 assert.equal(world.canExit(), true);
 const workerStart = world.workers[0].actor.group.position.clone();
 for (let frame = 0; frame < 60; frame += 1) world.update({ delta: 1 / 60 });

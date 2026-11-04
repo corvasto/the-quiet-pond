@@ -10,7 +10,7 @@ import { createUnderground } from '../generators/underground.js';
 import { createFrameAnimationClip, resolveAnimationClip } from '../props/model-animation.js';
 import { clampMotionDelta, clampMovementAxis, resolveMovementAxes, stepPlanarMotion, resolveGroundDirection, trackGroundOrbit } from '../utils/player-motion.js';
 
-const cameraAngles = [0.45, -0.45, 0.9, -0.9, 1.4, -1.4, Math.PI];
+const cameraAngles = [0, 0.18, -0.18, 0.36, -0.36, 0.6, -0.6, 0.9, -0.9, 1.25, -1.25, 1.65, -1.65, 2.15, -2.15, Math.PI];
 const cameraHeights = [0.18, 0.32];
 const yieldToBrowser = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -34,6 +34,11 @@ export class UndergroundWorld {
     this.resolvedCameraOffset = new THREE.Vector3();
     this.cameraSearchOffset = new THREE.Vector3();
     this.lastCameraOffset = new THREE.Vector3();
+    this.cameraGoalOffset = new THREE.Vector3();
+    this.cameraStartOffset = new THREE.Vector3();
+    this.cameraDirection = new THREE.Vector3();
+    this.cameraPathPoint = new THREE.Vector3();
+    this.cameraWorldGoal = new THREE.Vector3();
     this.antCameraMovementYaw = 0;
     this.antCameraInputAngle = null;
     this.velocity = new THREE.Vector3();
@@ -185,7 +190,12 @@ export class UndergroundWorld {
     }
   }
 
-  activate() {
+  getCheckpoint() {
+    return { active: this.active, position: { x: this.position.x, z: this.position.z },
+      heading: this.player.group.rotation.y - THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset) };
+  }
+
+  activate(checkpoint = null) {
     if (!this.ready || this.disposed) return false;
     this.active = true;
     this.entryId += 1;
@@ -194,8 +204,13 @@ export class UndergroundWorld {
     this.paused = false;
     this.exploreActive = false;
     this.position.copy(this.level.spawn);
-    this.position.y += SCENE_PROPS.ant.lift;
-    this.player.group.rotation.set(0, THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset), 0);
+    const saved = checkpoint?.position;
+    if (saved && this.level.layout.isWalkable(saved.x, saved.z, UNDERGROUND_CONFIG.antRadius)) {
+      this.position.set(saved.x, this.level.layout.heightAt(saved.x,saved.z), saved.z);
+    }
+    this.position.y += SCENE_PROPS.ant.lift + (this.walkLift?.(this.position.x,this.position.z) ?? 0);
+    const heading = Number.isFinite(checkpoint?.heading) ? checkpoint.heading % (Math.PI * 2) : 0;
+    this.player.group.rotation.set(0, heading + THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset), 0);
     this.clearInput();
     this.controls.enabled = true;
     this.resetCamera();
@@ -365,7 +380,7 @@ export class UndergroundWorld {
     const moved = Math.hypot(actorPosition.x - startX, actorPosition.z - startZ) > 0.000001;
     if (Math.abs(actorPosition.x-startX) < 1e-8) this.velocity.x = 0;
     if (Math.abs(actorPosition.z-startZ) < 1e-8) this.velocity.z = 0;
-    actorPosition.y = this.level.layout.heightAt(actorPosition.x, actorPosition.z) + SCENE_PROPS.ant.lift;
+    actorPosition.y = this.level.layout.heightAt(actorPosition.x, actorPosition.z) + SCENE_PROPS.ant.lift + (this.walkLift?.(actorPosition.x,actorPosition.z) ?? 0);
     if (moved && this.axes.magnitude > 0) {
       const desired = Math.atan2(x, z) + THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset);
       const rotation = this.player.group.rotation.y;
@@ -435,35 +450,7 @@ export class UndergroundWorld {
     const nearHeight = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.near;
     const radius = Math.max(config.collisionRadius, Math.hypot(nearHeight, nearHeight * this.camera.aspect) + 0.035);
     this.cameraRadius = radius;
-    let safeDistance=this.sweepCamera(this.offset,distance,radius);
-    this.resolvedCameraOffset.copy(this.offset).multiplyScalar(safeDistance);
-    // When an orbit faces a wall, choose a nearby clear shoulder instead of
-    // pushing the view into the player or hiding the player model.
-    let retained=false;
-    if (safeDistance < config.framingDistance+0.1 && this.lastCameraOffset.length()>config.framingDistance*0.9) {
-      const previousLength=this.lastCameraOffset.length();
-      this.cameraSearchOffset.copy(this.lastCameraOffset).multiplyScalar(1/previousLength);
-      const clear=this.sweepCamera(this.cameraSearchOffset,previousLength,radius);
-      if(clear>config.framingDistance*0.9) {
-        this.resolvedCameraOffset.copy(this.cameraSearchOffset).multiplyScalar(clear);
-        retained=true;
-      }
-    }
-    if (!retained && safeDistance < config.framingDistance) {
-      const yaw=Math.atan2(this.offset.x,this.offset.z);
-      let best=safeDistance;
-      for (const angle of cameraAngles) for (const height of cameraHeights) {
-        this.cameraSearchOffset.set(Math.sin(yaw+angle)*config.framingDistance,
-          height,Math.cos(yaw+angle)*config.framingDistance);
-        const length=this.cameraSearchOffset.length();
-        this.cameraSearchOffset.multiplyScalar(1/length);
-        const clear=this.sweepCamera(this.cameraSearchOffset,length,radius);
-        if (clear>best+0.02) {
-          best=clear;
-          this.resolvedCameraOffset.copy(this.cameraSearchOffset).multiplyScalar(clear);
-        }
-      }
-    }
+    this.resolveCameraOrbit(distance, radius, dt);
     // Input follows the rendered view, including automatic shoulder changes.
     // Compensate those changes so a held direction stays on its ground heading.
     trackGroundOrbit(this,this.lastCameraOffset.x,this.lastCameraOffset.z,
@@ -476,13 +463,125 @@ export class UndergroundWorld {
     this.player.group.visible=true;
   }
 
+  // Keep the requested zoom on the virtual camera. Collision constrains orbit
+  // angles first; only movement into a tighter space can shorten the view.
+  resolveCameraOrbit(distance, radius, dt) {
+    const config = UNDERGROUND_CONFIG.camera;
+    const initial = this.lastCameraOffset.lengthSq() < 1e-8 || dt === 0;
+    const requestedYaw = Math.atan2(this.offset.x, this.offset.z);
+    const requestedPitch = Math.asin(THREE.MathUtils.clamp(this.offset.y, -1, 1));
+    const currentYaw = initial ? requestedYaw : Math.atan2(this.lastCameraOffset.x, this.lastCameraOffset.z);
+    let constrained = this.sweepCamera(this.offset, distance, radius) < distance - 0.002;
+    this.cameraGoalOffset.copy(this.offset).multiplyScalar(distance);
+    if (constrained) {
+      let found = false;
+      // Most endpoints are rejected before a ray sweep, keeping the search bounded.
+      for (let stage = 0; stage < 3 && !found; stage += 1) {
+        const length = stage === 0 ? distance : Math.min(distance, stage === 1 ? 0.7 : config.framingDistance);
+        let best = Infinity;
+        for (const angle of cameraAngles) {
+          const yaw = requestedYaw + angle;
+          for (let elevation = -1; elevation < cameraHeights.length; elevation += 1) {
+            const pitch = elevation < 0 ? requestedPitch : Math.asin(Math.min(0.9, cameraHeights[elevation] / length));
+            this.cameraSearchOffset.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+            this.cameraCandidate.copy(this.target).addScaledVector(this.cameraSearchOffset, length);
+            if (!this.level.layout.containsSphere(this.cameraCandidate.x, this.cameraCandidate.y, this.cameraCandidate.z, radius)) continue;
+            const previousTurn = Math.atan2(Math.sin(yaw-currentYaw), Math.cos(yaw-currentYaw));
+            const score = angle*angle + 0.3*previousTurn*previousTurn + 0.4*(pitch-requestedPitch)**2;
+            if (score >= best || this.sweepCamera(this.cameraSearchOffset, length, radius) < length-0.002) continue;
+            best = score; found = true;
+            this.cameraGoalOffset.copy(this.cameraSearchOffset).multiplyScalar(length);
+          }
+        }
+      }
+      if (!found) {
+        const safe = this.sweepCamera(this.offset, distance, radius);
+        this.cameraGoalOffset.copy(this.offset).multiplyScalar(safe);
+      }
+    }
+    if (initial) {
+      this.resolvedCameraOffset.copy(this.cameraGoalOffset);
+      return;
+    }
+    this.cameraStartOffset.copy(this.lastCameraOffset);
+    let startLength = this.cameraStartOffset.length();
+    this.cameraDirection.copy(this.cameraStartOffset).multiplyScalar(1/Math.max(startLength,1e-8));
+    let safeStart = this.sweepCamera(this.cameraDirection, startLength, radius);
+    if (safeStart < startLength-0.002) {
+      // Holding a still-valid world position lets the ant approach a wall without
+      // translating the camera into it on every frame.
+      this.cameraSearchOffset.subVectors(this.camera.position,this.target);
+      const worldLength=this.cameraSearchOffset.length();
+      this.cameraDirection.copy(this.cameraSearchOffset).multiplyScalar(1/Math.max(worldLength,1e-8));
+      if(this.sweepCamera(this.cameraDirection,worldLength,radius)>=worldLength-0.002) {
+        this.cameraStartOffset.copy(this.cameraSearchOffset); startLength=worldLength; safeStart=worldLength;
+      } else this.cameraStartOffset.multiplyScalar(safeStart/Math.max(startLength,1e-8));
+    }
+    startLength=this.cameraStartOffset.length();
+    if(startLength<0.15) {
+      this.resolvedCameraOffset.copy(this.cameraGoalOffset);
+    } else {
+      const goalLength=this.cameraGoalOffset.length();
+      const fromYaw=Math.atan2(this.cameraStartOffset.x,this.cameraStartOffset.z);
+      const toYaw=Math.atan2(this.cameraGoalOffset.x,this.cameraGoalOffset.z);
+      const yawTurn=Math.atan2(Math.sin(toYaw-fromYaw),Math.cos(toYaw-fromYaw));
+      const fromPitch=Math.asin(THREE.MathUtils.clamp(this.cameraStartOffset.y/startLength,-1,1));
+      const toPitch=Math.asin(THREE.MathUtils.clamp(this.cameraGoalOffset.y/Math.max(goalLength,1e-8),-1,1));
+      const angularTravel=Math.hypot(yawTurn,toPitch-fromPitch);
+      let fraction=angularTravel>1e-8 ? Math.min(1,config.orbitMaxSpeed*dt/angularTravel) : 1;
+      const outward=1-Math.exp(-config.recoveryResponsiveness*dt);
+      const length=goalLength>startLength ? startLength+(goalLength-startLength)*outward : goalLength;
+      this.resolvedCameraOffset.copy(this.cameraStartOffset);
+      for(let attempt=0;attempt<6;attempt++) {
+        const yaw=fromYaw+yawTurn*fraction, pitch=fromPitch+(toPitch-fromPitch)*fraction;
+        this.cameraDirection.set(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch));
+        const clear=this.sweepCamera(this.cameraDirection,Math.max(startLength,length),radius);
+        // Do not pull inward just because an orbit angle points at a wall.
+        const allowed = length>=startLength ? Math.min(clear,length) : length;
+        if(clear>=Math.min(startLength,length)-0.002) {
+          this.cameraWorldGoal.copy(this.target).addScaledVector(this.cameraDirection,allowed);
+          if(this.cameraPathClear(this.camera.position,this.cameraWorldGoal,radius)) {
+            this.resolvedCameraOffset.copy(this.cameraDirection).multiplyScalar(allowed); break;
+          }
+        }
+        fraction*=0.5;
+      }
+    }
+    // Feed the constrained angle back into controls so dragging stops at a wall
+    // instead of accumulating a hidden orbit that later jumps to the far side.
+    if(constrained) {
+      const length=this.resolvedCameraOffset.length();
+      if(length>1e-8) this.orbitCamera.position.copy(this.target).addScaledVector(this.resolvedCameraOffset,distance/length);
+    }
+  }
+
+  cameraPathClear(from,to,radius) {
+    const distance=from.distanceTo(to);
+    const steps=Math.min(48,Math.max(1,Math.ceil(distance/UNDERGROUND_CONFIG.camera.sweepStep)));
+    for(let step=1;step<=steps;step++) {
+      this.cameraPathPoint.lerpVectors(from,to,step/steps);
+      if(!this.level.layout.containsSphere(this.cameraPathPoint.x,this.cameraPathPoint.y,this.cameraPathPoint.z,radius)) return false;
+    }
+    return true;
+  }
+
   sweepCamera(direction,distance,radius) {
     const steps=Math.max(1,Math.ceil(distance/UNDERGROUND_CONFIG.camera.sweepStep));
     let safe=0;
     for(let step=1;step<=steps;step++) {
       const d=distance*step/steps;
       this.cameraCandidate.copy(this.target).addScaledVector(direction,d);
-      if(!this.level.layout.containsSphere(this.cameraCandidate.x,this.cameraCandidate.y,this.cameraCandidate.z,radius)) break;
+      if(!this.level.layout.containsSphere(this.cameraCandidate.x,this.cameraCandidate.y,this.cameraCandidate.z,radius)) {
+        let blocked=d;
+        // Refine contact instead of changing distance in visible 4.5 cm steps.
+        for(let refine=0;refine<5;refine++) {
+          const middle=(safe+blocked)*0.5;
+          this.cameraCandidate.copy(this.target).addScaledVector(direction,middle);
+          if(this.level.layout.containsSphere(this.cameraCandidate.x,this.cameraCandidate.y,this.cameraCandidate.z,radius)) safe=middle;
+          else blocked=middle;
+        }
+        return Math.max(0,safe-0.003);
+      }
       safe=d;
     }
     return safe;

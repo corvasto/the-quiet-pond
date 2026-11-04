@@ -9,6 +9,9 @@ import { ObjectiveChime } from './objective-chime.js';
 import { PondRadioAudio } from './radio-audio.js';
 import { AmbienceAudio } from './ambience-audio.js';
 import { SeedToBurrowGame } from './seed-to-burrow.js';
+import { MATERIAL_DEFINITIONS } from '../content/building.js';
+import { AntGroundTrail } from './ant-ground-trail.js';
+import { BurrowBuilding } from './burrow-building.js';
 import { BirdFlight, isBirdRewardUnlocked } from './bird-flight.js';
 
 export class PondGameSession {
@@ -21,6 +24,7 @@ export class PondGameSession {
     language = 'en',
     season = DEFAULTS.season,
     soundEnabled = true,
+    antTrailsEnabled = false,
     musicVolume = POND_GAME.radioAudio.musicVolume,
     saveState = null,
   } = {}) {
@@ -33,6 +37,7 @@ export class PondGameSession {
     this.language = language === 'id' ? 'id' : 'en';
     this.season = season;
     this.soundEnabled = Boolean(soundEnabled);
+    this.antTrailsEnabled = Boolean(antTrailsEnabled);
     this.musicVolume = THREE.MathUtils.clamp(Number(musicVolume) || 0, 0, 1);
     this.app = null;
     this.game = null;
@@ -59,11 +64,14 @@ export class PondGameSession {
     this.objectiveChime.setEnabled(this.soundEnabled);
     this.allObjectivesAnnounced = false;
     this.saveState = saveState;
+    this.restoringUndergroundCheckpoint = saveState?.underground?.active === true;
     this.savePosition = new THREE.Vector3();
     this.saveFacing = new THREE.Vector3();
     this.debugPosition = new THREE.Vector3();
     this.bird = null;
     this.birdPreparing = false;
+    this.colony = null;
+    this.antTrail = null;
     this.underground = null;
     this.undergroundDiscoveries = new Set(
       (Array.isArray(saveState?.underground?.discoveries) ? saveState.underground.discoveries : [])
@@ -106,6 +114,7 @@ export class PondGameSession {
     this.objectives.start();
     this.startWorldCycle();
     this.game = new SeedToBurrowGame(this.app, {
+      canCollectObject: () => !this.colony?.state.carried,
       onStateChange: (snapshot) => {
         this.latestGameSnapshot = snapshot;
         this.objectives?.setSeedSnapshot(snapshot);
@@ -129,12 +138,16 @@ export class PondGameSession {
     this.bird = this.createBirdController();
     this.bird.setDebugEnabled(this.isClimbDebugEnabled());
     this.restoreSaveState(this.saveState);
+    this.colony = new BurrowBuilding(this, this.saveState?.colony);
+    this.colony.sync();
+    await this.restoreUndergroundCheckpoint(this.saveState?.underground);
+    this.setAntTrailsEnabled(this.antTrailsEnabled);
     this.onLoadProgress(99);
     return this;
   }
 
   getSaveState() {
-    if (!this.app || !this.game || !this.objectives) return null;
+    if (!this.app || !this.game || !this.objectives || this.restoringUndergroundCheckpoint) return null;
     const position = this.getSavePosition();
     if (!position) return null;
     const facing = this.app.getAntFacingDirection(this.saveFacing);
@@ -146,9 +159,10 @@ export class PondGameSession {
         z: position.z,
         heading: facing ? Math.atan2(facing.x, facing.z) : null,
       },
+      colony: this.colony?.save(),
       game: this.game.getSaveState(),
       objectives: this.objectives.getSaveState(),
-      underground: { discoveries: [...this.undergroundDiscoveries] },
+      underground: { ...this.underground?.getCheckpoint(), discoveries: [...this.undergroundDiscoveries] },
     };
   }
 
@@ -172,8 +186,25 @@ export class PondGameSession {
     return this.isUnderground() ? this.underground.prepareMapSurface() : Promise.resolve(null);
   }
 
+  getBuildingStatus() {
+    if (this.colony?.planning) return 'building.preview';
+    if (this.colony?.state.carried) return MATERIAL_DEFINITIONS[this.colony.state.carried.type].carryStatusKey;
+    if (this.game?.carriedSeed) return 'building.carrySeed';
+    return '';
+  }
+  getBuildingActions() { return this.colony?.actions() ?? []; }
+  performBuildingAction(id) { return this.colony?.act(id) ?? false; }
+  getMaterialStorage() {
+    return { leaves: this.colony?.state.count('leaf') ?? 0, bedBuilt: Boolean(this.colony?.state.bed),
+      materials: this.colony?.inventory() ?? [], recipes: this.colony?.recipeOptions() ?? [] };
+  }
+  takeStoredMaterial(type) { return this.colony?.take(type) ?? false; }
+  planBuild(recipeId) { return this.colony?.startPlan(recipeId) ?? false; }
+  takeStoredLeaf() { return this.takeStoredMaterial('leaf'); }
+  planLeafBed() { return this.planBuild('leaf-bed'); }
+
   getUndergroundMapData() {
-    return this.isUnderground() ? this.underground.getMapData() : null;
+    return this.isUnderground() ? { ...this.underground.getMapData(), colony: this.colony?.markers() } : null;
   }
 
   isUnderground() {
@@ -191,12 +222,23 @@ export class PondGameSession {
       && Math.hypot(position.x - entrance.x, position.z - entrance.z) <= POND_GAME.sleep.radius);
   }
 
+  async restoreUndergroundCheckpoint(checkpoint) {
+    if (checkpoint?.active !== true) return false;
+    this.restoringUndergroundCheckpoint = true;
+    await this.prepareUnderground((value) => this.onLoadProgress(96 + value * 0.03));
+    const restored = this.setUndergroundActive(true, checkpoint);
+    // A failed load must preserve the last checkpoint instead of autosaving outside.
+    this.restoringUndergroundCheckpoint = !restored;
+    return restored;
+  }
+
   async prepareUnderground(onProgress = () => {}) {
     if (this.underground) return;
     const app = this.app;
     const { UndergroundWorld } = await import('./underground.js');
     if (!app || app !== this.app || app.disposed) throw new Error('Session ended during burrow loading.');
     const interior = new UndergroundWorld(app);
+    interior.walkLift = (x,z) => this.colony?.walkLift(x,z) ?? 0;
     try {
       await interior.start({ onProgress });
       if (app !== this.app || app.disposed) throw new Error('Session ended during burrow loading.');
@@ -207,14 +249,14 @@ export class PondGameSession {
     }
   }
 
-  setUndergroundActive(active) {
+  setUndergroundActive(active, checkpoint = null) {
     if (!this.app || !this.underground) return false;
     this.clearMovementInput();
     this.exploreActive = false;
     this.app.setExploreTouchMode(false);
     this.app.setAntLocatorActive(false);
     if (active) {
-      this.underground.activate();
+      this.underground.activate(checkpoint);
       this.underground.setPaused(this.paused);
       this.app.controls.enabled = false;
       this.app.setAlternateRuntime(this.underground);
@@ -227,13 +269,14 @@ export class PondGameSession {
       this.radioAudio?.setEnabled(true);
       this.ambienceAudio?.setEnabled(this.soundEnabled);
     }
+    this.colony?.sync();
     this.setPaused(this.paused);
     this.emitPrompt();
     return true;
   }
 
   canPlayBird() {
-    return Boolean(!this.isUnderground() && this.bird && (
+    return Boolean(!this.isUnderground() && !this.colony?.busyHands && this.bird && (
       POND_GAME.debug.enabled || isBirdRewardUnlocked(this.objectives?.getSnapshot())
     ));
   }
@@ -452,7 +495,7 @@ export class PondGameSession {
   }
 
   toggleFlight() {
-    if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive() || this.isUnderground()) return false;
+    if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive() || this.isUnderground() || this.colony?.busyHands) return false;
     if (!this.isFlightEnabled() && !this.climbing?.exitSurfaceForDebug()) return false;
     this.clearMovementInput();
     const enabled = this.app.setAntFlightEnabled(!this.app.isAntFlightEnabled(), {
@@ -528,6 +571,17 @@ export class PondGameSession {
     this.radioAudio?.unlock();
     this.ambienceAudio?.unlock();
     this.objectiveChime?.unlock();
+  }
+
+  setAntTrailsEnabled(enabled) {
+    this.antTrailsEnabled = Boolean(enabled);
+    if (!this.antTrailsEnabled) {
+      this.antTrail?.dispose();
+      this.antTrail = null;
+    } else if (!this.antTrail && this.app && this.colony) {
+      this.antTrail = new AntGroundTrail(this);
+    }
+    return this.antTrailsEnabled;
   }
 
   setSoundEnabled(enabled) {
@@ -764,6 +818,10 @@ export class PondGameSession {
   dispose() {
     this.worldCycleUnsubscribe?.();
     this.worldCycleUnsubscribe = null;
+    this.antTrail?.dispose();
+    this.antTrail = null;
+    this.colony?.dispose();
+    this.colony = null;
     this.app?.setAlternateRuntime(null);
     this.underground?.dispose();
     this.underground = null;

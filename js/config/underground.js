@@ -22,5 +22,9 @@ export const UNDERGROUND_CONFIG = Object.freeze({
     lookHeight: 0.11,
     framingDistance: 0.4,
     sweepStep: 0.045,
+    // Constrain wall-facing orbit angles while retaining the requested zoom.
+    orbitMaxSpeed: 2.8,
+    // Recover outward gradually after moving away from an obstruction.
+    recoveryResponsiveness: 4,
   }),
 });

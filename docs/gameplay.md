@@ -14,7 +14,7 @@ The elevated camera starts wide and gently aligns behind sustained travel while 
 
 1. Start in Ant view with the first of two seed batches.
 2. Move to an active seed with `WASD`; each batch mixes collision-validated ground seeds with climbable rock tops and companion-tree branches. Use `Space` to climb. If an elevated anchor is unavailable, the seed falls back to validated ground.
-3. Enter a seed's collection radius to pick it up automatically.
+3. Enter a seed's collection radius, then select Pick up seed or press F.
 4. Carry it to the authored burrow entrance and enter the deposit radius.
 5. Deposit all three active seeds to reveal the next batch, then repeat until all six are home.
 6. Return to the burrow for the leaf offering, carry it to the pond, and enter the offering radius.
@@ -96,3 +96,8 @@ Tune movement/camera/time/weather in `js/config/world.js`, seeds/interactions in
 ## Carry behavior
 
 The verified ant walk range plays while carrying; no carrying loop is verified, so the seed remains a visual prop.
+
+
+## A home below
+
+Pick up seeds explicitly using the contextual action or desktop F. Their existing delivery and objective progress are preserved. Completing seed collection unlocks building leaves near the burrow. Carry them individually above or below ground, arrange them on safe floors, or deposit them into the underground material store. Two stored leaves build one resting bed at a valid player-chosen chamber location. Preview and cancellation are free; confirmation spends exactly two leaves. Storage/bed markers appear on the underground map. Details and limitations are in [burrow-building.md](burrow-building.md).

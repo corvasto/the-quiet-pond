@@ -1,4 +1,4 @@
-import { renderUndergroundMap, createMapViewport, applySurfaceMap } from './ui/underground-map.js';
+import { renderUndergroundMap, createMapViewport, applySurfaceMap, setMapLabelsVisible } from './ui/underground-map.js';
 import { createDebugControls } from './ui/debug-controls.js';
 import { PondGameSession } from './game/game-session.js';
 import { APP_VERSION, DEFAULTS, SEASONS } from './config/index.js';
@@ -15,6 +15,7 @@ import { formatSeedProgress, translate } from './ui/localization.js';
 import { FpsSampler } from './utils/fps-diagnostic.js';
 import { shouldTouchRun } from './utils/player-motion.js';
 
+import { createGameplayLayout } from './ui/gameplay-layout.js';
 const byId = (id) => document.getElementById(id);
 
 // Track actual input so touch focus stays quiet and keyboard focus remains visible.
@@ -38,9 +39,14 @@ const elements = {
   sleepDialog: byId('sleep-dialog'),
   sleepTitle: byId('sleep-title'),
   sleepFade: byId('sleep-fade'),
+  materialStore: byId('material-store'),
+  buildingActions: byId('building-actions'),
+  buildingButtons: byId('building-buttons'),
+  buildingStatus: byId('building-status'),
   undergroundMap: byId('underground-map'),
   undergroundMapContent: byId('underground-map-content'),
   undergroundMapClose: byId('underground-map-close'),
+  undergroundMapLabels: byId('underground-map-labels'),
   burrowButton: byId('burrow-button'),
   burrowFade: byId('burrow-fade'),
   objective: byId('game-objective-title'),
@@ -80,6 +86,7 @@ const elements = {
   newGameButton: byId('new-game-button'),
   saveSlotList: byId('save-slot-list'),
   soundEnabled: byId('sound-enabled'),
+  antTrailsEnabled: byId('ant-trails-enabled'),
   musicVolume: byId('music-volume'),
   musicVolumeValue: byId('music-volume-value'),
   seasonSelect: byId('season-select'),
@@ -134,6 +141,7 @@ const heldFlightCodes = new Set();
 let touchRunHeld = false;
 let resetMobileControls = null;
 
+const gameplayLayout = createGameplayLayout({ caption: elements.radioCaption, dock: document.querySelector('.context-actions'), hint: elements.touchHint });
 let session = null;
 let paused = false;
 let gameReady = false;
@@ -142,18 +150,21 @@ let burrowTransition = false;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
+const ANT_TRAILS_KEY = 'the-quiet-pond-ant-trails';
 const SOUND_EFFECTS_KEY = 'the-quiet-pond-soft-chimes';
 const MUSIC_VOLUME_KEY = 'the-quiet-pond-music-volume';
 const SAVE_SLOTS_KEY = 'the-quiet-pond-saves-v1';
 const ACTIVE_SAVE_SLOT_KEY = 'the-quiet-pond-active-save-slot-v1';
 let language = readStoredValue(LANGUAGE_KEY) === 'id' ? 'id' : 'en';
 let season = readSeasonPreference();
+let antTrailsEnabled = readStoredValue(ANT_TRAILS_KEY) === '1';
 let soundEffectsEnabled = readStoredValue(SOUND_EFFECTS_KEY) !== '0';
 let musicVolume = readMusicVolumePreference();
 const initialSeedTotal = Math.max(1, Number(POND_GAME.seed.totalCount) || 1);
 elements.progress.setAttribute('aria-valuemax', String(initialSeedTotal));
 elements.step.textContent = formatSeedProgress(0, initialSeedTotal, language);
 elements.soundEnabled.checked = soundEffectsEnabled;
+elements.antTrailsEnabled.checked = antTrailsEnabled;
 elements.seasonSelect.value = season;
 elements.musicVolume.value = String(Math.round(musicVolume * 100));
 elements.musicVolumeValue.value = `${Math.round(musicVolume * 100)}%`;
@@ -770,6 +781,119 @@ function updateSleepButton() {
   elements.sleepButton.hidden = !available;
 }
 
+let buildingUiElapsed = 0.2;
+let buildingUiSignature = '';
+const buildingTouchMedia = window.matchMedia('(any-pointer: coarse)');
+const compactBuildingStatuses = new Set(['building.carrySeed', 'building.carryLeaf', 'building.carryStick', 'building.preview', 'building.needLeaves', 'building.needMaterials']);
+let buildingNoticeTimer = null;
+let lastBuildingNotice = '';
+let lastBuildingNoticeTime = -Infinity;
+function notifyBuildingStatus(status, active) {
+  if (!active) { elements.buildingStatus.hidden = true; return; }
+  if (!status || status === lastBuildingNotice) return;
+  const now = performance.now();
+  if (now - lastBuildingNoticeTime < 3500 || !elements.cardNotice.hidden) return;
+  lastBuildingNotice = status; lastBuildingNoticeTime = now;
+  const headerBottom = elements.checklistToggle.getBoundingClientRect().bottom;
+  elements.buildingStatus.style.top = `${Math.min(headerBottom + 8, window.innerHeight * 0.5)}px`;
+  elements.buildingStatus.textContent = t(status); elements.buildingStatus.hidden = false;
+  window.clearTimeout(buildingNoticeTimer);
+  buildingNoticeTimer = window.setTimeout(() => { elements.buildingStatus.hidden = true; }, 3000);
+}
+function updateBuildingControls({ delta = 0.2 } = {}) {
+  buildingUiElapsed += delta;
+  if (buildingUiElapsed < 0.12) return;
+  buildingUiElapsed = 0;
+  const actions = canMoveAnt() ? session?.getBuildingActions() ?? [] : [];
+  const fullStatus = actions[0]?.reason ?? session?.getBuildingStatus() ?? '';
+  const status = buildingTouchMedia.matches && compactBuildingStatuses.has(fullStatus) ? `${fullStatus}.touch` : fullStatus;
+  const signature = JSON.stringify([actions, status, language]);
+  if (signature === buildingUiSignature) return;
+  buildingUiSignature = signature;
+  elements.buildingActions.hidden = !actions.length;
+  notifyBuildingStatus(status, actions.length > 0);
+  elements.buildingButtons.replaceChildren();
+  actions.forEach((action, index) => {
+    const button = document.createElement('button'); button.type = 'button';
+    button.textContent = t(action.label); button.disabled = Boolean(action.disabled);
+    button.dataset.primary = String(index === 0);
+    if (action.reason) button.title = t(action.reason);
+    button.addEventListener('click', () => performBuildingAction(action.id));
+    elements.buildingButtons.append(button);
+  });
+}
+function performBuildingAction(id) {
+  if (!canMoveAnt()) return;
+  const result = session?.performBuildingAction(id);
+  if (result === 'sleep') { openSleep(); return; }
+  if (result === 'storage') {
+    setPaused(true); elements.pauseDialog.hidden = true;
+    renderMaterialStore();
+    elements.materialStore.showModal();
+  } else {
+    if (result) saveActiveSlot();
+    buildingUiSignature = ''; updateBuildingControls();
+    session?.focusScene();
+  }
+}
+function fillFutureMaterialSlots(container, count) {
+  for (let index = count; index < 6; index++) {
+    const slot = document.createElement('div'); slot.className = 'material-empty-slot';
+    const mark = document.createElement('span'); mark.textContent = '···'; mark.setAttribute('aria-hidden','true');
+    const label = document.createElement('span'); label.textContent = t('building.comingSoon');
+    slot.append(mark,label); container.append(slot);
+  }
+}
+function renderMaterialStore() {
+  const storage = session.getMaterialStorage();
+  const slots = byId('material-store-slots'); slots.replaceChildren();
+  for (const material of storage.materials) {
+    const card = document.createElement('button'); card.type = 'button'; card.className = 'material-slot';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox','0 0 64 64'); icon.setAttribute('aria-hidden','true');
+    icon.classList.add('material-slot-icon');
+    for (const shape of material.iconPaths ?? ['M12 32L32 12L52 32L32 52Z']) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',shape); icon.append(path);
+    }
+    const label = document.createElement('span'); label.textContent = t(material.labelKey);
+    const count = document.createElement('span'); count.className = 'material-slot-count'; count.textContent = String(material.count);
+    card.disabled = material.count === 0;
+    card.setAttribute('aria-label',t('building.withdrawMaterial',{material:t(material.labelKey),count:material.count}));
+    card.title = t('building.withdrawHint');
+    card.addEventListener('click',()=>{ if(session.takeStoredMaterial(material.id)) { saveActiveSlot(); closeMaterialStore(); } });
+    card.append(icon,label,count); slots.append(card);
+  }
+  fillFutureMaterialSlots(slots, storage.materials.length);
+  const recipes = byId('material-store-recipes'); recipes.replaceChildren();
+  for(const recipe of storage.recipes) {
+    const card = document.createElement('button'); card.type = 'button'; card.className = 'material-recipe';
+    const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    icon.setAttribute('viewBox','0 0 96 96'); icon.setAttribute('aria-hidden','true');
+    icon.classList.add('material-recipe-icon');
+    for (const shape of recipe.iconShapes ?? []) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',shape.path); path.setAttribute('fill',shape.fill); path.setAttribute('stroke',shape.stroke);
+      icon.append(path);
+    }
+    const label = document.createElement('span'); label.className = 'material-recipe-name';
+    label.textContent = t(recipe.nameKey ?? recipe.labelKey);
+    const cost = document.createElement('span'); cost.className = 'material-recipe-cost';
+    const costText = Object.entries(recipe.cost).map(([type,amount])=>`${amount} ${t(storage.materials.find((material)=>material.id===type)?.labelKey ?? type)}`).join(' + ');
+    cost.textContent = costText;
+    card.disabled = !recipe.canBuild;
+    card.setAttribute('aria-label',`${t(recipe.labelKey)}. ${cost.textContent}`);
+    card.title = recipe.canBuild ? t(recipe.labelKey) : t('building.needMaterials');
+    card.addEventListener('click',()=>{ if(session.planBuild(recipe.id)) closeMaterialStore(); else renderMaterialStore(); });
+    card.append(icon,label,cost); recipes.append(card);
+  }
+  fillFutureMaterialSlots(recipes, storage.recipes.length);
+}
+function closeMaterialStore() {
+  elements.materialStore.close(); setPaused(false);
+  buildingUiSignature = ''; updateBuildingControls();
+}
+
 function updateBurrowButton() {
   elements.burrowButton.hidden = !canMoveAnt() || !elements.cardsDialog.hidden || !session?.canUseBurrow();
   elements.burrowButton.textContent = t(session?.isUnderground() ? 'underground.exit' : 'underground.enter');
@@ -1166,6 +1290,10 @@ function setupMobileGameControls() {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (elements.materialStore.open) {
+    if (event.code === 'Escape') { event.preventDefault(); closeMaterialStore(); }
+    return;
+  }
   if (elements.undergroundMap.open) {
     if ((event.code === 'Escape' || event.code === 'KeyM') && !event.repeat) {
       event.preventDefault(); closeUndergroundMap();
@@ -1199,6 +1327,10 @@ window.addEventListener('keydown', (event) => {
     }
     return;
   }
+  if (event.code === 'Escape' && !event.repeat && canMoveAnt()
+    && session?.getBuildingActions().some((action) => action.id === 'cancel')) {
+    event.preventDefault(); performBuildingAction('cancel'); return;
+  }
   const pauseKey = event.code === 'Escape' || event.code === 'KeyP';
   if (pauseKey && !event.repeat && (paused || !isEditableTarget(event.target))) {
     event.preventDefault();
@@ -1206,6 +1338,11 @@ window.addEventListener('keydown', (event) => {
     return;
   }
   if (isEditableTarget(event.target)) return;
+  if (event.code === 'KeyF' && !event.repeat && canMoveAnt()) {
+    const action = session?.getBuildingActions()[0];
+    if (action) { event.preventDefault(); if (!action.disabled) performBuildingAction(action.id); }
+    return;
+  }
   if (event.code === 'KeyU' && !event.repeat && canMoveAnt() && session?.canUseBurrow()) {
     event.preventDefault();
     useBurrow();
@@ -1293,7 +1430,10 @@ window.addEventListener('resize', () => resetMobileControls?.());
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) clearGameInput();
   if (document.hidden) fpsSampler.reset();
-  if (document.hidden && gameReady && session && !paused) setPaused(true);
+  if (document.hidden && gameReady && session) {
+    if (!paused) setPaused(true);
+    else saveActiveSlot();
+  }
 });
 
 elements.radioControlButton.addEventListener('click', openRadioControl);
@@ -1348,6 +1488,11 @@ elements.closeAboutButton.addEventListener('click', closeAboutDialog);
 elements.resumeButton.addEventListener('click', () => setPaused(false));
 elements.exploreButton.addEventListener('click', toggleExplore);
 elements.undergroundMapClose.addEventListener('click', closeUndergroundMap);
+elements.undergroundMapLabels.addEventListener('change', () => {
+  setMapLabelsVisible(elements.undergroundMapContent, elements.undergroundMapLabels.checked);
+});
+byId('material-store-close').addEventListener('click', closeMaterialStore);
+elements.materialStore.addEventListener('cancel', (event) => { event.preventDefault(); closeMaterialStore(); });
 elements.undergroundMap.addEventListener('cancel', (event) => { event.preventDefault(); closeUndergroundMap(); });
 elements.birdSwitchButton.addEventListener('click', toggleBird);
 elements.resetCameraButton.addEventListener('click', resetCameraView);
@@ -1356,6 +1501,16 @@ elements.restartButton.addEventListener('click', () => {
   window.location.reload();
 });
 elements.newGameButton.addEventListener('click', () => startNewGame());
+elements.antTrailsEnabled.addEventListener('change', () => {
+  antTrailsEnabled = elements.antTrailsEnabled.checked;
+  try {
+    window.localStorage.setItem(ANT_TRAILS_KEY, antTrailsEnabled ? '1' : '0');
+  } catch (error) {
+    console.warn('[the-quiet-pond] Could not store the trail preference.', error);
+  }
+  session?.setAntTrailsEnabled(antTrailsEnabled);
+});
+
 elements.soundEnabled.addEventListener('change', () => {
   soundEffectsEnabled = elements.soundEnabled.checked;
   try {
@@ -1423,6 +1578,7 @@ async function startGame() {
       language,
       season,
       soundEnabled: soundEffectsEnabled,
+      antTrailsEnabled,
       musicVolume,
       saveState: saveSlots[activeSaveSlotIndex]?.state ?? null,
     });
@@ -1435,6 +1591,7 @@ async function startGame() {
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
     session.onFrame(updateBurrowButton);
+    session.onFrame(updateBuildingControls);
     session.onFrame(updateRadioControlButton);
     updateExploreControl();
     saveActiveSlot();
@@ -1451,9 +1608,12 @@ async function startGame() {
   }
 }
 
+window.addEventListener('pagehide', () => saveActiveSlot());
 window.addEventListener('beforeunload', () => {
-  mapViewport.dispose();
   saveActiveSlot();
+  gameplayLayout.dispose();
+  window.clearTimeout(buildingNoticeTimer);
+  mapViewport.dispose();
   window.clearTimeout(saveTimeout);
   debugControls.dispose();
   performanceDiagnosticUnsubscribe?.();

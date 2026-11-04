@@ -240,10 +240,11 @@ const OBJECTIVES = Object.freeze({
 });
 
 export class SeedToBurrowGame {
-  constructor(app, { onStateChange = () => {}, onPromptChange = () => {} } = {}) {
+  constructor(app, { onStateChange = () => {}, onPromptChange = () => {}, canCollectObject = () => true } = {}) {
     this.app = app;
     this.onStateChange = onStateChange;
     this.onPromptChange = onPromptChange;
+    this.canCollectObject = canCollectObject;
     this.phase = 'discovering';
     this.paused = false;
     this.root = null;
@@ -463,7 +464,7 @@ export class SeedToBurrowGame {
         antPosition.distanceTo(seed.position) <= POND_GAME.seed.collectRadius
       ));
       if (nearbySeed) {
-        this.collectSeed(nearbySeed);
+        this.setPrompt('building.seedNearby');
       } else {
         this.setPrompt(`Find an active seed. ${this.activeSeeds.length} nearby.`);
       }
@@ -726,7 +727,7 @@ export class SeedToBurrowGame {
   }
 
   collectSeed(seed) {
-    if (this.phase !== 'discovering' || !seed?.visual) return;
+    if (this.phase !== 'discovering' || !seed?.visual || !this.canCollectObject()) return;
     if (!this.app.attachObjectToAnt(seed.visual, POND_GAME.seed.carryOffset)) return;
     this.activeSeeds = this.activeSeeds.filter((candidate) => candidate !== seed);
     this.carriedSeed = seed;
@@ -804,6 +805,7 @@ export class SeedToBurrowGame {
   }
 
   collectOffering() {
+    if (!this.canCollectObject()) return;
     if (this.phase !== 'offeringPickup' || !this.offering) return;
     if (!this.app.attachObjectToAnt(this.offering, POND_GAME.offering.carryOffset)) return;
     this.phase = 'offeringCarrying';

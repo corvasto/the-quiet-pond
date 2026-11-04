@@ -102,5 +102,5 @@ export function createUndergroundLayout({ treePosition = { x: 0, z: 0 } } = {}) 
     [pointAt(0, 8), pointAt(8, 8), pointAt(8, 17), pointAt(0, 17)],
   ];
   return { cells, hasCell, pointAt, isWalkable, containsSphere, floorY, ceilingY,
-    cellSize, heightAt, roofAt, treePosition, rootRadius, spawn, exit: spawn, landmarks, workerRoutes };
+    antRadius: UNDERGROUND_CONFIG.antRadius, cellSize, heightAt, roofAt, treePosition, rootRadius, spawn, exit: spawn, landmarks, workerRoutes };
 }
