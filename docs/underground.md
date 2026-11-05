@@ -17,7 +17,9 @@ The underground is part of the surface world. Walk into the rounded burrow mouth
 
 The four-unit ramp connects to the nest, store, root chamber, quiet chamber, and return loop. Adjacent rooms leave clearance around the upper ramp. Floor support includes the ramp-to-room seam and stays continuous during ascent. Surface height remains intact above the covered section.
 
-The entrance camera looks straight down the passage, with rotation and zoom disabled. Normal controls return in the chambers. Reset view updates the requested underground orbit to face the ant forward; it does not start a surface camera tween. Wall corrections ease toward a safe position and compensate held movement using changes in the rendered camera heading. The camera never moves the ant.
+The entrance camera locks along the direction of travel when the ant enters the ramp, with rotation and zoom disabled. Camera handoffs preserve held movement, so approaching the exit from inside does not reverse walking. The camera aims at the ant's body to keep it visible on the slope. Normal controls return in the chambers. Reset view updates the requested underground orbit to face the ant forward; it does not start a surface camera tween. Wall corrections ease toward a safe position and compensate held movement using changes in the rendered camera heading. The camera never moves the ant.
+
+At the surface exit, the passage camera stays active until the ant clears the mouth. A 750 ms eased orbit then restores the normal outdoor Reset view, including distance and height. The transition follows the moving ant and preserves held movement direction. Orbit interpolation avoids zooming through the ant when the viewing direction changes. Walking back into the ramp cancels the outdoor transition.
 
 The central taproot keeps its brown color and receives a procedural bark bump map. The texture affects surface detail, not color, and requires no download. Root extension stays within its horizontal collision footprint. Underground material fill uses no point lights that could illuminate surface props.
 

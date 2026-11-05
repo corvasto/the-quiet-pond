@@ -731,6 +731,7 @@ export class PondGameSession {
       hour,
       raining: this.weatherPhase === 'rain',
     });
+    if (this.isBelowGround()) this.objectives?.updateUndergroundShelter(safeDelta);
     this.radioAudio?.update({
       delta: safeDelta,
       hour,

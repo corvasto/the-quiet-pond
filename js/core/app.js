@@ -24,6 +24,7 @@ import { Environment } from './environment.js';
 import { Fireflies } from './fireflies.js';
 import { LampMoths } from './moths.js';
 import { RainWeather } from './rain.js';
+import { UndergroundView } from './underground-view.js';
 import { loadModelProp, loadModelProps } from '../props/model-prop.js';
 import { createObjectGroundFootprint } from '../props/model-surface-proxy.js';
 import {
@@ -549,6 +550,8 @@ export class PondApp {
   }
 
   disposeWorld() {
+    this.undergroundView?.dispose();
+    this.undergroundView = null;
     if (!this.world) return;
     this.draggedPondStone = null;
     this.draggablePondStone = null;
@@ -1115,7 +1118,10 @@ export class PondApp {
     this.moths?.update(elapsed, this.settings.sunHour, this.streetLampGlow?.position);
     this.renderer.setRenderTarget(null);
     this.updateAntOcclusionWindow();
-    this.renderer.render(this.scene, this.camera);
+    if (this.ground?.chamber?.isSheltered(this.ant?.group.position) && this.isAntViewActive()) {
+      this.undergroundView ??= new UndergroundView(this);
+      this.undergroundView.render();
+    } else this.renderer.render(this.scene, this.camera);
   }
 
   setAntOcclusionEnabled(enabled) {

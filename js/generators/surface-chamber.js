@@ -206,13 +206,23 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
     passage.push({ x: c.x + side * passageWidth(z), z });
   }
   return { group, layout, level, surfaceHeightAt, supportHeight, canOccupy, canMove, below, containsCamera,
+    cameraDistance: config.cameraDistance,
+    isSheltered: (p) => Boolean(below(p) && ((inPassage(p) && p.z >= coverZ && p.y < rampRoofAt(p.x, p.z) - 0.08)
+      || (layout.isWalkable(p.x, p.z) && p.y < layout.roofAt(p.x, p.z) - 0.08))),
     cameraInPassage: (p) => Boolean(level && ramp(p.x, p.z) && p.y < heightAt(p.x, p.z) - 0.04),
-    setPassageCamera: (p, camera, target) => {
-      const eyeZ = Math.max(mouthZ - 0.15, p.z - 0.28);
-      const eyeFloor = eyeZ < mouthZ ? heightAt(c.x, eyeZ) : rampHeight(c.x, eyeZ);
-      const ceiling = eyeZ < coverZ ? Infinity : rampRoofAt(c.x, eyeZ) - 0.06;
-      camera.position.set(c.x, Math.min(eyeFloor + 0.17, ceiling), eyeZ);
-      target.set(c.x, rampHeight(c.x, Math.min(doorZ, p.z + 0.3)) + 0.13, p.z + 0.3);
+    cameraAtMouth: (p) => Boolean(level && Math.abs(p.x - c.x) < c.passageWidth / 2
+      && p.z >= mouthZ - 0.05 && p.z <= mouthZ + 0.6),
+    setPassageCamera: (p, camera, target, direction = 1) => {
+      const eyeZ = p.z - direction * 0.4;
+      const halfWidth = eyeZ >= mouthZ && eyeZ <= doorZ ? passageWidth(eyeZ) - 0.075 : layout.cellSize * 1.5 - 0.075;
+      const eyeX = THREE.MathUtils.clamp(p.x, c.x - halfWidth, c.x + halfWidth);
+      const eyeFloor = eyeZ < mouthZ ? heightAt(eyeX, eyeZ)
+        : eyeZ > doorZ ? layout.heightAt(eyeX, eyeZ) : rampHeight(eyeX, eyeZ);
+      const ceiling = eyeZ < coverZ ? Infinity
+        : (eyeZ > doorZ ? layout.roofAt(eyeX, eyeZ) : rampRoofAt(eyeX, eyeZ)) - 0.065;
+      camera.position.set(eyeX, Math.min(Math.max(eyeFloor + 0.12, p.y + 0.16), ceiling), eyeZ);
+      // Frame the ant itself, rather than a point farther down the slope.
+      target.set(p.x, p.y + 0.045, p.z);
       camera.lookAt(target);
     },
     adjustDecorations, inPassage, passage, openingLength: c?.openingLength, rampRoofAt, entrance: level ? { x: c.x, z: mouthZ } : null };

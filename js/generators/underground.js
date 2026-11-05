@@ -113,6 +113,23 @@ export function createUnderground({ treePosition, barkMaterial, layout = createU
   }
   soil.side = THREE.DoubleSide;
   earthMesh('Enclosed soil walls', soil, wallVertices);
+  const frameMaterial = material(new THREE.MeshStandardMaterial({
+    color: '#684a32', roughness: 1, side: THREE.DoubleSide,
+  }));
+  const frameVertices = [];
+  const frameZ = layout.spawn.z - cellSize * 1.5 + 0.008;
+  const left = layout.spawn.x - cellSize / 2, right = layout.spawn.x + cellSize / 2;
+  const band = 0.1;
+  const frameQuad = (a, b, c, d) => frameVertices.push(...a, ...b, ...c, ...b, ...d, ...c);
+  // Dark soil trim stays outside the clear passage, marking the way to the ramp.
+  for (const [inner, outer] of [[left, left - band], [right, right + band]]) {
+    const low = layout.heightAt(inner, frameZ), high = layout.roofAt(inner, frameZ);
+    frameQuad([inner, low, frameZ], [outer, low, frameZ],
+      [inner, high, frameZ], [outer, high + band, frameZ]);
+  }
+  frameQuad([left, layout.roofAt(left, frameZ), frameZ], [right, layout.roofAt(right, frameZ), frameZ],
+    [left - band, layout.roofAt(left, frameZ) + band, frameZ], [right + band, layout.roofAt(right, frameZ) + band, frameZ]);
+  earthMesh('Dark soil entrance frame', frameMaterial, frameVertices);
   // Shallow irregular clods give the square passages a hand-dug surface.
   // Keep their inward extent below the actor and camera collision margin.
   instances('Uneven soil clods', pebble, soil, walls.length * 3, (object, i) => {
