@@ -1,83 +1,40 @@
 # Beneath the roots
 
-Version 1.1.0 adds the burrow's first underground floor. Walk within the existing burrow interaction radius and press U or select Enter burrow. E and the Zz button allow the ant to sleep anywhere, including underground. At the underground entrance, Return outside becomes available. Entry and exit share the sleep transition's fade style, with a separate overlay so sleep state is independent.
+The underground is part of the surface world. Walk into the rounded burrow mouth at X -2.8, Z -3.84 and descend the covered passage. Walk back up to leave. The same ant, camera, and scene remain active throughout; there is no alternate-scene controller or mode flag.
 
 ## Ownership
 
-| File | Responsibility |
-| --- | --- |
-| `js/config/underground.js` | Floor height, passage cell size, player radius and camera limits |
-| `js/content/underground-layout.js` | Connected floor plan, landmarks, worker paths, and numeric occupancy queries |
-| `js/generators/underground.js` | Procedural soil, ceiling, roots, lights, and resource cleanup |
-| `js/game/underground.js` | Separate scene/camera, player animation, movement, and camera collision |
-| `js/game/game-session.js` | Deferred import, entry/exit routing, surface suspension, discovery persistence, and input routing |
-| `js/ui/underground-map.js` | SVG map, surface image placement, and pinch/wheel/pan viewport |
-| `js/utils/map-bounds.js` | Shared world bounds for SVG and orthographic image alignment |
-| `js/core/surface-map.js` | One-shot surface rendering, pixel readback, and renderer/scene restoration |
-| `js/main.js` | Button/key input, fade, loading progress, error feedback, and autosave |
+- `js/config/content.js`: entrance dimensions, surface terrain features and root extension.
+- `js/config/underground.js`: floor height, roof limit, cell size, actor clearance, and map reference tuning.
+- `js/content/underground-layout.js`: chambers, corridors, root collision footprint, and occupancy queries.
+- `js/generators/underground.js`: contoured earth, solid wall backing, roots, bark bump texture, and resource disposal.
+- `js/generators/surface-chamber.js`: terrain opening, covered ramp, floor support, camera clearance, and vegetation cleanup.
+- `js/core/app-ant-navigation.js` and `js/core/app-camera.js`: shared walking and camera behavior.
+- `js/game/game-session.js`: startup, underground state, map, saves, and surface interaction suspension.
+- `js/ui/underground-map.js` and `js/core/surface-map.js`: map dialog and one-shot surface reference.
 
-`PondApp.setAlternateRuntime(runtime)` accepts an injected scene, camera, and update method. Its alternate frame branch bypasses surface simulation and camera updates while preserving the existing frame listeners for UI. Core does not import gameplay. Seeds, objectives, climbing, surface ambience/radio, and world time suspend during underground play. Exit restores the surface camera and controller state.
+## Walking and camera
 
-The player clone shares the existing ant model's mesh resources with a separate skeleton and mixer. The surface ant stays at its entrance position. Underground disposal releases procedural resources and controls without disposing shared surface meshes. The underground code has no inactive frame subscription.
+The four-unit ramp connects to the nest, store, root chamber, quiet chamber, and return loop. Adjacent rooms leave clearance around the upper ramp. Floor support includes the ramp-to-room seam and stays continuous during ascent. Surface height remains intact above the covered section.
 
-## Layout and camera
+The entrance camera locks along the direction of travel when the ant enters the ramp, with rotation and zoom disabled. Camera handoffs preserve held movement, so approaching the exit from inside does not reverse walking. The camera aims at the ant's body to keep it visible on the slope. Normal controls return in the chambers. Reset view updates the requested underground orbit to face the ant forward; it does not start a surface camera tween. Wall corrections ease toward a safe position and compensate held movement using changes in the rendered camera heading. The camera never moves the ant.
 
-One horizontal underground unit equals one surface unit. The layout is anchored to BURROW_CONFIG, with a lower contoured floor and a low arched ceiling. It contains an entry passage, central nest, seed store, root chamber, quiet chamber, and loop. This is a single floor without excavation or a full map overlay. The main taproot uses the surface tree's actual world X/Z position, with a solid root column and space to walk around it. Smaller roots branch across the chamber roof.
+At the surface exit, the passage camera stays active until the ant clears the mouth. A 750 ms eased orbit then restores the normal outdoor Reset view, including distance and height. The transition follows the moving ant and preserves held movement direction. Orbit interpolation avoids zooming through the ant when the viewing direction changes. Walking back into the ramp cancels the outdoor transition.
 
-The walking camera uses a virtual orbit camera and a bounded sphere sweep against the earth, roof, and root. Its target height follows the contoured floor immediately. When a wall makes the requested orbit too close, bounded alternate yaw/height samples find a clear shoulder position. The ant stays visible; the camera never switches its model off. Player travel retains the shared surface movement and input-heading helpers, with interior collision constraints.
+The central taproot keeps its brown color and receives a procedural bark bump map. The texture affects surface detail, not color, and requires no download. Root extension stays within its horizontal collision footprint. Underground material fill uses no point lights that could illuminate surface props.
 
-Underground Explore is now Map. It opens a native modal dialog and suspends travel, animation, and canvas gestures. The complete first floor is drawn from its live cell layout, with a red player marker and heading, gold entrance marker, structural root, and faint surface tree and exact pond shoreline. Every layer uses the same world X/Z coordinates. the X close button, M, or Escape closes the map; Map text, labels, and controls cannot be selected or long-press copied. The close button follows the existing dialog X styling. Native dialog focus containment prevents interaction with the game behind it. No map image or new model asset is downloaded. Pinch and wheel zoom between 100% and 600%; dragging pans. Mobile opens at 160% around the ant. The same SVG viewBox transforms every layer, preserving world scale. Pond points are sampled from the actual surface shoreline; the tree canopy circle and player/entrance markers are symbols rather than measured footprints. Surface Explore remains unchanged.
+## Map, building, and saves
 
-The entrance has a daylight opening in its end wall. Return outside appears within 1.05 world units of the entrance in walking mode. The same visible button works on desktop and mobile; U remains an optional desktop shortcut. The map marks the entrance and has a visible close button. Mobile exit placement leaves space for the touch hint and movement controls.
+Explore becomes Map below ground. Tap it or press M for the tunnel plan, tapered ramp, position, heading, entrance, and surface reference. X, M, or Escape closes the dialog. Map pauses walking and canvas gestures. Soil between corridors at different floor heights is intentional.
 
-The floor also supports the carrying, material store, and two-leaf bed described in [burrow-building.md](burrow-building.md). Worker ants roam the tunnels. Decorative caps, pale pebbles, circular nest fibers, entrance floor rings, and story triggers remain absent. The structural tree root remains. Broad hemisphere fill, invisible room lights, and a soft camera light illuminate the light brown soil. Reloading resumes outside; re-entry starts at the underground entrance.
+Surface objectives, seed interactions, climbing, and surface audio pause below ground. The world clock continues. Materials, storage, recipes, and beds use the same underground layout and save data. Pickup checks include area and height. Drops validate the walking path separately from the full landing footprint.
 
-## Loading and offline
+Checkpoints validate both tunnel cells and the entrance ramp. Valid ramp saves resume on the ramp rather than at the chamber spawn. Invalid positions fall back to the entrance. Existing save namespaces and inventory formats remain unchanged.
 
-The four underground runtime modules are registered in ON_DEMAND_SHELL. Service-worker installation downloads APP_SHELL only. Entry dynamically imports the underground controller, generates the level, and shares the existing loading UI. Failed first loads leave the surface playable and show a retry message. Once entered online, deferred files cache for later visits. Updated app versions require their matching deferred files to be loaded again.
+## Offline and verification
 
-The production build uses ES module splitting. Startup and shared static dependencies stay in APP_SHELL; underground chunks stay in ON_DEMAND_SHELL. This prevents a dynamic import from being inlined into the first-play bundle. No additional media assets or voice recordings are needed for this version.
+All runtime generation and map modules are pre-cached. No entry fade, deferred scene load, extra ant model, or separate underground camera controller is required.
 
-## Verification
+Run `npm run check`, `npm test`, and `git diff --check`. Headless checks cover geometry, connectivity, complete exit walks, ramp checkpoint restoration, camera reset persistence, held input, map alignment, pickups, drop clearance, and resource cleanup.
 
-Run npm run check, npm test, npm run build:release, npm run check:release, and git diff --check. Headless tests cover floor-plan connectivity, collision containment, worker routes, controller lifecycle, movement, camera obstruction, shared model ownership, and deferred offline requests.
-
-Browser/device verification must be performed by the user. Check desktop and mobile, including Full as the visual reference:
-
-- Enter with U and touch; confirm the fade/loading screen, daylight opening, and visible Return outside button on desktop and mobile.
-- Open Map with M and touch. Confirm the red ant marker, heading, exit, and aligned surface tree/pond; movement stops, and the X close button, M, and Escape resume walking.
-- Orbit and zoom near bends, corners, and slopes. Confirm the ant stays visible, the camera stays inside, and alternate shoulder positions feel comfortable.
-- Move diagonally with the joystick while orbiting with another finger; pause/resume and reset the camera.
-- Visit the chambers and check that only earth, structural roots, and the player are visible.
-- Exit during day and rain; confirm surface camera, movement, sleep, seed loop, bird, and audio still work.
-- Reload while inside; confirm safe surface resume.
-- Enter online, wait for caching, then test entry offline. Test a fresh offline first entry and confirm readable failure and a playable surface.
-- Inspect startup network requests in the release build to confirm the underground chunk waits until entry.
-
-
-Underground wall boundaries meet the floor, roof, and adjacent wall at shared positions. Headless geometry checks require every earth-shell edge to have exactly two incident faces, covering corner seams and roof joins. Structural roots use curved, tapered meshes with capped ends; the central root remains inside its collision footprint.
-
-Surface and underground controllers both call `resolveGroundDirection`, `trackGroundOrbit`, and `stepPlanarMotion` in `js/utils/player-motion.js`. This shares input-change handling, held-heading compensation during camera orbit, and acceleration/braking rather than copying separate heading logic. The underground camera shares surface follow responsiveness, orbit damping, rotation speed, and field of view; enclosed collision and pure-strafe camera behavior remain specific to the interior. Tests compare the actual surface and underground controllers frame by frame through input changes and manual camera orbit.
-
-
-Underground roots clone the main surface tree's bark material and share its existing color, normal, and roughness maps. UVs wrap around each curved root and run along its length at the surface bark's repeat scale. The underground owns the cloned material and root geometry; the surface retains texture ownership, so exiting/disposal does not release its maps. This adds no texture download.
-
-
-## Transparent surface reference
-
-The map overlays a frozen top-down render of the existing surface scene at 20% opacity above the tunnel fills and below the labels/player marker. An orthographic camera uses exactly the same X/Z bounds as the SVG; smaller world Z is at the top. Pinch, pan, and wheel move the image and diagram together. Simple tree/pond outlines remain the fallback until capture succeeds.
-
-Opening the map paints its controls and SVG first, then schedules a single render/readback. The image is reused for that underground visit and invalidated on the next entry. It uses existing geometry and textures, with no download. The capture uses a 512-pixel longest edge on small screens and 1024 on larger ones. Closing the map before capture starts cancels it.
-
-Capture temporarily hides dense ash foliage, the surface player ant, weather/sky, and existing lights. Neutral fill/directional lighting makes the map readable independently of game time. The pond uses its actual surface mesh with a simple water material during capture, avoiding reflection renders. All visibility, water material/callback, fog/background, render target, viewport/scissor, clear settings, XR, and shadow enable state are restored in finally. Temporary targets/materials are disposed; PNG data is released when the interior is disposed or a new visit starts.
-
-The dark entry/exit fade remains text-free. Its two 900 ms fades account for 1.8 seconds before any preparation cost. First entry retains the existing progress/loading screen while underground code loads and procedural geometry prepares; exiting and later entries reuse the prepared interior.
-
-Headless checks verify orthographic corners, world Z/image orientation, common bounds, successful capture, restoration after render/readback/encoding failures, and temporary resource cleanup. Browser verification must confirm actual WebGL rendering, mobile capture delay, alignment with the pond/tree, 20% blending, pinch preservation while the image arrives, and unchanged surface lighting/water after exit.
-
-
-The surface image is sliced by the orthographic camera's near plane, defaulting to 2 world units above the main tree's ground height. Set `surfaceMapCutHeight` in `js/config/underground.js` to adjust it. This clips high trunks and branches, including parts of meshes that cross the cutoff, without changing surface geometry/materials or global renderer clipping state. It affects the map image only; all scenery remains intact during gameplay.
-
-Both overlay settings live in js/config/underground.js with inline comments: surfaceMapCutHeight sets the slice height relative to the tree ground level, and surfaceMapOpacity sets visibility from 0 (invisible) to 1 (solid). Reload after editing configuration. The opacity no longer needs a CSS change.
-
-Three worker ants follow routes through the burrow using the existing ant model and animations. Their movement runs only while the underground world is active and unpaused; animation updates are limited to workers near the player. `workerCount`, `workerSpeed`, and `workerAnimationDistance` are in `js/config/underground.js`. Workers share the original model geometry and materials.
+Browser/device verification remains with the user. Test repeated entry and exit after restoring a save, Reset view and wall approaches, diagonal turning, leaf pickup/drop, map controls, root appearance, and Low/Mid/Full quality. Verify the release and offline behavior with the normal release workflow.

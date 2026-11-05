@@ -166,6 +166,9 @@ const antNavigationMethods = {
   canAntOccupy(x, z) {
     if (!this.ant || !this.ground) return false;
     const config = SCENE_PROPS.ant;
+    const chamber = this.ground.chamber;
+    if (chamber && !chamber.canOccupy(this.ant.group.position, x, z, config.collisionRadius)) return false;
+    if (chamber?.below(this.ant.group.position)) return true;
     const centerDistance = Math.hypot(
       x - this.antMovementCenter.x,
       z - this.antMovementCenter.y,
@@ -241,6 +244,8 @@ const antNavigationMethods = {
   },
 
   enforceGameGroundBlockers() {
+    if (this.ground?.chamber?.below(this.ant?.group.position)
+      || this.ground?.chamber?.inPassage(this.ant?.group.position)) return false;
     if (
       this.antFlightEnabled
       || this.antMotionLocked
@@ -269,6 +274,8 @@ const antNavigationMethods = {
   },
 
   moveAntTo(x, z, { validatePath = true } = {}) {
+    if (validatePath && this.ground?.chamber
+      && !this.ground.chamber.canMove(this.ant.group.position, x, z, SCENE_PROPS.ant.collisionRadius)) return false;
     if (!this.canAntOccupy(x, z)) return false;
     const previousX = this.ant.group.position.x;
     const previousZ = this.ant.group.position.z;
@@ -301,10 +308,11 @@ const antNavigationMethods = {
     this.antWasOnWater = onWater;
     const supportHeight = onWater && this.activePondWater
       ? this.activePondWater.getSurfaceHeight(x, z) + 0.008
-      : this.ground.heightAt(x, z);
+      : (this.ground.chamber?.supportHeight(x, z, this.ant.group.position.y) ?? this.ground.heightAt(x, z));
     this.ant.group.position.set(
       x,
-      supportHeight + SCENE_PROPS.ant.lift + SCENE_PROPS.ant.offset.y,
+      supportHeight + SCENE_PROPS.ant.lift + SCENE_PROPS.ant.offset.y
+        + (this.ground.chamber?.below(this.ant.group.position) ? this.ground.chamber.walkLift?.(x, z) ?? 0 : 0),
       z,
     );
     return true;

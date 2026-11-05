@@ -3,7 +3,7 @@ import { translateMessage } from '../content/messages.js';
 import { PondApp } from '../core/app.js';
 import { AntClimbing } from './ant-climbing.js';
 import { POND_GAME } from '../config/game.js';
-import { DEFAULTS } from '../config/index.js';
+import { DEFAULTS, SCENE_PROPS } from '../config/index.js';
 import { PondGameObjectives } from './game-objectives.js';
 import { ObjectiveChime } from './objective-chime.js';
 import { PondRadioAudio } from './radio-audio.js';
@@ -74,17 +74,27 @@ export class PondGameSession {
     this.birdPreparing = false;
     this.colony = null;
     this.antTrail = null;
-    this.underground = null;
-    this.undergroundDiscoveries = new Set(
-      (Array.isArray(saveState?.underground?.discoveries) ? saveState.underground.discoveries : [])
-        .filter((key) => ['nest', 'store', 'roots', 'quiet'].includes(key)),
-    );
+
   }
 
   async start() {
+    const [{ createUndergroundLayout }, { createUnderground }, { UNDERGROUND_CONFIG }] = await Promise.all([
+      import('../content/underground-layout.js'), import('../generators/underground.js'),
+      import('../config/underground.js'),
+    ]);
+    const c = POND_GAME.surfaceTerrain.chamber;
+    const doorZ = c.z - c.length / 2;
+    const layout = createUndergroundLayout({
+      origin: { x: c.x, z: doorZ + UNDERGROUND_CONFIG.cellSize * 1.5 },
+      entranceClearance: c.passageWidth / 2 + 0.12,
+    });
+    this.burrowLevel = createUnderground({ layout,
+      rootExtension: POND_GAME.surfaceTerrain.rootExtension });
+    const surfaceTerrain = { ...POND_GAME.surfaceTerrain, level: this.burrowLevel };
     this.app = new PondApp(this.container, {
       mode: 'game',
       groundReservations: POND_GAME.groundReservations,
+      surfaceTerrain,
       enablePondStoneInteraction: false,
       antCameraFollow: POND_GAME.antCameraFollow,
       antMovement: POND_GAME.antMovement,
@@ -117,7 +127,7 @@ export class PondGameSession {
     this.objectives.start();
     this.startWorldCycle();
     this.game = new SeedToBurrowGame(this.app, {
-      canCollectObject: () => !this.colony?.state.carried,
+      canCollectObject: (seed) => !this.colony?.state.carried && (!seed || this.colony?.nearestSeed() === seed),
       onStateChange: (snapshot) => {
         this.latestGameSnapshot = snapshot;
         this.objectives?.setSeedSnapshot(snapshot);
@@ -142,6 +152,7 @@ export class PondGameSession {
     this.bird.setDebugEnabled(this.isClimbDebugEnabled());
     this.restoreSaveState(this.saveState);
     this.colony = new BurrowBuilding(this, this.saveState?.colony);
+    if (this.burrowLevel) this.app.ground.chamber.walkLift = (x, z) => this.colony?.walkLift(x, z) ?? 0;
     this.colony.sync();
     await this.restoreUndergroundCheckpoint(this.saveState?.underground);
     this.setAntTrailsEnabled(this.antTrailsEnabled);
@@ -165,7 +176,10 @@ export class PondGameSession {
       colony: this.colony?.save(),
       game: this.game.getSaveState(),
       objectives: this.objectives.getSaveState(),
-      underground: { ...this.underground?.getCheckpoint(), discoveries: [...this.undergroundDiscoveries] },
+      underground: { ...this.saveState?.underground, ...(this.isBelowGround() ? {
+        active: true, mode: 'in-world', position: { x: position.x, z: position.z },
+        heading: facing ? Math.atan2(facing.x, facing.z) : 0,
+      } : { active: false }) },
     };
   }
 
@@ -181,12 +195,32 @@ export class PondGameSession {
   }
 
   getPlayerWorldPosition() {
-    if (this.isUnderground()) return this.underground.position;
     return this.isBirdActive() ? this.bird.position : this.getAntWorldPosition();
   }
 
   prepareUndergroundMapSurface() {
-    return this.isUnderground() ? this.underground.prepareMapSurface() : Promise.resolve(null);
+    if (this.isBelowGround()) return this.captureUndergroundMapSurface();
+    return Promise.resolve(null);
+  }
+
+  async captureUndergroundMapSurface() {
+    if (this.undergroundSurfaceMap) return this.undergroundSurfaceMap;
+    if (!this.app?.renderer.isWebGLRenderer) return null;
+    const app = this.app;
+    const [{ captureSurfaceMap }, { getMapBounds }, { UNDERGROUND_CONFIG }] = await Promise.all([
+      import('../core/surface-map.js'), import('../utils/map-bounds.js'),
+      import('../config/underground.js'),
+    ]);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (app !== this.app || !this.isBelowGround() || !this.exploreActive) return null;
+    const group = app.ground.chamber.group, visible = group.visible;
+    try {
+      group.visible = false;
+      this.undergroundSurfaceMap = captureSurfaceMap(app, getMapBounds(this.getUndergroundMapData()),
+        app.renderer.domElement.clientWidth < 600 ? 512 : 1024, undefined,
+        (app.ground.naturalHeightAt?.(0, 0) ?? 0) + UNDERGROUND_CONFIG.surfaceMapCutHeight);
+      return this.undergroundSurfaceMap;
+    } finally { group.visible = visible; }
   }
 
   getBuildingStatus() {
@@ -207,79 +241,61 @@ export class PondGameSession {
   planLeafBed() { return this.planBuild('leaf-bed'); }
 
   getUndergroundMapData() {
-    return this.isUnderground() ? { ...this.underground.getMapData(), colony: this.colony?.markers() } : null;
+    if (this.isBelowGround()) {
+      const chamber = this.app.ground.chamber;
+      const p = this.getAntWorldPosition(), pond = this.app.ground.pondProfile;
+      return { layout: { ...chamber.layout, exit: chamber.entrance }, passage: chamber.passage,
+        position: { x: p.x, z: p.z },
+        heading: this.app.ant.group.rotation.y - THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset),
+        pond: pond ? Array.from({ length: 64 }, (_, i) => pond.pointAt(i / 64 * Math.PI * 2)) : [],
+        pondCenter: pond?.center ?? null, surfaceMap: this.undergroundSurfaceMap,
+        colony: this.colony?.markers() };
+    }
+    return null;
   }
 
-  isUnderground() {
-    return this.underground?.active ?? false;
+  isBelowGround() {
+    return Boolean(this.app?.ground?.chamber?.below(this.app.ant?.group.position));
   }
 
-  canUseBurrow() {
-    if (!this.app || this.paused || this.exploreActive || this.isBirdActive()
-      || this.isClimbing() || this.isFlightEnabled() || this.birdPreparing
-      || this.app.isAntAnimationBusy()) return false;
-    if (this.isUnderground()) return this.underground.canExit();
-    const position = this.getAntWorldPosition();
-    const entrance = this.game?.burrowPosition;
-    return Boolean(position && entrance
-      && Math.hypot(position.x - entrance.x, position.z - entrance.z) <= POND_GAME.sleep.radius);
+  getBurrowLevel() { return this.burrowLevel; }
+  getBurrowScene() { return this.app?.world; }
+
+  syncUnderground() {
+    if (!this.burrowLevel) return;
+    const active = this.isBelowGround();
+    if (active === this.undergroundActive) return;
+    this.undergroundActive = active;
+    this.objectives?.setPaused(this.paused || active);
+    this.game?.setPaused(this.paused || active, { preserveMovement: !this.paused });
+    this.climbing?.setPaused(this.paused || active);
+    this.radioAudio?.setEnabled(!active);
+    this.ambienceAudio?.setEnabled(this.soundEnabled && !active);
+    this.colony?.sync();
+    this.emitPrompt();
+    this.emitGameState();
   }
+
 
   async restoreUndergroundCheckpoint(checkpoint) {
     if (checkpoint?.active !== true) return false;
-    this.restoringUndergroundCheckpoint = true;
-    await this.prepareUnderground((value) => this.onLoadProgress(96 + value * 0.03));
-    const restored = this.setUndergroundActive(true, checkpoint);
-    // A failed load must preserve the last checkpoint instead of autosaving outside.
-    this.restoringUndergroundCheckpoint = !restored;
-    return restored;
-  }
-
-  async prepareUnderground(onProgress = () => {}) {
-    if (this.underground) return;
-    const app = this.app;
-    const { UndergroundWorld } = await import('./underground.js');
-    if (!app || app !== this.app || app.disposed) throw new Error('Session ended during burrow loading.');
-    const interior = new UndergroundWorld(app);
-    interior.walkLift = (x,z) => this.colony?.walkLift(x,z) ?? 0;
-    try {
-      await interior.start({ onProgress });
-      if (app !== this.app || app.disposed) throw new Error('Session ended during burrow loading.');
-      this.underground = interior;
-    } catch (error) {
-      interior.dispose();
-      throw error;
-    }
-  }
-
-  setUndergroundActive(active, checkpoint = null) {
-    if (!this.app || !this.underground) return false;
-    this.clearMovementInput();
-    this.exploreActive = false;
-    this.app.setExploreTouchMode(false);
-    this.app.setAntLocatorActive(false);
-    if (active) {
-      this.underground.activate(checkpoint);
-      this.underground.setPaused(this.paused);
-      this.app.controls.enabled = false;
-      this.app.setAlternateRuntime(this.underground);
-      this.radioAudio?.setEnabled(false);
-      this.ambienceAudio?.setEnabled(false);
-    } else {
-      this.underground.deactivate();
-      this.app.setAlternateRuntime(null);
+    if (this.burrowLevel) {
+      const layout = this.burrowLevel.layout;
+      const chamber = this.app.ground.chamber;
+      const p = checkpoint.position;
+      const position = p && (layout.isWalkable(p.x, p.z, layout.antRadius) || chamber.inPassage(p, layout.antRadius)) ? p : layout.spawn;
+      const y = chamber.supportHeight(position.x, position.z, -Infinity) + SCENE_PROPS.ant.lift;
+      this.app.setAntPose(new THREE.Vector3(position.x, y, position.z), { heading: checkpoint.heading });
       this.app.setView('ant', true);
-      this.radioAudio?.setEnabled(true);
-      this.ambienceAudio?.setEnabled(this.soundEnabled);
+      this.restoringUndergroundCheckpoint = false;
+      this.syncUnderground();
+      return true;
     }
-    this.colony?.sync();
-    this.setPaused(this.paused);
-    this.emitPrompt();
-    return true;
+    return false;
   }
 
   canPlayBird() {
-    return Boolean(!this.isUnderground() && !this.colony?.busyHands && this.bird && (
+    return Boolean(!this.isBelowGround() && !this.colony?.busyHands && this.bird && (
       POND_GAME.debug.enabled || isBirdRewardUnlocked(this.objectives?.getSnapshot())
     ));
   }
@@ -342,11 +358,6 @@ export class PondGameSession {
   }
 
   getCameraDebugValues() {
-    if (this.isUnderground()) return {
-      position: this.underground.camera.position,
-      target: this.underground.controls.target,
-      rotation: this.underground.camera.rotation,
-    };
     if (!this.app?.camera || !this.app?.controls) return null;
     return {
       position: this.app.camera.position,
@@ -384,20 +395,19 @@ export class PondGameSession {
 
   setPaused(paused) {
     this.paused = Boolean(paused);
-    this.objectives?.setPaused(this.paused || this.isBirdActive() || this.isUnderground());
-    this.game?.setPaused(this.paused || this.isBirdActive() || this.isUnderground());
-    this.climbing?.setPaused(this.paused || this.isUnderground());
+    this.objectives?.setPaused(this.paused || this.isBirdActive() || this.isBelowGround());
+    this.game?.setPaused(this.paused || this.isBirdActive() || this.isBelowGround());
+    this.climbing?.setPaused(this.paused || this.isBelowGround());
+    if (this.isBelowGround()) this.app.controls.enabled = !this.paused && !this.exploreActive;
     this.bird?.setPaused(paused);
-    this.underground?.setPaused(paused);
     this.clearMovementInput();
-    if (this.isUnderground()) this.emitPrompt();
+    if (this.isBelowGround()) this.emitPrompt();
   }
 
   clearMovementInput() {
     this.app?.clearAntMovement();
     this.climbing?.clearMovementInput();
     this.bird?.clearInput();
-    this.underground?.clearInput();
   }
 
   setMovementAxes(horizontal, forward) {
@@ -405,10 +415,6 @@ export class PondGameSession {
     const blocked = this.paused || this.exploreActive;
     const x = blocked ? 0 : horizontal;
     const y = blocked ? 0 : forward;
-    if (this.isUnderground()) {
-      this.underground.setMovementAxes(x, y);
-      return true;
-    }
     if (this.isBirdActive()) {
       this.bird.setMovementAxes(x, y);
       return true;
@@ -420,17 +426,12 @@ export class PondGameSession {
 
   resetCameraView() {
     if (!this.app || this.paused || this.exploreActive) return false;
-    if (this.isUnderground()) { this.underground.resetCamera(); return true; }
     return this.isBirdActive() ? this.bird.resetCamera() : this.app.resetAntCameraView();
   }
 
   setMovementKey(direction, pressed) {
     if (!this.app) return false;
     if (this.paused || this.exploreActive) pressed = false;
-    if (this.isUnderground()) {
-      this.underground.setMovementKey(direction, pressed);
-      return true;
-    }
     if (this.isBirdActive()) {
       this.bird.setMovementKey(direction, pressed);
       return true;
@@ -446,10 +447,6 @@ export class PondGameSession {
 
   setAntRunning(enabled) {
     if (!this.app) return false;
-    if (this.isUnderground()) {
-      this.underground.setRunning(Boolean(enabled) && !this.paused && !this.exploreActive);
-      return true;
-    }
     if (this.isBirdActive()) return false;
     this.app.setAntRunning(Boolean(enabled) && !this.paused && !this.exploreActive && !this.isClimbing());
     return true;
@@ -460,7 +457,7 @@ export class PondGameSession {
   }
 
   toggleClimb() {
-    if (this.paused || this.exploreActive || this.isFlightEnabled() || this.isBirdActive() || this.isUnderground()) return false;
+    if (this.paused || this.exploreActive || this.isFlightEnabled() || this.isBirdActive() || this.isBelowGround()) return false;
     const previousPhase = this.isClimbing();
     const result = this.climbing?.toggleSurfaceRoam() ?? false;
     if (this.isClimbing() !== previousPhase) this.clearMovementInput();
@@ -498,7 +495,7 @@ export class PondGameSession {
   }
 
   toggleFlight() {
-    if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive() || this.isUnderground() || this.colony?.busyHands) return false;
+    if (!this.isClimbDebugEnabled() || !this.app || this.isBirdActive() || this.isBelowGround() || this.colony?.busyHands) return false;
     if (!this.isFlightEnabled() && !this.climbing?.exitSurfaceForDebug()) return false;
     this.clearMovementInput();
     const enabled = this.app.setAntFlightEnabled(!this.app.isAntFlightEnabled(), {
@@ -517,7 +514,7 @@ export class PondGameSession {
       this.app
       && this.exploreActive
       && !this.isBirdActive()
-      && !this.isUnderground()
+      && !this.isBelowGround()
       && this.isClimbDebugEnabled()
       && POND_GAME.debug?.allowExploreRelocation === true
       && !this.isClimbing()
@@ -541,8 +538,9 @@ export class PondGameSession {
     if (!this.app || nextActive === this.exploreActive) return true;
     this.exploreActive = nextActive;
     this.clearMovementInput();
-    if (this.isUnderground()) {
-      this.underground.setExploreActive(nextActive);
+    if (this.isBelowGround()) {
+      this.app.setAntMotionLocked(nextActive);
+      this.app.controls.enabled = !nextActive && !this.paused;
       this.emitPrompt();
       return true;
     }
@@ -596,7 +594,7 @@ export class PondGameSession {
     this.soundEnabled = Boolean(enabled);
     this.objectiveChime?.setEnabled(enabled);
     this.game?.setSoundEnabled(enabled);
-    this.ambienceAudio?.setEnabled(enabled && !this.isUnderground());
+    this.ambienceAudio?.setEnabled(enabled && !this.isBelowGround());
     return this.soundEnabled;
   }
 
@@ -617,7 +615,7 @@ export class PondGameSession {
   }
 
   canDebugControlRadio() {
-    return !this.isUnderground() && this.isClimbDebugEnabled() && POND_GAME.debug?.allowRadioControls === true;
+    return !this.isBelowGround() && this.isClimbDebugEnabled() && POND_GAME.debug?.allowRadioControls === true;
   }
 
   canDebugControlWeather() {
@@ -662,7 +660,7 @@ export class PondGameSession {
   }
 
   canAdjustRadio() {
-    return Boolean(this.app && !this.paused && !this.exploreActive && !this.isBirdActive() && !this.isUnderground()
+    return Boolean(this.app && !this.paused && !this.exploreActive && !this.isBirdActive() && !this.isBelowGround()
       && !this.isFlightEnabled() && this.climbing?.isOnRadio());
   }
 
@@ -714,7 +712,9 @@ export class PondGameSession {
   }
 
   updateWorldCycle({ delta = 0 } = {}) {
-    if (this.paused || !this.app || this.isUnderground()) return;
+    this.syncUnderground();
+    if (this.isBelowGround() && this.exploreActive) return;
+    if (this.paused || !this.app) return;
     const safeDelta = Math.max(0, Math.min(Number(delta) || 0, 0.25));
     const secondsPerGameHour = Number(POND_GAME.time?.secondsPerGameHour);
     if (POND_GAME.time?.enabled !== false && secondsPerGameHour > 0) {
@@ -731,6 +731,7 @@ export class PondGameSession {
       hour,
       raining: this.weatherPhase === 'rain',
     });
+    if (this.isBelowGround()) this.objectives?.updateUndergroundShelter(safeDelta);
     this.radioAudio?.update({
       delta: safeDelta,
       hour,
@@ -791,7 +792,7 @@ export class PondGameSession {
   }
 
   emitPrompt() {
-    if (this.isUnderground()) {
+    if (this.isBelowGround()) {
       this.onPromptChange(this.exploreActive ? 'underground.prompt.explore' : 'underground.prompt.walk');
       return;
     }
@@ -830,9 +831,6 @@ export class PondGameSession {
     this.antTrail = null;
     this.colony?.dispose();
     this.colony = null;
-    this.app?.setAlternateRuntime(null);
-    this.underground?.dispose();
-    this.underground = null;
     this.bird?.dispose();
     this.bird = null;
     if (this.app?.readerClimbingController === this.climbing) {
@@ -852,6 +850,8 @@ export class PondGameSession {
     this.audioListener?.gain?.disconnect();
     this.audioListener = null;
     this.app?.dispose();
+    this.burrowLevel = null;
+    this.undergroundSurfaceMap = null;
     this.game = null;
     this.climbing = null;
     this.app = null;

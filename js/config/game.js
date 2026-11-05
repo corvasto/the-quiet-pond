@@ -7,6 +7,7 @@ import {
   OFFERING_CONFIG,
   SEED_CONFIG,
   SLEEP_CONFIG,
+  SURFACE_TERRAIN,
 } from './content.js';
 import { RADIO_AUDIO_CONFIG } from './radio.js';
 import { AMBIENCE_CONFIG } from './ambience.js';
@@ -37,6 +38,7 @@ export const POND_GAME = Object.freeze({
   antMovement: ANT_MOVEMENT_CONFIG,
   antMovementRadius: ANT_MOVEMENT_RADIUS,
   groundReservations: GAME_GROUND_RESERVATIONS,
+  surfaceTerrain: SURFACE_TERRAIN,
   climbing: CLIMBING_CONFIG,
   birdFlight: BIRD_FLIGHT_CONFIG,
 });

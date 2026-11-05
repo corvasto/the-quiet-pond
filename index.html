@@ -94,7 +94,7 @@
   </section>
 
   <div class="game-hint">
-    <div id="underground-hint" class="game-hint__row" hidden data-i18n="underground.hint">WASD / arrows: move · Shift: run · Drag: look · C: reset · M: explore · U: exit at entrance</div>
+    <div id="underground-hint" class="game-hint__row" hidden data-i18n="underground.hint">WASD / arrows: move · Shift: run · Drag: look · C: reset · M: map · Walk up the entrance to leave</div>
     <div id="ant-hint" class="game-hint__rows">
       <div class="game-hint__row">
         <span><kbd>WASD</kbd> / <kbd>↑←↓→</kbd> <span data-i18n="ui.move">Move</span></span>
@@ -119,7 +119,6 @@
   <div id="building-status" class="card-notice building-notice" role="status" aria-live="polite" hidden></div>
   <div class="context-actions">
     <div class="burrow-actions">
-      <button id="burrow-button" class="sleep-button" type="button" hidden data-i18n="underground.enter">Enter burrow</button>
     </div>
     <div id="building-actions" class="building-actions" hidden><div id="building-buttons"></div></div>
   </div>
@@ -165,7 +164,6 @@
     </div>
   </div>
   <div id="sleep-fade" class="sleep-fade" aria-hidden="true" hidden><span>Zzzz...</span></div>
-  <div id="burrow-fade" class="sleep-fade" aria-hidden="true" hidden></div>
   <button id="radio-control-button" class="sleep-button" type="button" hidden data-i18n="radio.control.button">Radio volume</button>
   <div id="radio-control-dialog" class="game-dialog" role="dialog" aria-modal="true" aria-labelledby="radio-control-title" hidden>
     <div class="game-dialog__frame radio-control-frame">

@@ -56,7 +56,7 @@ const WORLD_QUERY_METHODS = {
     const onWater = this.ground.containsPond?.(x, z, -0.045) ?? false;
     const supportHeight = onWater && this.activePondWater
       ? this.activePondWater.getSurfaceHeight(x, z) + 0.008
-      : this.ground.heightAt(x, z);
+      : (this.ground.chamber?.supportHeight(x, z, this.ant?.group.position.y) ?? this.ground.heightAt(x, z));
     return target.set(x, supportHeight, z);
   },
 

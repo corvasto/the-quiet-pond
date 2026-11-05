@@ -50,7 +50,7 @@ Keyboard and analog input drive camera-relative ground motion with acceleration/
 
 ## State and offline operation
 
-Underground play uses a deferred controller with a separate scene, camera, and cloned actors. The session injects it through `PondApp.setAlternateRuntime()`, which bypasses surface simulation while keeping UI frame notifications. Surface actors and terrain stay intact, and surface controllers pause until exit. See [underground.md](underground.md) for ownership, loading, collision, and verification.
+Underground play shares the surface scene, ant, and camera. The session injects its prepared procedural level into the runtime, which provides continuous floor support and camera clearance for the entrance ramp and tunnel network. Surface interactions pause below ground while the same world continues. See [underground.md](underground.md).
 
 `js/main.js` owns save slots and language preferences. Controllers serialize versioned progress to project-specific browser keys, not render resources. The service worker caches the shell, imports, models, and audio; it handles root/index navigation and limits cache access to this app's scope/version. See [pwa.md](pwa.md).
 

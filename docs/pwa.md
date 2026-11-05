@@ -10,9 +10,9 @@
 
 Cache prefix: `the-quiet-pond-v`. Activation removes only older matching releases, preserving other apps' caches. Requests must match worker origin/scope; reads use the current version's cache.
 
-`APP_SHELL` lists `index.html`, CSS, manifest, icon, startup runtime imports, local Three.js dependencies, models, and audio files used by the surface profiles. Underground imports are registered in `ON_DEMAND_SHELL`; installation skips these files. Entry loads and caches them, with a post-entry message covering entry before worker control. A first offline underground visit needs a previous successful online load of the same app version. Add new runtime dependencies to the appropriate registry.
+`APP_SHELL` lists `index.html`, CSS, manifest, icon, all game runtime imports, local Three.js dependencies, models, and audio. Underground layout, generation, and map dependencies are installed with the application shell. Add new runtime dependencies to this registry.
 
-The release build splits ES modules, follows static imports to register eager startup/shared chunks, and registers deferred chunks separately. See [underground.md](underground.md) for the first-floor loading and verification flow.
+The release build splits ES modules and pre-caches every generated runtime chunk, including dynamic imports used during startup. There is no optional underground cache group or entry notification. See [underground.md](underground.md) for verification.
 
 Only root and `index.html` document navigation is handled. Offline requests, including `?q=mid`, fall back to cached `index.html`; other document requests pass through.
 

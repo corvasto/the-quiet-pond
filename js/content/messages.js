@@ -62,19 +62,13 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'underground.map.description': defineMessage({ en: 'Tunnel map with your position, heading, entrance, and surface tree and pond.', id: 'Peta lorong dengan posisi, arah, pintu masuk, pohon dan kolam di permukaan.' }),
   'underground.map.close': defineMessage({ en: 'Close map', id: 'Tutup peta' }),
   'underground.map.entrance': defineMessage({ en: 'Entrance / exit', id: 'Pintu masuk / keluar' }),
+  'underground.map.ramp': defineMessage({ en: 'Sloping entrance passage', id: 'Lorong masuk menurun' }),
   'underground.map.tree': defineMessage({ en: 'Tree above', id: 'Pohon di atas' }),
   'underground.map.pond': defineMessage({ en: 'Pond above', id: 'Kolam di atas' }),
   'underground.map.you': defineMessage({ en: 'You', id: 'Kamu' }),
-  'underground.enter': defineMessage({ en: 'Enter burrow', id: 'Masuk liang' }),
-  'underground.exit': defineMessage({ en: 'Return outside', id: 'Kembali keluar' }),
-  'underground.loading': defineMessage({ en: 'Following the roots below', id: 'Mengikuti akar ke bawah' }),
-  'underground.loadFailed': defineMessage({
-    en: 'The burrow could not load. Connect to the internet for your first visit, then try again at the entrance.',
-    id: 'Liang belum dapat dimuat. Hubungkan ke internet untuk kunjungan pertama, lalu coba lagi di pintu masuk.',
-  }),
   'underground.hint': defineMessage({
-    en: 'WASD / arrows: move · Shift: run · Drag: look · C: reset · M: map · U: exit at entrance',
-    id: 'WASD / panah: bergerak · Shift: lari · Seret: lihat · C: atur kamera · M: peta · U: keluar di pintu masuk',
+    en: 'WASD / arrows: move · Shift: run · Drag: look · C: reset · M: map · Walk up the entrance to leave',
+    id: 'WASD / panah: bergerak · Shift: lari · Seret: lihat · C: atur kamera · M: peta · Naiki jalan masuk untuk keluar',
   }),
   'underground.prompt.walk': defineMessage({
     en: 'Beneath the roots. Explore the tunnels and chambers. Return to the entrance to go outside.',

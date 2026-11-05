@@ -23,17 +23,12 @@ assert.ok(!css.includes('background-title.png'), 'Bundled CSS should omit the re
 const appShellBlock = serviceWorker.match(/const APP_SHELL = (\[[\s\S]*?\]);/)?.[1];
 assert.ok(appShellBlock, 'Release service worker should contain a generated app shell.');
 const appShell = JSON.parse(appShellBlock);
-const onDemandBlock = serviceWorker.match(/const ON_DEMAND_SHELL = (\[[\s\S]*?\]);/)?.[1];
-assert.ok(onDemandBlock, 'Release service worker should register deferred feature chunks.');
-const onDemandShell = JSON.parse(onDemandBlock);
-assert.ok(onDemandShell.length > 0, 'Underground runtime should remain in deferred release chunks.');
-for (const entry of [...appShell, ...onDemandShell]) {
+for (const entry of appShell) {
   assert.ok(exists(entry.replace(/^\.\//, '')), `Release cache entry should exist: ${entry}`);
 }
-for (const entry of onDemandShell) assert.ok(!appShell.includes(entry), `Deferred chunk should not be downloaded on installation: ${entry}`);
 const eagerScripts = appShell.filter((entry) => entry.endsWith('.js'));
 assert.ok(eagerScripts.reduce((size, entry) => size + read(entry).length, 0) > 100_000, 'Eager chunks should include the game and shared Three.js runtime.');
-const registeredScripts = new Set([...eagerScripts, ...onDemandShell]);
+const registeredScripts = new Set(eagerScripts);
 for (const entry of registeredScripts) {
   const code = read(entry);
   assert.ok(!/from\s*["']three(?:\/|["'])/.test(code), `Chunk should use the bundled Three.js runtime: ${entry}`);

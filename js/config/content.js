@@ -43,6 +43,16 @@ export const BURROW_CONFIG = Object.freeze({
   shelterRadius: 0.78,
 });
 
+export const SURFACE_TERRAIN = Object.freeze({
+  cameraDistance: 1.5,
+  chamber: Object.freeze({ x: BURROW_CONFIG.position.x, z: BURROW_CONFIG.position.z - 0.24 + 4 + 1.2,
+    width: 2.2, length: 2.4, rampLength: 4, doorwayWidth: 0.52, openingLength: 0.44, cornerRadius: 0.07,
+    passageWidth: 1.4, roofThickness: 0.08, depth: 1.15 }),
+  bumps: Object.freeze({ x: -12, z: -10, radius: 2.1, height: 0.35 }),
+  dip: Object.freeze({ x: -10, z: -11.5, radius: 0.85, height: -0.22 }),
+  rootExtension: 0.35,
+});
+
 export const SLEEP_CONFIG = Object.freeze({
   radius: 0.9,
   morningHour: 7,

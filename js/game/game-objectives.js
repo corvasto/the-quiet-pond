@@ -363,6 +363,7 @@ export class PondGameObjectives {
   }
 
   isNearShelter(position) {
+    if (this.app.ground?.chamber?.isSheltered(position)) return true;
     const padding = Math.max(0, Number(POND_GAME.objectives.shelterPadding) || 0);
     const nearBurrow = this.burrowShelterPosition
       && Math.hypot(
@@ -378,6 +379,14 @@ export class PondGameObjectives {
     }
     return nearBurrow || distanceToAny(position, this.landmarkPositions.shelter)
       <= POND_GAME.objectives.shelterRadius;
+  }
+
+  updateUndergroundShelter(delta) {
+    const position = this.app.getAntWorldPosition(this.antPosition);
+    if (!position) return;
+    this.updateTask('shelter', this.raining, Boolean(this.app.ground?.chamber?.isSheltered(position)),
+      Math.max(0, Math.min(delta, 0.25)));
+    this.emitChange();
   }
 
   buildSnapshot() {

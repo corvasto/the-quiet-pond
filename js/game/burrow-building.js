@@ -54,17 +54,17 @@ export class BurrowBuilding {
     this.unsubscribe = this.app.onFrame((frame) => this.update(frame));
   }
 
-  get area() { return this.session.isUnderground() ? 'burrow' : 'surface'; }
-  get actor() { return this.session.isUnderground() ? this.session.underground.player.group : this.app.ant.group; }
+  get area() { return this.session.isBelowGround() ? 'burrow' : 'surface'; }
+  get actor() { return this.app.ant.group; }
   get busyHands() { return Boolean(this.state.carried || this.session.game.carriedSeed || this.session.game.phase === 'offeringCarrying'); }
   get blocked() { return this.session.paused || this.session.exploreActive || this.session.isBirdActive() || this.session.isFlightEnabled() || this.session.birdPreparing; }
   get grounded() { return !this.blocked && !this.session.isClimbing() && !this.app.isAntAnimationBusy(); }
   height(area, x, z) {
-    return area === 'surface' ? this.app.ground.heightAt(x, z) : this.session.underground?.level.layout.heightAt(x, z) ?? -5;
+    return area === 'surface' ? this.app.ground.heightAt(x, z) : this.session.getBurrowLevel()?.layout.heightAt(x, z) ?? -5;
   }
   floorClear(area, x, z, radius) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
-    const layout = this.session.underground?.level.layout;
+    const layout = this.session.getBurrowLevel()?.layout;
     if (area === 'burrow') return Boolean(layout?.isWalkable(x, z, radius));
     if (this.app.ground.containsPond?.(x, z, radius + 0.06)) return false;
     for (let i = -1; i < footprint.length; i++) {
@@ -95,14 +95,15 @@ export class BurrowBuilding {
     if (build && area !== 'burrow') return 'building.burrowOnly';
     // A build must be reachable, but its full footprint only needs to fit at the destination.
     // Dropped objects still sweep their whole footprint to avoid crossing water or walls.
-    const sweepRadius = build ? (this.session.underground?.level.layout.antRadius ?? radius) : radius;
+    const sweepRadius = build || area === 'burrow' ? (this.session.getBurrowLevel()?.layout.antRadius ?? radius) : radius;
     for (let i = 0; i <= 8; i++) {
       const t = i / 8;
       if (!this.floorClear(area, position.x + (this.candidate.x - position.x) * t,
         position.z + (this.candidate.z - position.z) * t, sweepRadius)) return 'building.noRoom';
     }
+    if (!this.floorClear(area, this.candidate.x, this.candidate.z, radius)) return 'building.noRoom';
     if (!this.slopeClear(area, this.candidate.x, this.candidate.z, radius)) return 'building.noRoom';
-    const entrance = area === 'burrow' ? this.session.underground.level.exit : POND_GAME.burrow.position;
+    const entrance = area === 'burrow' ? this.session.getBurrowLevel().exit : POND_GAME.burrow.position;
     if (Math.hypot(this.candidate.x - entrance.x, this.candidate.z - entrance.z) < radius + 0.85) return 'building.entranceClear';
     if (build && !this.floorClear(area, this.candidate.x, this.candidate.z, recipe.clearance)) return 'building.chamberOnly';
     if (area === 'burrow' && this.storePosition && Math.hypot(this.candidate.x - this.storePosition.x, this.candidate.z - this.storePosition.z) < radius + 0.35) return 'building.noRoom';
@@ -116,7 +117,8 @@ export class BurrowBuilding {
   }
   nearStore() {
     const p = this.session.getPlayerWorldPosition();
-    return this.area === 'burrow' && this.storePosition && Math.hypot(p.x - this.storePosition.x, p.z - this.storePosition.z) < CONFIG.interactionRadius;
+    return this.area === 'burrow' && this.storePosition && Math.abs(p.y - this.height('burrow', p.x, p.z)) < 0.18
+      && Math.hypot(p.x - this.storePosition.x, p.z - this.storePosition.z) < CONFIG.interactionRadius;
   }
   nearestSeed() {
     const p = this.session.getPlayerWorldPosition();
@@ -126,6 +128,7 @@ export class BurrowBuilding {
   nearestMaterial() {
     const p = this.session.getPlayerWorldPosition();
     return this.grounded ? this.state.items.find((item) => item.state === 'loose' && item.area === this.area
+      && Math.abs(p.y - (this.meshes.get(item.id)?.position.y ?? this.height(item.area, item.x, item.z))) <= 0.18
       && Math.hypot(item.x - p.x, item.z - p.z) <= CONFIG.pickupRadius) : null;
   }
   nearestLeaf() { return this.nearestMaterial(); }
@@ -265,16 +268,16 @@ export class BurrowBuilding {
   }
 
   sync() {
-    if (this.session.underground && this.burrow.parent !== this.session.underground.scene) {
-      this.session.underground.scene.add(this.burrow);
-      this.storePosition = this.session.underground.level.landmarks.store;
+    if (this.session.getBurrowLevel() && this.burrow.parent !== this.session.getBurrowScene()) {
+      this.session.getBurrowScene().add(this.burrow);
+      this.storePosition = this.session.getBurrowLevel().landmarks.store;
       for (const item of this.state.items) if(item.state==='loose' && item.area==='burrow'
         && !this.floorClear('burrow',item.x,item.z,MATERIAL_DEFINITIONS[item.type].radius)) item.state='stored';
       for(const build of [...this.state.builds]) {
         if(!this.floorClear('burrow',build.x,build.z,BUILD_RECIPES[build.recipe].clearance)) this.state.removeBuild(build.id);
       }
       for(const seed of this.session.game.activeSeeds) if(seed.area==='burrow') {
-        if(!this.floorClear('burrow',seed.position.x,seed.position.z,0.08)) seed.position.copy(this.session.underground.level.spawn);
+        if(!this.floorClear('burrow',seed.position.x,seed.position.z,0.08)) seed.position.copy(this.session.getBurrowLevel().spawn);
         seed.position.y=this.height('burrow',seed.position.x,seed.position.z)+0.055;
         seed.baseY=seed.position.y; seed.visual.position.copy(seed.position); this.burrow.add(seed.visual);
       }

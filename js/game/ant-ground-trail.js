@@ -83,8 +83,8 @@ export class AntGroundTrail {
       this.colors.needsUpdate = true;
     }
     const session = this.session;
-    this.mesh.visible = this.activeCount > 0 && !session.isUnderground();
-    if (session.paused || session.exploreActive || session.isUnderground() || session.isBirdActive()
+    this.mesh.visible = this.activeCount > 0 && !session.isBelowGround();
+    if (session.paused || session.exploreActive || session.isBelowGround() || session.isBirdActive()
       || session.isFlightEnabled() || session.isClimbing() || this.app.isAntAnimationBusy()
       || !this.app.getAntWorldPosition(this.position)) {
       this.tracking = false; this.distance = 0; return;

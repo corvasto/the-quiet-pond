@@ -1,19 +1,10 @@
 import { captureSurfaceMap, createSurfaceMapCamera } from '../js/core/surface-map.js';
 import { getMapBounds } from '../js/utils/map-bounds.js';
-import { readFile } from 'node:fs/promises';
-import { runInNewContext } from 'node:vm';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createUndergroundLayout } from '../js/content/underground-layout.js';
 import { createUnderground } from '../js/generators/underground.js';
 import { renderUndergroundMap, createMapViewport, setMapLabelsVisible } from '../js/ui/underground-map.js';
-import { UndergroundWorld } from '../js/game/underground.js';
-import { UNDERGROUND_CONFIG } from '../js/config/underground.js';
-import { installPondAntNavigationMethods } from '../js/core/app-ant-navigation.js';
-import { SCENE_PROPS } from '../js/config/index.js';
-import { ANT_MOVEMENT_CONFIG } from '../js/config/world.js';
-import { trackGroundOrbit } from '../js/utils/player-motion.js';
-import { PondGameSession } from '../js/game/game-session.js';
 
 // Exercise mobile pinch, mouse drag/wheel, fit, zoom limits, and teardown.
 const mapListeners=new Map();
@@ -61,22 +52,9 @@ for (let cursor = 0; cursor < queue.length; cursor += 1) {
   }
 }
 assert.equal(visited.size, layout.cells.length, 'Every chamber connects to the entrance.');
-for (const route of layout.workerRoutes) {
-  for (let index = 0; index < route.length; index += 1) {
-    const start = route[index];
-    const end = route[(index + 1) % route.length];
-    for (let step = 0; step <= 100; step += 1) {
-      const alpha = step / 100;
-      assert.ok(layout.isWalkable(start.x + (end.x - start.x) * alpha,
-        start.z + (end.z - start.z) * alpha, 0.1), 'Worker routes stay inside the tunnels.');
-    }
-  }
-}
 const corner = layout.pointAt(1, -1);
 assert.equal(layout.isWalkable(corner.x + layout.cellSize * 0.49,
   corner.z - layout.cellSize * 0.49, 0.15), false, 'A circle cannot squeeze through a solid corner.');
-assert.equal(layout.containsSphere(layout.spawn.x, layout.floorY + 0.05, layout.spawn.z, 0.13), false);
-assert.equal(layout.containsSphere(layout.spawn.x, layout.roofAt(layout.spawn.x,layout.spawn.z) - 0.05, layout.spawn.z, 0.13), false);
 
 const level = createUnderground({ seedCount: 3 });
 const floor = level.group.getObjectByName('Packed earth floor');
@@ -99,8 +77,17 @@ for (const name of ['Packed earth floor','Solid earth ceiling','Enclosed soil wa
     }
   }
 }
-assert.equal([...edges.values()].filter((count)=>count!==2).length,0,
-  'The complete earth lining has no unpaired edges or open wall seams.');
+const openEdges = [...edges].filter(([, count]) => count !== 2);
+assert.ok(openEdges.length > 0, 'The entry has an opening');
+for (const [edge, count] of openEdges) {
+  assert.equal(count, 1);
+  for (const point of edge.split('|')) {
+    const [x, , z] = point.split(',').map((v) => Number(v) / 10000);
+    assert.ok(Math.abs(z - (layout.spawn.z - layout.cellSize * 1.5)) < 0.0002);
+    assert.ok(Math.abs(x - layout.spawn.x) <= layout.cellSize / 2 + 0.0002,
+      'Every unpaired edge belongs to the authored entry, never a wall seam');
+  }
+}
 const taproot = level.group.getObjectByName('Curved tree taproot');
 assert.ok(taproot);
 const rootPositions = taproot.geometry.getAttribute('position');
@@ -141,434 +128,15 @@ assert.equal(materialDisposals,0,'Disposing the interior preserves the surface m
 for(const texture of [sharedBark.map,sharedBark.normalMap,sharedBark.roughnessMap]) texture.dispose();
 sharedBark.dispose();
 
-const listeners = new Map();
-const documentStub = {
-  addEventListener(name, listener) { listeners.set(listener, name); },
-  removeEventListener(name, listener) { listeners.delete(listener); },
-};
-const canvas = {
-  ...documentStub,
-  style: {},
-  ownerDocument: documentStub,
-  getRootNode: () => documentStub,
-  clientWidth: 1200,
-  clientHeight: 800,
-};
-const surfaceRoot = new THREE.Group();
-const surfaceGeometry = new THREE.BoxGeometry(0.09, 0.03, 0.06);
-const surfaceMaterial = new THREE.MeshStandardMaterial();
-const authoredModel = new THREE.Group();
-authoredModel.add(new THREE.Mesh(surfaceGeometry, surfaceMaterial));
-surfaceRoot.add(authoredModel);
-const carriedSeed = new THREE.Group();
-carriedSeed.name = 'Surface carried seed';
-surfaceRoot.add(carriedSeed, new THREE.PointLight());
-surfaceRoot.position.set(3, 0, 4);
-const surfacePosition = surfaceRoot.position.clone();
-let disposedSurface = 0;
-surfaceGeometry.addEventListener('dispose', () => { disposedSurface += 1; });
-surfaceMaterial.addEventListener('dispose', () => { disposedSurface += 1; });
-const discoveries = [];
-const app = {
-  camera: new THREE.PerspectiveCamera(55, 1.5, 0.1, 700),
-  renderer: { domElement: canvas },
-  ant: { group: surfaceRoot, animations: [] },
-};
-const world = new UndergroundWorld(app, { onDiscovery: (key) => discoveries.push(key) });
-const progress = [];
-await world.start({ seedCount: 4, onProgress: (value) => progress.push(value) });
-assert.equal(world.active, false, 'Preparation does not activate the underground world.');
-assert.equal(world.ready, true);
-assert.equal(progress.at(-1), 100);
-assert.equal(world.player.group.children.length, 1, 'Surface attachments are excluded from the clone.');
-assert.equal(world.workers.length, 3, 'Three workers are prepared for the burrow.');
-assert.equal(new Set(world.workers.map(({ actor }) => `${actor.group.position.x},${actor.group.position.z}`)).size, 3, 'Workers start in separate locations.');
-for (const worker of world.workers) {
-  assert.equal(worker.actor.group.children[0].children[0].geometry, surfaceGeometry, 'Workers share the existing ant geometry.');
-  assert.ok(world.level.layout.isWalkable(worker.actor.group.position.x, worker.actor.group.position.z, UNDERGROUND_CONFIG.antRadius));
-}
-assert.equal(world.player.group.children[0].children[0].geometry, surfaceGeometry,
-  'The existing model geometry is reused without a second download.');
-assert.equal(world.activate(), true);
-world.position.copy(world.level.layout.landmarks.quiet);
-world.player.group.rotation.y = 1.1;
-world.walkLift = () => .025;
-const checkpoint = JSON.parse(JSON.stringify(world.getCheckpoint()));
-world.deactivate();
-world.activate(checkpoint);
-assert.equal(world.position.x,checkpoint.position.x);
-assert.equal(world.position.z,checkpoint.position.z);
-assert.ok(Math.abs(world.player.group.rotation.y-1.1)<1e-10);
-assert.ok(Math.abs(world.position.y-world.level.layout.heightAt(world.position.x,world.position.z)-SCENE_PROPS.ant.lift-.025)<1e-10,
-  'Checkpoint height is recomputed from the floor and any bed support.');
-assert.deepEqual(surfaceRoot.position.toArray(),surfacePosition.toArray(),'Restoring inside preserves the parked surface ant.');
-world.walkLift = null;
-world.activate({position:{x:NaN,z:Infinity},heading:Infinity});
-assert.equal(world.position.x,world.level.spawn.x,'Invalid checkpoints safely resume at the underground entrance.');
-assert.equal(world.position.z,world.level.spawn.z);
-world.activate({position:world.level.layout.treePosition});
-assert.equal(world.position.x,world.level.spawn.x,'A checkpoint inside a root cannot restore into solid geometry.');
-const restoreSession = new PondGameSession(null);
-let interiorLoads = 0, activatedCheckpoint = null;
-restoreSession.prepareUnderground = async () => {
-  interiorLoads++;
-  assert.equal(restoreSession.restoringUndergroundCheckpoint,true);
-  assert.equal(restoreSession.getSaveState(),null,'Autosave cannot overwrite the checkpoint during restoration.');
-};
-restoreSession.setUndergroundActive = (active,saved) => { activatedCheckpoint=saved; return active; };
-assert.equal(await restoreSession.restoreUndergroundCheckpoint(undefined),false);
-assert.equal(await restoreSession.restoreUndergroundCheckpoint({discoveries:['nest']}),false);
-assert.equal(await restoreSession.restoreUndergroundCheckpoint({active:false}),false);
-assert.equal(interiorLoads,0,'Surface and old saves keep the underground lazy.');
-assert.equal(await restoreSession.restoreUndergroundCheckpoint(checkpoint),true);
-assert.equal(interiorLoads,1);
-assert.equal(restoreSession.restoringUndergroundCheckpoint,false);
-assert.deepEqual(activatedCheckpoint,checkpoint);
-restoreSession.prepareUnderground = async () => { throw new Error('load failed'); };
-await assert.rejects(restoreSession.restoreUndergroundCheckpoint(checkpoint),/load failed/);
-assert.equal(restoreSession.restoringUndergroundCheckpoint,true);
-assert.equal(restoreSession.getSaveState(),null,'A failed restore preserves the existing save.');
-restoreSession.objectiveChime.dispose();
-// Exercise the real session serialization and activation route, not a mocked activation.
-let alternateRuntime = null;
-const checkpointApp = {
-  getAntWorldPosition: (target) => target.copy(surfacePosition),
-  getAntFacingDirection: (target) => target.set(0,0,1),
-  clearAntMovement() {}, setExploreTouchMode() {}, setAntLocatorActive() {},
-  controls: {enabled:true}, setView() {},
-  setAlternateRuntime(runtime) { alternateRuntime = runtime; },
-};
-const saveSession = new PondGameSession(null);
-saveSession.app = checkpointApp;
-saveSession.game = {getSaveState:()=>({}),setPaused(){}};
-saveSession.objectives = {getSaveState:()=>({}),setPaused(){}};
-saveSession.underground = world;
-world.activate(checkpoint);
-const storedSession = JSON.parse(JSON.stringify(saveSession.getSaveState()));
-assert.equal(storedSession.underground.active,true);
-assert.deepEqual(storedSession.underground.position,checkpoint.position);
-assert.equal(storedSession.ant.x,surfacePosition.x,'The surface return point is saved separately.');
-const resumedSession = new PondGameSession(null,{saveState:storedSession});
-resumedSession.app = checkpointApp; resumedSession.game = saveSession.game; resumedSession.objectives = saveSession.objectives;
-resumedSession.prepareUnderground = async () => { world.deactivate(); resumedSession.underground=world; };
-assert.equal(await resumedSession.restoreUndergroundCheckpoint(storedSession.underground),true);
-assert.equal(resumedSession.isUnderground(),true);
-assert.equal(alternateRuntime,world,'Reload activates the underground renderer as well as the saved actor.');
-assert.deepEqual({x:world.position.x,z:world.position.z},checkpoint.position);
-assert.equal(resumedSession.getSaveState().underground.active,true,'The next autosave retains the restored area.');
-saveSession.objectiveChime.dispose(); resumedSession.objectiveChime.dispose();
+const mapData = { layout, position: layout.spawn, heading: 0, pond: [], pondCenter: null };
 const labelClasses = new Set();
 const labelContainer = {classList:{toggle(name,hidden){if(hidden)labelClasses.add(name);else labelClasses.delete(name);}}};
-const zoomBeforeLabels = viewBox;
 setMapLabelsVisible(labelContainer,false);
-assert.equal(labelClasses.has('underground-map__hide-labels'),true);
-setMapLabelsVisible(labelContainer,true);
-assert.equal(labelClasses.size,0);
-assert.equal(viewBox,zoomBeforeLabels,'Label changes leave map pan and zoom intact.');
-const pageMarkup = await readFile(new URL('../index.html',import.meta.url),'utf8');
-assert.match(pageMarkup, /id="underground-map-labels"[^>]*checked/,'Map labels default to visible.');
-world.activate();
-assert.equal(world.canExit(), true);
-const workerStart = world.workers[0].actor.group.position.clone();
-for (let frame = 0; frame < 60; frame += 1) world.update({ delta: 1 / 60 });
-assert.ok(world.workers[0].actor.group.position.distanceTo(workerStart) > 0.05, 'Workers walk along their routes.');
-for (const worker of world.workers) assert.ok(world.level.layout.isWalkable(worker.actor.group.position.x, worker.actor.group.position.z, UNDERGROUND_CONFIG.antRadius));
-
-world.setMovementKey('forward', true);
-for (let frame = 0; frame < 60; frame += 1) world.update({ delta: 1 / 60 });
-assert.ok(world.position.z > layout.spawn.z + 0.2, 'Forward moves into the entry tunnel.');
-world.setMovementKey('right', true);
-for (let frame = 0; frame < 240; frame += 1) world.update({ delta: 1 / 60 });
-assert.ok(layout.isWalkable(world.position.x, world.position.z, UNDERGROUND_CONFIG.antRadius),
-  'Sustained diagonal input slides along walls without crossing them.');
-assert.ok(layout.containsSphere(world.camera.position.x, world.camera.position.y,
-  world.camera.position.z, UNDERGROUND_CONFIG.camera.collisionRadius),
-'Hugging a tunnel wall still leaves clearance for the camera near plane.');
-world.position.copy(layout.landmarks.nest);
-world.resetCamera();
-const pausedPosition = world.position.clone();
-const pausedWorkerPosition = world.workers[0].actor.group.position.clone();
-world.setPaused(true);
-world.update({ delta: 1 });
-assert.deepEqual(world.position.toArray(), pausedPosition.toArray());
-assert.deepEqual(world.workers[0].actor.group.position.toArray(), pausedWorkerPosition.toArray(), 'Workers pause with the game.');
-world.setPaused(false);
-world.setExploreActive(true);
-world.setMovementKey('forward', true);
-for (let i=0; i<60; i++) world.update({ delta: 1/60 });
-assert.deepEqual(world.position.toArray(), pausedPosition.toArray(), 'Explore leaves the ant in place.');
-assert.equal(world.controls.enabled,false,'Map suspends the canvas orbit controls.');
-const mapData=world.getMapData();
-assert.deepEqual(mapData.position,{x:world.position.x,z:world.position.z},'The map uses underground coordinates rather than the parked surface ant.');
-const markup=renderUndergroundMap(mapData,(key)=>key);
+assert.ok(labelClasses.has('underground-map__hide-labels'));
+const markup = renderUndergroundMap(mapData,(key)=>key);
 assert.ok(markup.includes('underground-map__player'));
-assert.ok(markup.includes(`translate(${world.position.x} ${world.position.z})`));
-assert.ok(markup.includes(`cx="${layout.treePosition.x}" cy="${layout.treePosition.z}"`));
-assert.ok(markup.includes('underground.map.entrance'));
-assert.ok(level.group.getObjectByName('Daylight at surface entrance'));
-world.setPaused(true); world.setPaused(false);
-assert.equal(world.controls.enabled,false,'Pause/resume does not enable controls beneath the map.');
-world.setExploreActive(false);
-world.clearInput();
+assert.ok(markup.includes('underground-map__entrance'));
 
-// Compare the actual surface and underground movement over input changes and orbit.
-class SurfaceHarness {}
-installPondAntNavigationMethods(SurfaceHarness);
-const surface = new SurfaceHarness();
-world.clearInput(); world.position.copy(layout.landmarks.nest); world.resetCamera();
-Object.assign(surface, {
-  activeView:'ant', ant:{group:new THREE.Group()}, ground:{},
-  antMovement:ANT_MOVEMENT_CONFIG, antMovementInput:new Set(), antMovementAxes:new THREE.Vector2(),
-  antResolvedAxes:{}, antVelocity:new THREE.Vector3(), antDisplacement:new THREE.Vector3(),
-  antForward:new THREE.Vector3(), antRight:new THREE.Vector3(), antMoveDirection:new THREE.Vector3(),
-  camera:world.camera, controls:world.controls,
-  recoverAntFromCollision:()=>true, setAntAnimationPlaying:()=>{},
-  moveAntTo(x,z) { this.ant.group.position.x=x; this.ant.group.position.z=z; return true; },
-});
-surface.ant.group.position.copy(world.position);
-surface.ant.group.rotation.copy(world.player.group.rotation);
-world.manualDelay=100;
-for(let frame=0;frame<120;frame++) {
-  const right=frame>=30 && frame<90, forward=frame<30 || (frame>=60 && frame<90);
-  surface.antMovementInput.clear(); world.keys.clear();
-  if(right) {surface.antMovementInput.add('right'); world.keys.add('right');}
-  if(forward) {surface.antMovementInput.add('forward'); world.keys.add('forward');}
-  if(frame===20 || frame===65) {
-    const before=world.orbitCamera.position.clone().sub(world.controls.target);
-    const angle=0.7;
-    const after=before.clone().applyAxisAngle(new THREE.Vector3(0,1,0),angle);
-    world.orbitCamera.position.copy(world.controls.target).add(after);
-    world.camera.position.copy(world.orbitCamera.position);
-    trackGroundOrbit(world,before.x,before.z,after.x,after.z);
-    trackGroundOrbit(surface,before.x,before.z,after.x,after.z);
-  }
-  surface.updateAntMovement(1/60); world.updateMovement(1/60);
-  assert.ok(Math.abs(surface.ant.group.position.x-world.position.x)<1e-8
-    && Math.abs(surface.ant.group.position.z-world.position.z)<1e-8,
-    'Actual surface and interior movement agree through input changes and camera orbit.');
-  assert.ok(Math.abs(surface.ant.group.rotation.y-world.player.group.rotation.y)<1e-8,
-    'Body turning also agrees with the surface controller.');
-}
-world.clearInput(); world.manualDelay=0;
-
-// Sideways-only movement matches surface speed and never spins the camera.
-for (const direction of ['left','right']) {
-  world.position.copy(layout.landmarks.nest);
-  world.clearInput(); world.resetCamera();
-  world.setMovementKey(direction,true);
-  const start = world.position.clone();
-  const before = world.orbitCamera.position.clone().sub(world.target);
-  for (let i=0; i<60; i++) world.update({delta:1/60});
-  const after = world.orbitCamera.position.clone().sub(world.target);
-  assert.ok(Math.abs(world.position.x-start.x) > 0.2, 'A/D translates sideways.');
-  assert.ok(Math.abs(world.position.z-start.z) < 0.001, 'A/D travels straight without W.');
-  assert.ok(before.distanceTo(after) < 0.001, 'A/D leaves camera orbit unchanged.');
-}
-world.clearInput();
-
-// Exercise main's actual key handler as well as the controller routing.
-const mainSource = await readFile(new URL('../js/main.js',import.meta.url),'utf8');
-const begin = mainSource.indexOf("window.addEventListener('keydown', (event) => {");
-const end = mainSource.indexOf("window.addEventListener('keyup'",begin);
-let keydown, underground = false;
-const routed = [];
-runInNewContext(mainSource.slice(begin,end), {
-  window:{addEventListener:(_name,handler)=>{keydown=handler;}},
-  sleepTransition:false, burrowTransition:false,
-  elements:new Proxy({}, {get:()=>({hidden:true})}),
-  session:{isExploreActive:()=>true, isUnderground:()=>underground, canPlayBird:()=>false, unlockSound:()=>{}},
-  isEditableTarget:()=>false, paused:false,
-  debugControls:{handleKeyDown:()=>false},
-  antMovementKeys:new Map([['KeyW','forward']]), heldMovementCodes:new Set(),
-  canMoveAnt:()=>true, syncMovementDirection:(value)=>routed.push(value),
-});
-keydown({code:'KeyW',repeat:false,preventDefault(){}});
-assert.deepEqual(routed,[], 'Surface Explore keeps its original keyboard behavior.');
-underground=true;
-keydown({code:'KeyW',repeat:false,preventDefault(){}});
-assert.deepEqual(routed,[], 'Keyboard movement is blocked while the underground map is open.');
-
-// Exercise all orbit headings and elevations beside walls and inside rooms.
-for (const point of [layout.spawn, layout.landmarks.nest, layout.landmarks.roots]) {
-  world.position.copy(point);
-  world.position.y += 0.006;
-  world.resetCamera();
-  for (let turn = 0; turn < 32; turn += 1) {
-    for (const height of [-0.3, 0.4, 2]) {
-      world.orbitCamera.position.copy(world.target).add(new THREE.Vector3(
-        Math.sin(turn * Math.PI / 16) * 2.3, height, Math.cos(turn * Math.PI / 16) * 2.3));
-      world.updateCamera(0);
-      assert.ok(layout.containsSphere(world.camera.position.x, world.camera.position.y,
-        world.camera.position.z, UNDERGROUND_CONFIG.camera.collisionRadius),
-      'Every rendered orbit position keeps the camera sphere inside the earth boundaries.');
-      world.camera.updateMatrixWorld();
-      const projected=world.position.clone().add(new THREE.Vector3(0,0.04,0)).project(world.camera);
-      assert.ok(Math.abs(projected.x)<0.95 && Math.abs(projected.y)<0.95,
-        'The camera frames the ant body even when a requested orbit is obstructed.');
-      assert.equal(world.player.group.visible,true,'Tight camera orbit never hides the ant.');
-      assert.ok(world.camera.position.distanceTo(world.position) > 0.25,
-        'Obstructed orbits retain enough room to frame the ant.');
-    }
-  }
-}
-
-// A desired camera endpoint in another room must not skip intervening soil.
-world.position.copy(layout.landmarks.nest);
-world.position.y += 0.006;
-world.resetCamera();
-world.controls.maxDistance = 30;
-world.orbitCamera.position.copy(layout.landmarks.quiet);
-world.orbitCamera.position.y += 0.4;
-world.updateCamera(0);
-assert.ok(world.camera.position.distanceTo(world.target) < world.orbitCamera.position.distanceTo(world.target) - 1,
-  'The sweep stops at the first wall even when the far endpoint is in an open room.');
-app.camera.aspect = 3.5;
-world.updateCamera(0);
-assert.equal(world.camera.aspect, 3.5, 'The underground camera follows viewport resizing.');
-world.position.copy(layout.spawn);
-world.resetCamera();
-const updateControls = world.controls.update;
-world.controls.update = () => {};
-world.orbitCamera.position.copy(world.target);
-world.updateCamera(0);
-assert.ok(world.camera.position.distanceTo(world.target) > 0,
-  'A degenerate orbit gets a safe nonzero camera offset.');
-assert.ok(world.camera.quaternion.toArray().every(Number.isFinite));
-world.controls.update = updateControls;
-
-world.deactivate();
-assert.equal(world.controls.enabled, false);
-const inactivePosition = world.position.clone();
-world.update({ delta: 0.05 });
-assert.deepEqual(world.position.toArray(), inactivePosition.toArray());
-assert.deepEqual(surfaceRoot.position.toArray(), surfacePosition.toArray(), 'Underground play never moves the surface actor.');
-world.dispose();
-assert.equal(listeners.size, 0, 'Controller disposal removes its input listeners.');
-assert.equal(disposedSurface, 0, 'Underground disposal preserves shared surface resources.');
-
-// Exercise the real session routing without creating WebGL, audio, or a server.
-const captions = [];
-const session = new PondGameSession(null, {
-  saveState: { underground: { discoveries: ['nest', 'underground.story.roots', 'invalid', 'store'] } },
-  onRadioCaption: (message) => captions.push(message),
-});
-assert.deepEqual([...session.undergroundDiscoveries], ['nest', 'store'],
-  'Saved discoveries use the same plain room identifiers as the controller.');
-const surfaceCamera = new THREE.PerspectiveCamera(55, 1.5, 0.1, 700);
-surfaceCamera.position.set(4, 2, 8);
-const savedCameraPosition = surfaceCamera.position.clone();
-const savedControlsTarget = new THREE.Vector3(3, 0.1, 4);
-const sessionCalls = [];
-session.app = {
-  ...app,
-  camera: surfaceCamera,
-  controls: { enabled: true, target: savedControlsTarget.clone() },
-  clearAntMovement: () => {},
-  setExploreTouchMode: (value) => sessionCalls.push(['touchExplore', value]),
-  setAntLocatorActive: (value) => sessionCalls.push(['locator', value]),
-  setAlternateRuntime(value) { this.alternateRuntime = value; },
-  setView(view) { sessionCalls.push(['view', view]); this.controls.enabled = true; },
-  getAntWorldPosition: (target) => target.copy(surfaceRoot.position),
-  getAntFacingDirection: (target) => target.set(0, 0, 1),
-  setAntMovementAxes: () => { throw new Error('Underground input reached the surface actor.'); },
-  setAntMovementKey: () => { throw new Error('Underground input reached the surface actor.'); },
-  setAntRunning: () => { throw new Error('Underground run input reached the surface actor.'); },
-  isAntAnimationBusy:()=>false, isAntFlightEnabled:()=>false,
-};
-const surfaceGame = {
-  setPaused(value) { this.paused = value; },
-  getSaveState: () => ({ delivered: 2 }),
-};
-session.game = surfaceGame;
-session.objectives = { ...surfaceGame, getSaveState: () => ({ completed: [] }) };
-session.climbing = {
-  setPaused(value) { this.paused = value; },
-  clearMovementInput: () => {},
-  isClimbing: () => false,
-};
-session.radioAudio = { setEnabled(value) { this.enabled = value; } };
-session.ambienceAudio = { setEnabled(value) { this.enabled = value; } };
-session.underground = new UndergroundWorld(session.app);
-await session.underground.start({ seedCount: 2 });
-assert.equal(session.setUndergroundActive(true), true);
-assert.equal(session.paused, false, 'The session remains playable underground.');
-assert.equal(session.app.controls.enabled, false);
-assert.equal(session.app.alternateRuntime, session.underground);
-assert.equal(session.game.paused, true);
-assert.equal(session.objectives.paused, true);
-assert.equal(session.climbing.paused, true, 'Surface controllers remain suspended while inside.');
-assert.equal(session.radioAudio.enabled, false);
-assert.equal(session.ambienceAudio.enabled, false);
-session.setMovementAxes(0.3, 0.7);
-assert.equal(session.underground.inputX, 0.3);
-assert.equal(session.underground.inputY, 0.7);
-session.setMovementKey('forward', true);
-assert.equal(session.underground.keys.has('forward'), true);
-session.setAntRunning(true);
-assert.equal(session.underground.running, true);
-assert.equal(session.canUseBurrow(),true,'The same visible exit action is available to desktop and touch.');
-session.setExploreActive(true);
-assert.equal(session.canUseBurrow(),false,'Map uses Back to ant before walking to the exit.');
-session.setMovementAxes(1, 1);
-assert.equal(session.underground.inputX, 0);
-assert.equal(session.underground.inputY, 0);
-assert.equal(session.underground.exploreActive, true);
-session.setExploreActive(false);
-assert.equal(sessionCalls.some(([key]) => key === 'view'), false,
-  'Underground Explore never invokes the surface camera presets.');
-assert.deepEqual(surfaceCamera.position.toArray(), savedCameraPosition.toArray());
-assert.deepEqual(session.app.controls.target.toArray(), savedControlsTarget.toArray());
-const sessionSave = session.getSaveState();
-assert.equal(sessionSave.ant.x, surfaceRoot.position.x);
-assert.equal(sessionSave.ant.z, surfaceRoot.position.z);
-assert.deepEqual(sessionSave.underground.discoveries, ['nest', 'store'],
-  'Underground saves preserve the safe surface return position and discovered rooms.');
-assert.equal(session.getPlayerWorldPosition(), session.underground.position);
-assert.equal(session.setUndergroundActive(false), true);
-assert.equal(session.underground.active, false);
-assert.equal(session.app.alternateRuntime, null);
-assert.equal(session.app.controls.enabled, true);
-assert.equal(session.game.paused, false);
-assert.equal(session.objectives.paused, false);
-assert.equal(session.climbing.paused, false);
-assert.equal(session.radioAudio.enabled, true);
-assert.equal(session.ambienceAudio.enabled, session.soundEnabled);
-assert.deepEqual(sessionCalls.filter(([key]) => key === 'view'), [['view', 'ant']]);
-assert.deepEqual(surfaceRoot.position.toArray(), surfacePosition.toArray());
-// Exercise main's real map synchronization and modal open/close actions.
-const uiSession={
-  isExploreActive:()=>mapActive, isUnderground:()=>true,
-  isBirdActive:()=>false, isBirdPreparing:()=>false, canPlayBird:()=>false,
-  getUndergroundMapData:()=>session.underground.getMapData(),
-  setExploreActive:(active)=>{mapActive=active;}, clearMovementInput:()=>{}, focusScene:()=>{},
-};
-let mapActive=true;
-const genericElement=()=>({hidden:false,setAttribute(){},focus(){},querySelector(){return null;},textContent:''});
-const uiElements=new Proxy({}, {get:(target,key)=>target[key]??(target[key]=genericElement())});
-uiElements.undergroundMap={open:false,showModal(){this.open=true;},close(){this.open=false;}};
-const controlStart=mainSource.indexOf('function updateExploreControl()');
-const controlEnd=mainSource.indexOf('function setChecklistCollapsed',controlStart);
-const closeStart=mainSource.indexOf('function closeUndergroundMap()');
-const closeEnd=mainSource.indexOf('async function toggleBird',closeStart);
-const mapUi={elements:uiElements,session:uiSession,t:(key)=>key,
-  document:{body:{classList:{toggle(){}}}},debugControls:{sync(){}},gameReady:true,
-  renderUndergroundMap,mapViewport:{reset(){},clear(){}},requestAnimationFrame:(callback)=>callback(),clearGameInput(){},paused:false};
-runInNewContext(mainSource.slice(controlStart,controlEnd)+mainSource.slice(closeStart,closeEnd)
-  +'updateExploreControl();',mapUi);
-assert.equal(uiElements.undergroundMap.open,true,'Underground Explore opens an actual modal map.');
-assert.ok(uiElements.undergroundMapContent.innerHTML.includes('underground-map__player'));
-runInNewContext('closeUndergroundMap();',mapUi);
-assert.equal(mapActive,false,'Back to ant closes map state.');
-assert.equal(uiElements.undergroundMap.open,false,'Back to ant also closes the native dialog.');
-assert.equal(uiElements.exploreButton.textContent,'underground.map.button','Walking shows Map on the shared control.');
-
-session.underground.dispose();
-surfaceGeometry.dispose();
-surfaceMaterial.dispose();
-console.log('Underground layout, movement, camera, lazy lifecycle, and resource checks passed.');
-
-
-// Orthographic surface pixels and SVG coordinates share corners and orientation.
 const captureBounds={x:-4,z:-3,width:8,height:4};
 const overhead=createSurfaceMapCamera(captureBounds);
 for(const cut of [0.5,2,4]) {

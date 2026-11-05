@@ -1,3 +1,4 @@
+import { createSurfaceChamber } from './surface-chamber.js';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { DIORAMA, PERFORMANCE, SEASONS, getHabitatArea } from '../config/index.js';
@@ -696,6 +697,7 @@ export async function createGround({
   treeClearings = [],
   modelPropClearing = null,
   modelPropClearings = [],
+  surfaceTerrain = null,
 } = {}) {
   const group = new THREE.Group();
   group.name = 'Procedural diorama ground';
@@ -923,6 +925,7 @@ export async function createGround({
   terrain.castShadow = false;
   terrain.name = 'Uneven living ground';
   group.add(terrain);
+
   let pondFeatures = null;
   if (pondProfile) {
     pondFeatures = createPondFeatures({
@@ -1300,6 +1303,13 @@ export async function createGround({
   if (outerRocks) group.add(outerRocks.group);
   if (outerBushes) group.add(outerBushes.group);
 
+  // Apply local terrain after seeded scenery placement to preserve rocks and radio.
+  const chamber = surfaceTerrain ? createSurfaceChamber({
+    config: surfaceTerrain, terrain, heightAt,
+  }) : null;
+  if (chamber) group.add(chamber.group);
+  chamber?.adjustDecorations([grass, ...grassChunks.map(({ mesh }) => mesh), fallenLeaves, woodChips, flowers, bushes.group]);
+
   const update = (elapsed, windStrength) => {
     const uniforms = grassMaterial.userData.windUniforms;
     uniforms.uTime.value = elapsed;
@@ -1397,7 +1407,9 @@ export async function createGround({
       }
     },
     terrainSurface: terrain,
-    heightAt,
+    heightAt: chamber?.surfaceHeightAt ?? heightAt,
+    chamber,
+    naturalHeightAt: heightAt,
     surfaceHeightAt,
     rockAnchor: rocks.propAnchor,
     rockSurfaceAnchors: rocks.surfaceAnchors,

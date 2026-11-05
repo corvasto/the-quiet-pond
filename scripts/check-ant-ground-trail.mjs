@@ -15,7 +15,7 @@ function fixture() {
     addWorldObject:(object)=>world.add(object),removeWorldObject:(object)=>object.removeFromParent(),
     onFrame(callback){listeners.add(callback);return()=>listeners.delete(callback);},
   };
-  const session = {app,paused:false,exploreActive:false,isUnderground:()=>state.underground,
+  const session = {app,paused:false,exploreActive:false,isBelowGround:()=>state.underground,
     isClimbing:()=>state.climbing,isFlightEnabled:()=>state.flight,isBirdActive:()=>state.bird};
   const move = (x,z=0,elevation=0) => position.set(x,ground.heightAt(x,z)+SCENE_PROPS.ant.lift+SCENE_PROPS.ant.offset.y+elevation,z);
   move(0);
