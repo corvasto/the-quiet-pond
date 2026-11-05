@@ -63,7 +63,7 @@ function createSeedVisual({ debug = false } = {}) {
   return group;
 }
 
-function createBurrowVisual() {
+export function createBurrowVisual() {
   const group = new THREE.Group();
   group.name = 'Game burrow';
   const createRock = (name, position, scale, color, variation) => {
@@ -91,7 +91,10 @@ function createBurrowVisual() {
     createRock('Burrow cave roof', new THREE.Vector3(0, 0.36, 0.08), new THREE.Vector3(0.8, 0.24, 0.42), '#82785a', 0.4),
     createRock('Burrow cave left wall', new THREE.Vector3(-0.54, 0.16, -0.015), new THREE.Vector3(0.28, 0.2, 0.3), '#72694f', 1.7),
     createRock('Burrow cave right wall', new THREE.Vector3(0.54, 0.15, 0.02), new THREE.Vector3(0.28, 0.19, 0.29), '#786e52', 3.2),
-    createRock('Burrow cave rear', new THREE.Vector3(0.02, 0.17, 0.28), new THREE.Vector3(0.62, 0.19, 0.2), '#625d46', 5.1),
+    ...[
+      createRock('Burrow rear left shoulder', new THREE.Vector3(-0.48, 0.17, 0.28), new THREE.Vector3(0.2, 0.19, 0.2), '#625d46', 5.1),
+      createRock('Burrow rear right shoulder', new THREE.Vector3(0.48, 0.17, 0.28), new THREE.Vector3(0.2, 0.19, 0.2), '#625d46', 5.6),
+    ],
   );
 
   const glow = new THREE.Mesh(
@@ -281,6 +284,7 @@ export class SeedToBurrowGame {
     if (!burrowPosition || !this.app.canAntOccupy(burrowPosition.x, burrowPosition.z)) {
       throw new Error('The Quiet Pond burrow is outside the current ant route.');
     }
+    if (this.app.ground.naturalHeightAt) burrowPosition.y = this.app.ground.naturalHeightAt(burrowPosition.x, burrowPosition.z);
 
     this.root = new THREE.Group();
     this.root.name = 'Pond game interactions';
@@ -416,10 +420,10 @@ export class SeedToBurrowGame {
     return this.restoreSaveState({ depositedSeeds: POND_GAME.seed.totalCount, offeringComplete: true, phase: 'complete' });
   }
 
-  setPaused(paused) {
+  setPaused(paused, { preserveMovement = false } = {}) {
     this.paused = Boolean(paused);
     if (this.paused) {
-      this.app.clearAntMovement();
+      if (!preserveMovement) this.app.clearAntMovement();
       this.setPrompt('Paused.');
     }
   }
@@ -727,7 +731,7 @@ export class SeedToBurrowGame {
   }
 
   collectSeed(seed) {
-    if (this.phase !== 'discovering' || !seed?.visual || !this.canCollectObject()) return;
+    if (this.phase !== 'discovering' || !seed?.visual || !this.canCollectObject(seed)) return;
     if (!this.app.attachObjectToAnt(seed.visual, POND_GAME.seed.carryOffset)) return;
     this.activeSeeds = this.activeSeeds.filter((candidate) => candidate !== seed);
     this.carriedSeed = seed;

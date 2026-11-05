@@ -7,8 +7,8 @@ function variation(index) {
   return value - Math.floor(value);
 }
 
-export function createUnderground({ treePosition, barkMaterial } = {}) {
-  const layout = createUndergroundLayout({ treePosition });
+export function createUnderground({ treePosition, barkMaterial, layout = createUndergroundLayout({ treePosition }),
+  rootExtension = 0 } = {}) {
   const { cellSize, cells, landmarks } = layout;
   const group = new THREE.Group();
   group.name = 'Beneath the roots - first floor';
@@ -23,6 +23,18 @@ export function createUnderground({ treePosition, barkMaterial } = {}) {
   const ceilingMaterial = material(new THREE.MeshStandardMaterial({ color: '#896746', roughness: 1 }));
   const rootMaterial = material(barkMaterial ? barkMaterial.clone()
     : new THREE.MeshStandardMaterial({ color: '#75502f', roughness: 1 }));
+  // Bump detail leaves the authored bark color unchanged and needs no download.
+  const barkPixels = new Uint8Array(64 * 64 * 4);
+  for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
+    const grain = Math.sin(x * 1.8 + 0.8 * Math.sin(y * 0.2)) * 0.3
+      + Math.sin(x * 4.3 + y * 0.08) * 0.16;
+    const value = Math.round((0.5 + grain) * 255), offset = (y * 64 + x) * 4;
+    barkPixels[offset] = value; barkPixels[offset + 1] = value; barkPixels[offset + 2] = value; barkPixels[offset + 3] = 255;
+  }
+  const barkBump = new THREE.DataTexture(barkPixels, 64, 64);
+  barkBump.wrapS = barkBump.wrapT = THREE.RepeatWrapping;
+  barkBump.needsUpdate = true;
+  rootMaterial.bumpMap = barkBump; rootMaterial.bumpScale = 0.028;
   const pebble = geometry(new THREE.DodecahedronGeometry(1, 0));
   const temporary = new THREE.Object3D();
   const color = new THREE.Color();
@@ -30,6 +42,7 @@ export function createUnderground({ treePosition, barkMaterial } = {}) {
   for (const cell of cells) {
     for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       if (layout.hasCell(cell.column + dc, cell.row + dr)) continue;
+      if (cell.column === 0 && cell.row === -1 && dr === -1) continue;
       walls.push({ x: cell.x + dc * (cellSize / 2 + 0.09),
         z: cell.z + dr * (cellSize / 2 + 0.09), dc, dr });
     }
@@ -151,8 +164,8 @@ export function createUnderground({ treePosition, barkMaterial } = {}) {
     group.add(root);
   }
   const tree = layout.treePosition;
-  const rootTop = layout.roofAt(tree.x,tree.z)+0.3;
-  const rootBottom = layout.heightAt(tree.x,tree.z)-0.2;
+  const rootTop = layout.roofAt(tree.x,tree.z)+0.3+rootExtension;
+  const rootBottom = layout.heightAt(tree.x,tree.z)-0.2-rootExtension;
   // The whole curved taproot stays inside its circular collision footprint.
   curvedRoot('Curved tree taproot',[
     new THREE.Vector3(tree.x,rootTop,tree.z),
@@ -171,27 +184,25 @@ export function createUnderground({ treePosition, barkMaterial } = {}) {
     }
     curvedRoot('Tapered roof root',points,0.09,0.008);
   }
-  // A daylight opening identifies the surface passage without floor decorations.
-  const doorway = new THREE.Shape();
-  doorway.moveTo(-0.35,0); doorway.lineTo(0.35,0); doorway.lineTo(0.35,0.28);
-  doorway.quadraticCurveTo(0.35,0.48,0,0.48);
-  doorway.quadraticCurveTo(-0.35,0.48,-0.35,0.28); doorway.closePath();
-  const daylight = material(new THREE.MeshBasicMaterial({color:'#e9f3d1'}));
-  const opening = new THREE.Mesh(geometry(new THREE.ShapeGeometry(doorway)),daylight);
-  const entranceZ=layout.spawn.z-cellSize*1.5+0.006;
-  opening.position.set(layout.spawn.x,layout.heightAt(layout.spawn.x,entranceZ)+0.08,entranceZ);
-  opening.name='Daylight at surface entrance';
-  group.add(opening);
-  // Broad neutral fill keeps soil readable without visible decorative lights.
-  group.add(new THREE.HemisphereLight('#fff1df', '#c5a681', 2.6));
-  for (const point of [layout.spawn, landmarks.nest, landmarks.store, landmarks.roots, landmarks.quiet]) {
-    const light = new THREE.PointLight('#ffe8cf', 1.1, 5, 1.6);
-    light.position.set(point.x, point.y + 0.6, point.z);
-    group.add(light);
+  {
+    // Mesh-local fill keeps the interior readable without illuminating the surface.
+    for (const surface of materials) if (surface.emissive) {
+      surface.emissive.copy(surface.color).multiplyScalar(0.45);
+    }
+    // The extended root can join the surface trunk, so keep its bark unlit.
+    rootMaterial.emissive.set(0x000000);
+    const block = geometry(new THREE.BoxGeometry(1, 1, 1));
+    instances('Solid soil behind tunnel walls', block, soil, walls.length, (object, i) => {
+      const wall = walls[i];
+      const low = layout.heightAt(wall.x, wall.z) - 0.08;
+      const high = layout.roofAt(wall.x, wall.z) + 0.08;
+      object.position.set(wall.x, (low + high) / 2, wall.z);
+      object.scale.set(wall.dc ? 0.16 : cellSize + 0.16, high - low,
+        wall.dr ? 0.16 : cellSize + 0.16);
+    });
   }
   let disposed = false;
   return { group, layout, spawn: layout.spawn, exit: layout.exit, landmarks,
-    workerRoutes: layout.workerRoutes,
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -199,6 +210,7 @@ export function createUnderground({ treePosition, barkMaterial } = {}) {
       group.traverse((object) => { if (object.isInstancedMesh) object.dispose(); });
       for (const value of geometries) value.dispose();
       for (const value of materials) value.dispose();
+      barkBump.dispose();
     },
   };
 }

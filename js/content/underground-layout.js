@@ -3,9 +3,10 @@ import { UNDERGROUND_CONFIG } from '../config/underground.js';
 
 // One horizontal cell corresponds to the same X/Z area in the surface world.
 // Rooms share a continuous contoured floor. The roof remains solid in every camera mode.
-export function createUndergroundLayout({ treePosition = { x: 0, z: 0 } } = {}) {
-  const { cellSize, floorY, ceilingY } = UNDERGROUND_CONFIG;
-  const origin = BURROW_CONFIG.position;
+export function createUndergroundLayout({ treePosition = { x: 0, z: 0 },
+  origin = BURROW_CONFIG.position, floorY = UNDERGROUND_CONFIG.floorY,
+  roofLimit = UNDERGROUND_CONFIG.roofLimit, entranceClearance = 0 } = {}) {
+  const { cellSize } = UNDERGROUND_CONFIG;
   const treeColumn = Math.round((treePosition.x - origin.x) / cellSize);
   const treeRow = Math.round((treePosition.z - origin.z) / cellSize);
   const minimumColumn = Math.min(-12, treeColumn - 4);
@@ -36,6 +37,12 @@ export function createUndergroundLayout({ treePosition = { x: 0, z: 0 } } = {}) 
   fill(Math.min(8, treeColumn) - 1, Math.max(8, treeColumn) + 1, 7, 9);
   fill(treeColumn - 1, treeColumn + 1, Math.min(8, treeRow), Math.max(8, treeRow));
   fill(treeColumn - 3, treeColumn + 3, treeRow - 3, treeRow + 3);
+  // Keep neighboring chambers out of the descending passage until its floor joins.
+  if (entranceClearance > 0) {
+    for (let row = minimumRow; row < -1; row++) for (let column = minimumColumn; column <= maximumColumn; column++) {
+      if (Math.abs(column * cellSize) < entranceClearance + cellSize / 2) occupied[index(column, row)] = 0;
+    }
+  }
   const rootRadius = 0.34;
   const heightAt = (x, z) => floorY + 0.1 * Math.sin(x * 0.85 + z * 0.32)
     + 0.065 * Math.sin(z * 1.3 - x * 0.4);
@@ -50,8 +57,8 @@ export function createUndergroundLayout({ treePosition = { x: 0, z: 0 } } = {}) 
       edge = Math.min(edge, Math.hypot(dx,dz));
     }
     const shoulder = Math.min(1, edge/0.65);
-    return heightAt(x,z) + 0.72 + 0.3*Math.sin(shoulder*Math.PI/2)
-      + 0.035*Math.sin(x*0.6-z*0.7);
+    return Math.min(roofLimit, heightAt(x,z) + 0.72 + 0.3*Math.sin(shoulder*Math.PI/2)
+      + 0.035*Math.sin(x*0.6-z*0.7));
   }
   const pointAt = (column, row) => ({
     x: origin.x + column * cellSize,
@@ -85,11 +92,6 @@ export function createUndergroundLayout({ treePosition = { x: 0, z: 0 } } = {}) 
     return true;
   }
 
-  function containsSphere(x, y, z, radius = 0) {
-    return Number.isFinite(y) && y - radius >= heightAt(x, z) + radius * 0.4 && y + radius <= roofAt(x, z) - radius * 0.4
-      && isWalkable(x, z, radius);
-  }
-
   const spawn = pointAt(0, 0);
   const landmarks = {
     nest: pointAt(0, 8),
@@ -97,10 +99,6 @@ export function createUndergroundLayout({ treePosition = { x: 0, z: 0 } } = {}) 
     roots: { x: treePosition.x + 0.95, y: heightAt(treePosition.x + 0.95, treePosition.z), z: treePosition.z },
     quiet: pointAt(8, 17),
   };
-  const workerRoutes = [
-    [pointAt(0, 1), pointAt(0, 8), pointAt(-8, 8), pointAt(0, 8)],
-    [pointAt(0, 8), pointAt(8, 8), pointAt(8, 17), pointAt(0, 17)],
-  ];
-  return { cells, hasCell, pointAt, isWalkable, containsSphere, floorY, ceilingY,
-    antRadius: UNDERGROUND_CONFIG.antRadius, cellSize, heightAt, roofAt, treePosition, rootRadius, spawn, exit: spawn, landmarks, workerRoutes };
+  return { cells, hasCell, pointAt, isWalkable,
+    antRadius: UNDERGROUND_CONFIG.antRadius, cellSize, heightAt, roofAt, treePosition, rootRadius, spawn, exit: spawn, landmarks };
 }

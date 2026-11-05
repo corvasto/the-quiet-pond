@@ -47,8 +47,6 @@ const elements = {
   undergroundMapContent: byId('underground-map-content'),
   undergroundMapClose: byId('underground-map-close'),
   undergroundMapLabels: byId('underground-map-labels'),
-  burrowButton: byId('burrow-button'),
-  burrowFade: byId('burrow-fade'),
   objective: byId('game-objective-title'),
   prompt: byId('game-prompt'),
   step: byId('game-step'),
@@ -147,7 +145,6 @@ let session = null;
 let paused = false;
 let gameReady = false;
 let sleepTransition = false;
-let burrowTransition = false;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
@@ -511,7 +508,7 @@ function canMoveAnt() {
   return gameReady
     && !paused
     && !sleepTransition
-    && !burrowTransition
+
     && elements.sleepDialog.hidden
     && elements.settingsDialog.hidden
     && elements.aboutDialog.hidden
@@ -898,62 +895,6 @@ function closeMaterialStore() {
   buildingUiSignature = ''; updateBuildingControls();
 }
 
-function updateBurrowButton() {
-  elements.burrowButton.hidden = !canMoveAnt() || !elements.cardsDialog.hidden || !session?.canUseBurrow();
-  elements.burrowButton.textContent = t(session?.isUnderground() ? 'underground.exit' : 'underground.enter');
-}
-
-async function useBurrow() {
-  if (!canMoveAnt() || !session?.canUseBurrow() || burrowTransition) return;
-  const entering = !session.isUnderground();
-  burrowTransition = true;
-  setPaused(true);
-  elements.pauseDialog.hidden = true;
-  elements.burrowButton.hidden = true;
-  elements.burrowFade.hidden = false;
-  const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
-  const fadeMs = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 900;
-  const loadingLabel = elements.loading.querySelector('[data-i18n="ui.loading"]');
-  let failed = false;
-  try {
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    elements.burrowFade.classList.add('is-dark');
-    await wait(fadeMs);
-    if (entering) {
-      if (!session.underground) {
-        loadingProgressValue = 0;
-        updateLoadingProgress(0);
-        loadingLabel.textContent = t('underground.loading');
-        elements.loading.classList.add('is-burrow-loading');
-        elements.loading.hidden = false;
-        await new Promise(requestAnimationFrame);
-        await session.prepareUnderground(updateLoadingProgress);
-      }
-    }
-    session.setUndergroundActive(entering);
-    if (entering && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.active?.postMessage({ type: 'cache-underground' });
-      }).catch(() => {});
-    }
-    saveActiveSlot();
-  } catch (error) {
-    failed = true;
-    console.warn('[the-quiet-pond] Could not enter the burrow.', error);
-  } finally {
-    elements.loading.hidden = true;
-    elements.loading.classList.remove('is-burrow-loading');
-    loadingLabel.textContent = t('ui.loading');
-    elements.burrowFade.classList.remove('is-dark');
-    await wait(fadeMs);
-    elements.burrowFade.hidden = true;
-    burrowTransition = false;
-    setPaused(false);
-    updateExploreControl();
-    updateBurrowButton();
-    if (failed) showRadioCaption(t('underground.loadFailed'), 9);
-  }
-}
 
 function openSleep() {
   if (!canMoveAnt() || !session?.canSleep()) return;
@@ -1015,9 +956,9 @@ function showRadioCaption(text, duration = 5, celebration = false) {
 
 function setPaused(nextPaused) {
   if (!session || !gameReady) return;
-  if ((burrowTransition || sleepTransition) && !nextPaused) return;
+  if ((sleepTransition) && !nextPaused) return;
   paused = Boolean(nextPaused);
-  if (paused) { elements.sleepButton.hidden = true; elements.burrowButton.hidden = true; elements.radioControlButton.hidden = true; }
+  if (paused) { elements.sleepButton.hidden = true; elements.radioControlButton.hidden = true; }
   clearGameInput();
   session.setPaused(paused);
   elements.pauseDialog.hidden = !paused;
@@ -1105,7 +1046,7 @@ function updateExploreControl() {
   const exploreActive = session?.isExploreActive() ?? false;
   const birdActive = session?.isBirdActive() ?? false;
   const birdPreparing = session?.isBirdPreparing() ?? false;
-  const undergroundActive = session?.isUnderground() ?? false;
+  const undergroundActive = session?.isBelowGround() ?? false;
   const returnLabel = birdActive ? 'ui.birdView' : 'ui.antView';
   elements.exploreButton.textContent = t(exploreActive ? returnLabel : undergroundActive ? 'underground.map.button' : 'ui.explore');
   elements.exploreButton.setAttribute('aria-pressed', String(exploreActive));
@@ -1113,6 +1054,7 @@ function updateExploreControl() {
   elements.exploreReturnLabel.textContent = t(returnLabel);
   elements.antHint.hidden = exploreActive || birdActive || undergroundActive;
   elements.undergroundHint.hidden = !undergroundActive;
+  elements.undergroundHint.textContent = t('underground.hint');
   if (elements.climbButton) elements.climbButton.hidden = undergroundActive;
   elements.birdHint.hidden = exploreActive || !birdActive;
   elements.birdSwitchButton.hidden = !(session?.canPlayBird() ?? false);
@@ -1304,7 +1246,7 @@ window.addEventListener('keydown', (event) => {
     }
     return;
   }
-  if (sleepTransition || burrowTransition) { event.preventDefault(); return; }
+  if (sleepTransition) { event.preventDefault(); return; }
   if (!elements.radioControlDialog.hidden) {
     if (event.code === 'Escape') { event.preventDefault(); closeRadioControl(); }
     return;
@@ -1345,11 +1287,6 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'KeyF' && !event.repeat && canMoveAnt()) {
     const action = session?.getBuildingActions()[0];
     if (action) { event.preventDefault(); if (!action.disabled) performBuildingAction(action.id); }
-    return;
-  }
-  if (event.code === 'KeyU' && !event.repeat && canMoveAnt() && session?.canUseBurrow()) {
-    event.preventDefault();
-    useBurrow();
     return;
   }
   if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
@@ -1454,7 +1391,6 @@ elements.radioKnobInput.addEventListener('pointermove', (event) => {
   if (elements.radioKnobInput.hasPointerCapture(event.pointerId)) setRadioKnobFromPointer(event);
 });
 elements.sleepButton.addEventListener('click', openSleep);
-elements.burrowButton.addEventListener('click', useBurrow);
 byId('sleep-close').addEventListener('click', closeSleep);
 for (const choice of ['morning', 'evening']) {
   byId(`sleep-${choice}`).addEventListener('click', () => beginSleep(choice));
@@ -1605,7 +1541,11 @@ async function startGame() {
     debugControls.start(elements.scene.querySelector('canvas'));
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
-    session.onFrame(updateBurrowButton);
+    let lastBelowGround = session.isBelowGround();
+    session.onFrame(() => {
+      const below = session?.isBelowGround() ?? false;
+      if (below !== lastBelowGround) { lastBelowGround = below; updateExploreControl(); }
+    });
     session.onFrame(updateBuildingControls);
     session.onFrame(updateRadioControlButton);
     updateExploreControl();

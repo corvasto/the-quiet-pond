@@ -71,22 +71,12 @@ function generateReleaseShell(source, outputs) {
   const outputPath = (file) => `./${path.relative(releaseDirectory, path.resolve(projectRoot, file)).replaceAll('\\', '/')}`;
   const mainOutput = Object.keys(outputs).find((file) => outputs[file].entryPoint === 'js/main.js');
   if (!mainOutput) throw new Error('Release bundle has no main entry point.');
-  const eagerOutputs = new Set();
-  const visit = (file) => {
-    if (eagerOutputs.has(file)) return;
-    eagerOutputs.add(file);
-    for (const dependency of outputs[file].imports) {
-      if (!dependency.external && dependency.kind !== 'dynamic-import') visit(dependency.path);
-    }
-  };
-  visit(mainOutput);
-  const onDemandPaths = Object.keys(outputs).filter((file) => !eagerOutputs.has(file)).map(outputPath);
   const shellPaths = [
     './index.html',
     './manifest.webmanifest',
     './icon.png',
     './styles/game.css',
-    ...[...eagerOutputs].map(outputPath),
+    ...Object.keys(outputs).map(outputPath),
     ...fsSyncWalk(releaseAssets)
       .filter((file) => /\.(?:glb\.gz|woff|ttf|png|gif|webm|mp3|opus|wav)$/i.test(file))
       .map((file) => `./${path.relative(releaseDirectory, file).replaceAll('\\', '/')}`),
@@ -95,9 +85,6 @@ function generateReleaseShell(source, outputs) {
   return source.replace(
     /const APP_SHELL = \[[\s\S]*?\];/,
     `const APP_SHELL = ${array};`,
-  ).replace(
-    /const ON_DEMAND_SHELL = \[[\s\S]*?\];/,
-    `const ON_DEMAND_SHELL = ${JSON.stringify(onDemandPaths, null, 2)};`,
   );
 }
 

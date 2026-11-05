@@ -64,11 +64,9 @@ function shellPathFromFile(filePath) {
 function readAppShell() {
   const source = fs.readFileSync(path.join(projectRoot, 'service-worker.js'), 'utf8');
   const block = source.match(/const APP_SHELL = \[([\s\S]*?)\];/)?.[1] ?? '';
-  const deferredBlock = source.match(/const ON_DEMAND_SHELL = \[([\s\S]*?)\];/)?.[1] ?? '';
   return {
     source,
     entries: [...block.matchAll(/'([^']+)'/g)].map((match) => match[1]),
-    deferredEntries: [...deferredBlock.matchAll(/'([^']+)'/g)].map((match) => match[1]),
   };
 }
 
@@ -139,11 +137,10 @@ check(manifest.name === APP_METADATA.name, 'Manifest name does not match APP_MET
 check(manifest.short_name === APP_METADATA.shortName, 'Manifest short name does not match APP_METADATA.');
 check(manifest.start_url === './index.html', 'Manifest start URL must remain index.html.');
 
-const { source: serviceWorkerSource, entries: appShellEntries, deferredEntries } = readAppShell();
+const { source: serviceWorkerSource, entries: appShellEntries } = readAppShell();
 const appShell = new Set(appShellEntries);
-const registeredShell = new Set([...appShellEntries, ...deferredEntries]);
+const registeredShell = appShell;
 check(appShell.size === appShellEntries.length, 'service-worker.js APP_SHELL contains duplicate paths.');
-check(registeredShell.size === appShellEntries.length + deferredEntries.length, 'Service-worker eager and on-demand entries contain duplicate paths.');
 registeredShell.forEach((entry) => {
   const diskPath = path.resolve(projectRoot, entry.replace(/^\.\//, ''));
   const insideProject = diskPath === projectRoot || diskPath.startsWith(`${projectRoot}${path.sep}`);

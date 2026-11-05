@@ -88,12 +88,12 @@ assert.ok(carriedMesh.getWorldPosition(new THREE.Vector3()).distanceTo(head.loca
   'The stem follows the animated head without a per-frame model search.');
 assert.equal(colony.nearestSeed(),null);
 const layout=createUndergroundLayout();
-const underground={active:true,scene:new THREE.Scene(),level:{layout,spawn:layout.spawn,exit:layout.exit,landmarks:layout.landmarks},player:{group:new THREE.Group()}};
+const underground={active:true,scene:new THREE.Scene(),level:{layout,spawn:layout.spawn,exit:layout.exit,landmarks:layout.landmarks},player:{group:ant}};
 underground.getCheckpoint = () => ({active: underground.active, position: {x: underground.position.x,z: underground.position.z},heading: 0});
-underground.position=underground.player.group.position;underground.scene.add(underground.player.group);
-session.underground=underground;underground.position.copy(layout.landmarks.store);
+underground.position=underground.player.group.position;
+session.burrowLevel=underground.level; app.ground.chamber={below:()=>underground.active};underground.position.copy(layout.landmarks.store);
 colony.sync();
-assert.equal(colony.meshes.get(leaf.id).parent,underground.player.group,'Carried material transfers to the underground actor.');
+assert.equal(colony.meshes.get(leaf.id).parent,underground.player.group,'Carried material stays on the same actor underground.');
 assert.equal(colony.act('deposit'),true);
 assert.equal(colony.state.stored,1);assert.equal(colony.state.carried,null);
 assert.equal(colony.store.name,'Round material deposit');

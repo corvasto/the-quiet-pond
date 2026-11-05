@@ -1,20 +1,17 @@
-// Refresh the shell for the adjusted visibility window.
+// Refresh the offline shell for the walk-in underground.
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.2.4';
+const RELEASE_VERSION = '1.2.5';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
   console.info(`[the-quiet-pond] Updating ${REQUESTED_VERSION} to ${RELEASE_VERSION}.`);
 }
-// Optional feature modules are cached when requested, never during installation.
-const ON_DEMAND_SHELL = [
-  './js/config/underground.js',
-  './js/content/underground-layout.js',
-  './js/generators/underground.js',
-  './js/game/underground.js',
-  './js/core/surface-map.js',
-];
 const APP_SHELL = [
+  './js/core/surface-map.js',
+  './js/generators/underground.js',
+  './js/content/underground-layout.js',
+  './js/config/underground.js',
+  './js/generators/surface-chamber.js',
   './index.html',
   './manifest.webmanifest',
   './icon.png',
@@ -169,13 +166,6 @@ self.addEventListener('activate', (event) => {
       ))
       .then(() => self.clients.claim()),
   );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data?.type !== 'cache-underground') return;
-  // First entry may precede service-worker control. Cache the optional module
-  // group after readiness too, so the next offline visit has every dependency.
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ON_DEMAND_SHELL)));
 });
 
 self.addEventListener('fetch', (event) => {

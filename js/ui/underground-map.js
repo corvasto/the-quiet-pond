@@ -22,7 +22,7 @@ export function renderUndergroundMap(data, translate) {
   const opacity = Number.isFinite(data.surfaceMapOpacity) ? Math.max(0, Math.min(1, data.surfaceMapOpacity)) : 0.2;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${left} ${top} ${width} ${height}" role="img" aria-label="${label('underground.map.description')}">
     <title>${label('underground.map.description')}</title>
-    <g class="underground-map__tunnels">${cells}</g>
+    <g class="underground-map__tunnels">${cells}${data.passage?.length ? `<polygon style="fill:#b0946e;stroke:#61472f;stroke-width:0.045" points="${data.passage.map((p) => `${p.x},${p.z}`).join(' ')}"><title>${label('underground.map.ramp')}</title></polygon>` : ''}</g>
     <image class="underground-map__surface-image" opacity="${opacity}" x="${left}" y="${top}" width="${width}" height="${height}" preserveAspectRatio="none"${data.surfaceMap ? ` href="${escapeText(data.surfaceMap.url)}"` : ''}/>
     <g class="underground-map__surface"${data.surfaceMap ? ' visibility="hidden"' : ''}>
       ${pond.length ? `<polygon points="${pond.map((p) => `${p.x},${p.z}`).join(' ')}" class="underground-map__pond"/>` : ''}

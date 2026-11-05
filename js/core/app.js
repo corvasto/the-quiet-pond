@@ -212,6 +212,7 @@ export class PondApp {
   constructor(container, {
     mode = 'game',
     groundReservations = [],
+    surfaceTerrain = null,
     enablePondStoneInteraction = true,
     cameraViews = {},
     antCameraFollow = null,
@@ -225,6 +226,7 @@ export class PondApp {
     if (mode !== 'game') throw new RangeError('Only game mode is supported.');
     this.mode = 'game';
     this.groundReservations = normalizeGroundReservations(groundReservations);
+    this.surfaceTerrain = surfaceTerrain;
     this.enablePondStoneInteraction = Boolean(enablePondStoneInteraction);
     this.onLoadProgress = onLoadProgress;
     this.cameraViews = normalizeCameraViews(cameraViews);
@@ -724,6 +726,7 @@ export class PondApp {
     ));
     const ground = await createGround({
       ...this.settings,
+      surfaceTerrain: this.surfaceTerrain,
       grassDensity: this.settings.grassDensity * PERFORMANCE.grassDensityScale,
       treeClearings: groundTreeClearings,
       modelPropClearings: [
@@ -1033,11 +1036,6 @@ export class PondApp {
     this.renderer.setSize(width, height, false);
   }
 
-  // Alternate scenes own their simulation and camera; the surface stays intact.
-  setAlternateRuntime(runtime = null) {
-    this.alternateRuntime = runtime;
-  }
-
   animate() {
     if (!this.running) return;
     this.clock.update();
@@ -1059,13 +1057,7 @@ export class PondApp {
       }
     }
     const elapsed = this.clock.getElapsed();
-    if (this.alternateRuntime) {
-      this.alternateRuntime.update({ delta, elapsed });
-      this.notifyFrameUpdateListeners(delta, elapsed);
-      this.renderer.setRenderTarget(null);
-      this.renderer.render(this.alternateRuntime.scene, this.alternateRuntime.camera);
-      return;
-    }
+
     this.updateAntMovement(delta);
     this.antMixer?.update(delta);
     this.catMixer?.update(delta);

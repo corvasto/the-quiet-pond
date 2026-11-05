@@ -1,18 +1,20 @@
 {
   "name": "the-quiet-pond",
   "private": true,
-  "version": "1.2.4",
+  "version": "1.2.5",
   "type": "module",
   "description": "A procedural pond with changing weather, a day/night cycle, radio music, English/Indonesian text, touch controls, three save slots, and offline play.",
   "scripts": {
-    "build:release": "node scripts/build-release.mjs",
+    "dev": "live-server . --port=3000 --host=127.0.0.1 --no-browser",
+    "test": "node scripts/run-tests.mjs",
     "check": "node scripts/validate-project.mjs",
     "check:release": "node scripts/check-release-build.mjs",
-    "run:release": "npx serve build/release",
-    "test": "node scripts/run-tests.mjs"
+    "build:release": "node scripts/build-release.mjs",
+    "run:release": "npx serve build/release"
   },
   "dependencies": {
-    "three": "0.184.0"
+    "three": "0.184.0",
+    "live-server": "^1.2.2"
   },
   "directories": {
     "doc": "docs"
