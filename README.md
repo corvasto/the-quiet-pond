@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/corvasto/the-quiet-pond"><img src="https://img.shields.io/badge/Made_with-❤️-white?style=flat" alt="mwl" /></a>
-  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.2.0-2b6cb0?style=flat-square" alt="version" /></a>
+  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.2.4-2b6cb0?style=flat-square" alt="version" /></a>
   <a href="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml"><img src="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg" alt="deploy-pages" /></a>
 </p>
 
@@ -134,7 +134,7 @@ Time preview in the debug overlay lets you apply any hour/minute, freeze the pre
 
 Run `npm run check` for syntax, imports, assets, localization, quality settings, release metadata, and cache coverage. Run `npm test` for movement, debug UI, and offline-shell tests. Run `npm run build:release` to generate the minified, compressed site in `build/release`, then `npm run check:release` to validate it. These commands do not start a server.
 
-Ground collisions follow tree and rock mesh footprints at ant body height, with sliding around angled edges and validated climb landings. Tree climbing checks exposed bark locally and probes ahead at branch-to-trunk junctions; generated wood closes buried attachment ends for reliable solid collision checks. Touching rocks share climb surfaces, including the radio support cluster. Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
+The optional Ant visibility window in Settings fades detected scenery between the camera and ant; it is off by default. Grass is divided into spatial batches so the renderer can skip batches outside the camera view. Ground collisions follow tree and rock mesh footprints at ant body height, with sliding around angled edges and validated climb landings. Tree climbing checks exposed bark locally and probes ahead at branch-to-trunk junctions; generated wood closes buried attachment ends for reliable solid collision checks. Touching rocks share climb surfaces, including the radio support cluster. Rendering, touch, collisions, performance, installation, and offline use need browser/device checks. See the [verification checklist](docs/verification.md) and [offline guide](docs/pwa.md).
 
 ## Credits
 

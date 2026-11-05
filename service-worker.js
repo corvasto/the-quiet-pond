@@ -1,5 +1,6 @@
+// Refresh the shell for the adjusted visibility window.
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.2.3';
+const RELEASE_VERSION = '1.2.4';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {

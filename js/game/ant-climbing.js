@@ -1703,19 +1703,28 @@ export class AntClimbing {
       -Math.PI * 0.5,
       Math.PI,
     ];
-    const maximumDistance = Math.max(1.2, this.route.entryRadius + 0.6);
+    const readerBounds = this.route.id === 'reader' ? this.route.bounds : null;
+    const outsideReader = (x, z) => !readerBounds || (
+      x < readerBounds.min.x || x > readerBounds.max.x
+      || z < readerBounds.min.z || z > readerBounds.max.z
+    );
+    const readerSpan = readerBounds ? Math.hypot(
+      readerBounds.max.x - readerBounds.min.x,
+      readerBounds.max.z - readerBounds.min.z,
+    ) : 0;
+    const maximumDistance = Math.max(1.2, this.route.entryRadius + 0.6, readerSpan + 0.12);
     for (let distance = 0.06; distance <= maximumDistance; distance += 0.06) {
       for (const angleOffset of angleOffsets) {
         const angle = preferredAngle + angleOffset;
         const x = this.surfacePoint.x + Math.sin(angle) * distance;
         const z = this.surfacePoint.z + Math.cos(angle) * distance;
-        if (!this.app.canAntOccupy(x, z)) continue;
+        if (!outsideReader(x, z) || !this.app.canAntOccupy(x, z)) continue;
         const landing = this.app.getAntGroundPosition(x, z, new THREE.Vector3());
         if (landing) return landing;
       }
     }
     const entry = this.route.entry;
-    return entry && this.app.canAntOccupy(entry.x, entry.z)
+    return entry && outsideReader(entry.x, entry.z) && this.app.canAntOccupy(entry.x, entry.z)
       ? this.app.getAntGroundPosition(entry.x, entry.z, new THREE.Vector3())
       : null;
   }

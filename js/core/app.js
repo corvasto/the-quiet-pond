@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {
   ANT_LOCATOR,
+  ANT_OCCLUSION,
   ANT_NIGHT_LIGHT,
   CAMERA_VIEWS,
   DEFAULTS,
@@ -385,6 +386,30 @@ export class PondApp {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#b6ced1');
     this.antLocator = new AntLocator(this.scene, ANT_LOCATOR);
+    this.antOcclusionUniforms = {
+      center: { value: new THREE.Vector2() },
+      depth: { value: -1 },
+      radius: { value: 0 },
+    };
+    this.antOcclusionMaterials = [];
+    this.antOcclusionCandidates = [];
+    this.antOcclusionReaderMeshes = [];
+    this.antOcclusionActive = [];
+    this.antOcclusionEnabled = false;
+    this.antOcclusionRaycaster = new THREE.Raycaster();
+    this.antOcclusionLowRaycaster = new THREE.Raycaster();
+    this.antOcclusionLowDirection = new THREE.Vector3();
+    this.antOcclusionDirection = new THREE.Vector3();
+    this.antOcclusionBox = new THREE.Box3();
+    this.antOcclusionProbe = new THREE.Vector3();
+    this.antOcclusionHits = [];
+    this.antOcclusionRockSources = new Map();
+    this.antOcclusionInstanceProxy = new THREE.Mesh();
+    this.antOcclusionInstanceProxy.matrixAutoUpdate = false;
+    this.antOcclusionInstanceMatrix = new THREE.Matrix4();
+    this.antOcclusionNextCheck = 0;
+    this.antOcclusionPosition = new THREE.Vector3();
+    this.antOcclusionSize = new THREE.Vector2();
 
     this.camera = new THREE.PerspectiveCamera(this.settings.cameraFov, 1, 0.1, 700);
     const heroView = CAMERA_VIEWS.hero;
@@ -536,6 +561,14 @@ export class PondApp {
     this.radioSurfaceProxy?.removeFromParent();
     this.radioSurfaceProxy?.userData.dispose?.();
     this.radioSurfaceProxy = null;
+    this.clearAntOcclusion();
+    for (const entry of this.antOcclusionMaterials) {
+      for (const material of entry.clones) material.dispose();
+    }
+    this.antOcclusionMaterials = [];
+    this.antOcclusionCandidates = [];
+    this.antOcclusionReaderMeshes = [];
+    this.antOcclusionRockSources.clear();
     this.backgroundAntMixers.forEach((mixer) => mixer.stopAllAction());
     this.backgroundAntMixers = [];
     this.backgroundAnts.forEach((wanderer) => wanderer.group.removeFromParent());
@@ -884,6 +917,7 @@ export class PondApp {
       this.settings.quality,
       this.settings.area,
     );
+    this.setupAntOcclusionWindow();
     if (PERFORMANCE.shadows) this.renderer.shadowMap.needsUpdate = true;
     this.updateStreetLampLight();
     this.updateAntNightLight();
@@ -1088,7 +1122,214 @@ export class PondApp {
     this.fireflies?.update(elapsed, this.settings.sunHour);
     this.moths?.update(elapsed, this.settings.sunHour, this.streetLampGlow?.position);
     this.renderer.setRenderTarget(null);
+    this.updateAntOcclusionWindow();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  setAntOcclusionEnabled(enabled) {
+    this.antOcclusionEnabled = Boolean(enabled);
+    this.antOcclusionNextCheck = 0;
+    if (!this.antOcclusionEnabled) this.clearAntOcclusion();
+  }
+
+  clearAntOcclusion() {
+    for (const entry of this.antOcclusionActive) entry.mesh.material = entry.original;
+    this.antOcclusionActive.length = 0;
+    this.antOcclusionUniforms.radius.value = 0;
+  }
+
+  setupAntOcclusionWindow() {
+    const rockMesh = this.ground?.rockSurfaceMesh;
+    const pondRockMesh = this.ground?.pondRockSurfaceMesh;
+    this.antOcclusionRockSources.clear();
+    if (rockMesh) this.antOcclusionRockSources.set(rockMesh, {
+      anchors: this.ground.rockSurfaceAnchors ?? [],
+      companions: rockMesh.parent?.children.filter((mesh) => mesh !== rockMesh && mesh.isInstancedMesh) ?? [],
+    });
+    if (pondRockMesh) this.antOcclusionRockSources.set(pondRockMesh, {
+      anchors: this.ground.pondRockSurfaceAnchors ?? [], companions: [],
+    });
+    const roots = [this.tree?.group, ...(this.forest?.trees ?? []).map((tree) => tree.group),
+      rockMesh, pondRockMesh,
+      ...Object.entries(this.modelProps).filter(([id]) => id !== 'ant' && id !== 'reader').map(([, model]) => model?.group)];
+    this.antOcclusionReaderMeshes = [];
+    this.reader?.group?.traverse((mesh) => {
+      if (!mesh.isMesh || !mesh.material) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (materials.every((material) => material && !material.isShaderMaterial)) {
+        this.antOcclusionReaderMeshes.push(mesh);
+      }
+    });
+    const seen = new Set();
+    for (const root of roots) root?.traverse((mesh) => {
+      if (!mesh.isMesh || seen.has(mesh) || !mesh.geometry
+        || (mesh.isInstancedMesh && !this.antOcclusionRockSources.has(mesh))) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (materials.some((material) => !material || material.transparent || material.isShaderMaterial)) return;
+      seen.add(mesh);
+      if (mesh.isInstancedMesh) {
+        if (!mesh.boundingBox) mesh.computeBoundingBox();
+      } else if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      if (mesh.isInstancedMesh ? mesh.boundingBox : mesh.geometry.boundingBox) {
+        this.antOcclusionCandidates.push(mesh);
+      }
+    });
+  }
+
+  getAntOcclusionMaterial(mesh) {
+    let entry = this.antOcclusionMaterials.find((item) => item.mesh === mesh);
+    if (entry) return entry;
+    const original = mesh.material;
+    const uniforms = this.antOcclusionUniforms;
+    const clones = (Array.isArray(original) ? original : [original]).map((material) => {
+      const clone = material.clone();
+      const compile = material.onBeforeCompile;
+      const cacheKey = material.customProgramCacheKey;
+      clone.transparent = true;
+      clone.depthWrite = true;
+      clone.onBeforeCompile = function onBeforeCompile(shader, renderer) {
+        compile.call(this, shader, renderer);
+        shader.uniforms.antWindowCenter = uniforms.center;
+        shader.uniforms.antWindowRadius = uniforms.radius;
+        shader.uniforms.antWindowDepth = uniforms.depth;
+        shader.fragmentShader = shader.fragmentShader.replace('void main() {',
+          `uniform vec2 antWindowCenter; uniform float antWindowRadius; uniform float antWindowDepth; void main() {`)
+          .replace('#include <opaque_fragment>',
+            `float antWindowFade = 1.0 - smoothstep(antWindowRadius * 0.45, antWindowRadius,
+               distance(gl_FragCoord.xy, antWindowCenter));
+             if (gl_FragCoord.z < antWindowDepth) diffuseColor.a *= 1.0 - antWindowFade;
+             #include <opaque_fragment>`);
+      };
+      clone.customProgramCacheKey = () => `${cacheKey.call(material)}-ant-window-smooth-v4`;
+      return clone;
+    });
+    entry = { mesh, original, clones, faded: Array.isArray(original) ? clones : clones[0] };
+    this.antOcclusionMaterials.push(entry);
+    return entry;
+  }
+
+  updateAntOcclusionWindow() {
+    if (!this.antOcclusionEnabled || !this.isAntViewActive()
+      || !this.ant?.group?.visible || !this.ant.group.parent) {
+      this.clearAntOcclusion();
+      return;
+    }
+    this.camera.updateMatrixWorld();
+    this.ant.group.getWorldPosition(this.antOcclusionPosition);
+    this.antOcclusionPosition.y += ANT_OCCLUSION.heightOffset;
+    const now = this.clock.getElapsed();
+    if (now >= this.antOcclusionNextCheck) {
+      this.antOcclusionNextCheck = now + 0.2;
+      const direction = this.antOcclusionDirection.subVectors(this.antOcclusionPosition, this.camera.position);
+      const distance = direction.length();
+      this.antOcclusionRaycaster.set(this.camera.position, direction.normalize());
+      this.antOcclusionRaycaster.far = Math.max(0, distance - 0.04);
+      const lowDirection = this.antOcclusionLowDirection.copy(this.antOcclusionPosition);
+      lowDirection.y -= ANT_OCCLUSION.heightOffset;
+      lowDirection.sub(this.camera.position);
+      const lowDistance = lowDirection.length();
+      this.antOcclusionLowRaycaster.set(this.camera.position, lowDirection.normalize());
+      this.antOcclusionLowRaycaster.far = Math.max(0, lowDistance - 0.04);
+      const hits = [];
+      let probes = 0;
+      if (this.readerSurfaceProxy && this.reader?.group?.visible
+        && this.reader.group.parent && this.readerNightBlend < 0.01) {
+        this.readerSurfaceProxy.updateWorldMatrix(true, true);
+        this.antOcclusionHits.length = 0;
+        this.antOcclusionRaycaster.intersectObject(this.readerSurfaceProxy, true, this.antOcclusionHits);
+        if (this.antOcclusionHits.length) hits.push(...this.antOcclusionReaderMeshes);
+        probes += 1;
+      }
+      for (const mesh of this.antOcclusionCandidates) {
+        let visible = true;
+        for (let object = mesh; object && object !== this.world; object = object.parent) {
+          if (!object.visible) { visible = false; break; }
+        }
+        const bounds = mesh.isInstancedMesh ? mesh.boundingBox : mesh.geometry.boundingBox;
+        if (!visible || !mesh.parent || !bounds) continue;
+        mesh.updateWorldMatrix(true, false);
+        this.antOcclusionBox.copy(bounds).applyMatrix4(mesh.matrixWorld);
+        if (!this.antOcclusionBox.containsPoint(this.camera.position)) {
+          const point = this.antOcclusionRaycaster.ray.intersectBox(this.antOcclusionBox, this.antOcclusionProbe);
+          const mainIntersects = point && point.distanceTo(this.camera.position) < this.antOcclusionRaycaster.far;
+          if (!mainIntersects && mesh.isInstancedMesh) {
+            const lowPoint = this.antOcclusionLowRaycaster.ray.intersectBox(this.antOcclusionBox, this.antOcclusionProbe);
+            if (!lowPoint || lowPoint.distanceTo(this.camera.position) >= this.antOcclusionLowRaycaster.far) continue;
+          } else if (!mainIntersects) continue;
+        }
+        if (mesh.isInstancedMesh) {
+          const source = this.antOcclusionRockSources.get(mesh);
+          const startX = this.camera.position.x;
+          const startZ = this.camera.position.z;
+          const segmentX = this.antOcclusionPosition.x - startX;
+          const segmentZ = this.antOcclusionPosition.z - startZ;
+          const segmentLengthSq = segmentX * segmentX + segmentZ * segmentZ;
+          for (const anchor of source.anchors) {
+            const footprint = anchor.footprint ?? {};
+            const x = footprint.x ?? anchor.position.x;
+            const z = footprint.z ?? anchor.position.z;
+            const radius = Math.max(footprint.radius ?? 0, footprint.radiusX ?? 0,
+              footprint.radiusZ ?? 0, anchor.usableRadius ?? 0) * 1.2;
+            const t = segmentLengthSq > 0 ? THREE.MathUtils.clamp(
+              ((x - startX) * segmentX + (z - startZ) * segmentZ) / segmentLengthSq, 0, 1,
+            ) : 0;
+            if (Math.hypot(x - startX - segmentX * t, z - startZ - segmentZ * t) > radius) continue;
+            if (probes++ >= 12) break;
+            const proxy = this.antOcclusionInstanceProxy;
+            proxy.geometry = mesh.geometry;
+            proxy.material = mesh.material;
+            mesh.getMatrixAt(anchor.rockIndex, this.antOcclusionInstanceMatrix);
+            proxy.matrixWorld.multiplyMatrices(mesh.matrixWorld, this.antOcclusionInstanceMatrix);
+            this.antOcclusionHits.length = 0;
+            this.antOcclusionRaycaster.intersectObject(proxy, false, this.antOcclusionHits);
+            if (!this.antOcclusionHits.length) {
+              this.antOcclusionLowRaycaster.intersectObject(proxy, false, this.antOcclusionHits);
+            }
+            if (!this.antOcclusionHits.length) continue;
+            hits.push(mesh, ...source.companions);
+            break;
+          }
+          continue;
+        }
+        if (probes++ >= 12) continue;
+        this.antOcclusionHits.length = 0;
+        this.antOcclusionRaycaster.intersectObject(mesh, false, this.antOcclusionHits);
+        if (this.antOcclusionHits.length) hits.push(mesh);
+      }
+      for (let index = this.antOcclusionActive.length - 1; index >= 0; index -= 1) {
+        const entry = this.antOcclusionActive[index];
+        if (hits.includes(entry.mesh)) continue;
+        entry.mesh.material = entry.original;
+        this.antOcclusionActive.splice(index, 1);
+      }
+      for (const mesh of hits) {
+        if (this.antOcclusionActive.some((entry) => entry.mesh === mesh)) continue;
+        const entry = this.getAntOcclusionMaterial(mesh);
+        mesh.material = entry.faded;
+        this.antOcclusionActive.push(entry);
+      }
+    }
+    for (const entry of this.antOcclusionActive) {
+      const originals = Array.isArray(entry.original) ? entry.original : [entry.original];
+      entry.clones.forEach((material, index) => { material.opacity = originals[index].opacity; });
+    }
+    if (!this.antOcclusionActive.length) {
+      this.antOcclusionUniforms.radius.value = 0;
+      return;
+    }
+    this.antOcclusionPosition.project(this.camera);
+    if (this.antOcclusionPosition.z < -1 || this.antOcclusionPosition.z > 1) {
+      this.antOcclusionUniforms.radius.value = 0;
+      return;
+    }
+    this.renderer.getDrawingBufferSize(this.antOcclusionSize);
+    this.antOcclusionUniforms.center.value.set(
+      (this.antOcclusionPosition.x * 0.5 + 0.5) * this.antOcclusionSize.x,
+      (this.antOcclusionPosition.y * 0.5 + 0.5) * this.antOcclusionSize.y
+        + ANT_OCCLUSION.screenOffsetY * this.renderer.getPixelRatio(),
+    );
+    this.antOcclusionUniforms.depth.value = this.antOcclusionPosition.z * 0.5 + 0.5;
+    this.antOcclusionUniforms.radius.value = ANT_OCCLUSION.radius * this.renderer.getPixelRatio();
   }
 
 }

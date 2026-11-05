@@ -115,6 +115,8 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'ui.settings.interface': defineMessage({ en: 'Interface', id: 'Antarmuka' }),
   'ui.settings.audio': defineMessage({ en: 'Audio', id: 'Audio' }),
   'ui.settings.performance': defineMessage({ en: 'Performance', id: 'Performa' }),
+  'ui.antVisibility.title': defineMessage({ en: 'Ant visibility window', id: 'Jendela visibilitas semut' }),
+  'ui.antVisibility.description': defineMessage({ en: 'Fade scenery between the camera and ant. Off by default.', id: 'Samarkan objek antara kamera dan semut. Nonaktif secara bawaan.' }),
   'ui.trails.title': defineMessage({ en: 'Ant trails', id: 'Jejak semut' }),
   'ui.trails.description': defineMessage({ en: 'Brief footprints on dry ground. Off by default.', id: 'Jejak singkat di tanah kering. Nonaktif secara bawaan.' }),
   'ui.settings.world': defineMessage({ en: 'World', id: 'Dunia' }),

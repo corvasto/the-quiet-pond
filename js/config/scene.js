@@ -8,6 +8,12 @@ export const GRASS_VISIBILITY = Object.freeze({
   transitionRate: 10,
 });
 
+export const ANT_OCCLUSION = Object.freeze({
+  radius: 62,
+  screenOffsetY: -8,
+  heightOffset: 0.07,
+});
+
 export const ANT_LOCATOR = Object.freeze({
   color: '#ff1f18',
   coreColor: '#ff827a',

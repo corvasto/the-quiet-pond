@@ -25,6 +25,7 @@ export class PondGameSession {
     season = DEFAULTS.season,
     soundEnabled = true,
     antTrailsEnabled = false,
+    antVisibilityEnabled = false,
     musicVolume = POND_GAME.radioAudio.musicVolume,
     saveState = null,
   } = {}) {
@@ -38,6 +39,7 @@ export class PondGameSession {
     this.season = season;
     this.soundEnabled = Boolean(soundEnabled);
     this.antTrailsEnabled = Boolean(antTrailsEnabled);
+    this.antVisibilityEnabled = Boolean(antVisibilityEnabled);
     this.musicVolume = THREE.MathUtils.clamp(Number(musicVolume) || 0, 0, 1);
     this.app = null;
     this.game = null;
@@ -92,6 +94,7 @@ export class PondGameSession {
       season: this.season,
     });
     await this.app.start();
+    this.app.setAntOcclusionEnabled(this.antVisibilityEnabled);
     this.onLoadProgress(96);
     this.app.setView('ant', true);
     this.audioListener = new THREE.AudioListener();
@@ -571,6 +574,11 @@ export class PondGameSession {
     this.radioAudio?.unlock();
     this.ambienceAudio?.unlock();
     this.objectiveChime?.unlock();
+  }
+
+  setAntVisibilityEnabled(enabled) {
+    this.antVisibilityEnabled = Boolean(enabled);
+    this.app?.setAntOcclusionEnabled(this.antVisibilityEnabled);
   }
 
   setAntTrailsEnabled(enabled) {

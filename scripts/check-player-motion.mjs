@@ -432,4 +432,17 @@ const safeLanding = exit.findDismountPosition();
 assert.ok(safeLanding && exit.app.canAntOccupy(safeLanding.x, safeLanding.z),
   'Dismount must search past the trunk to a valid ground position.');
 
+exit.route = {
+  id: 'reader', center: new THREE.Vector3(), entryRadius: 0.5,
+  entry: new THREE.Vector3(),
+  bounds: { min: new THREE.Vector3(-0.6, 0, -0.6), max: new THREE.Vector3(0.6, 1, 0.6) },
+};
+exit.app.canAntOccupy = () => true;
+const readerLanding = exit.findDismountPosition();
+assert.ok(readerLanding && (Math.abs(readerLanding.x) > 0.6 || Math.abs(readerLanding.z) > 0.6),
+  'Dismounting the reader must avoid walkable gaps underneath the person.');
+exit.app.canAntOccupy = (x, z) => Math.abs(x) <= 0.6 && Math.abs(z) <= 0.6;
+assert.equal(exit.findDismountPosition(), null,
+  'An entry under the reader must not be used when outside landings are blocked.');
+
 console.log('Player motion checks passed: analog deadzone, frame-rate invariance, acceleration/braking, direction, collision/sliding, input reset, stable automatic and manual camera orbit, analog climbing, exact ground footprints, solid tree interiors, diagonal gaps, and safe climb exits.');

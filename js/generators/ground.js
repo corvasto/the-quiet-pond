@@ -13,6 +13,50 @@ import { createBushes } from './bushes.js';
 import { createPondFeatures, createPondProfile } from './pond.js';
 import { createRocks } from './rocks.js';
 
+// Preserve the original instance order so density changes keep the same plants.
+function partitionGrass(source, placed, group, name) {
+  const cells = new Map();
+  const matrices = source.instanceMatrix.array;
+  for (let index = 0; index < placed; index += 1) {
+    const offset = index * 16;
+    const key = `${Math.floor(matrices[offset + 12] / 16)},${Math.floor(matrices[offset + 14] / 16)}`;
+    if (!cells.has(key)) cells.set(key, []);
+    cells.get(key).push(index);
+  }
+  return [...cells.values()].map((indices) => {
+    const mesh = new THREE.InstancedMesh(source.geometry, source.material, indices.length);
+    mesh.name = name;
+    mesh.castShadow = source.castShadow;
+    mesh.receiveShadow = source.receiveShadow;
+    const matrix = new THREE.Matrix4();
+    const color = new THREE.Color();
+    indices.forEach((index, localIndex) => {
+      source.getMatrixAt(index, matrix);
+      mesh.setMatrixAt(localIndex, matrix);
+      source.getColorAt(index, color);
+      mesh.setColorAt(localIndex, color);
+    });
+    mesh.computeBoundingSphere();
+    mesh.boundingSphere.radius += 1;
+    mesh.count = indices.filter((index) => index < source.count).length;
+    group.add(mesh);
+    return { mesh, indices };
+  });
+}
+
+function updateGrassChunks(chunks, count) {
+  for (const { mesh, indices } of chunks) {
+    let low = 0;
+    let high = indices.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (indices[middle] < count) low = middle + 1;
+      else high = middle;
+    }
+    mesh.count = low;
+  }
+}
+
 const GENERATION_YIELD_INTERVALS = Object.freeze({
   textureRows: 32,
   terrainVertices: 8192,
@@ -1123,13 +1167,13 @@ export async function createGround({
   grass.instanceColor.needsUpdate = true;
   grass.receiveShadow = true;
   grass.castShadow = false;
-  grass.frustumCulled = false;
   grass.name = 'Instanced clustered forest grass';
-  group.add(grass);
+  const grassChunks = partitionGrass(grass, placed, group, grass.name);
 
   let outerGrass = null;
   let outerGrassPlaced = 0;
   let outerGrassCountBase = 0;
+  let outerGrassChunks = [];
 
   if (habitat.infinite) {
     const outerRandom = random.fork('infinite-outer-grass');
@@ -1190,9 +1234,8 @@ export async function createGround({
     outerGrass.instanceColor.needsUpdate = true;
     outerGrass.receiveShadow = false;
     outerGrass.castShadow = false;
-    outerGrass.frustumCulled = false;
     outerGrass.name = 'Dense infinite forest grass transition';
-    group.add(outerGrass);
+    outerGrassChunks = partitionGrass(outerGrass, outerGrassPlaced, group, outerGrass.name);
   }
 
   const fallenLeaves = createFallenLeaves(
@@ -1299,6 +1342,8 @@ export async function createGround({
         Math.round(outerGrassCountBase * normalizedDensity),
       );
     }
+    updateGrassChunks(grassChunks, grass.count);
+    if (outerGrass) updateGrassChunks(outerGrassChunks, outerGrass.count);
     stats.grass = grass.count + (outerGrass?.count ?? 0);
     return stats.grass;
   };
@@ -1344,7 +1389,12 @@ export async function createGround({
           data[offset] = 0; data[offset + 5] = 0; data[offset + 10] = 0;
         }
       }
-      grass.instanceMatrix.needsUpdate = true;
+      for (const { mesh, indices } of grassChunks) {
+        indices.forEach((index, localIndex) => {
+          mesh.instanceMatrix.array.set(data.subarray(index * 16, index * 16 + 16), localIndex * 16);
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+      }
     },
     terrainSurface: terrain,
     heightAt,

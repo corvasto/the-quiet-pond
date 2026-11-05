@@ -87,6 +87,7 @@ const elements = {
   saveSlotList: byId('save-slot-list'),
   soundEnabled: byId('sound-enabled'),
   antTrailsEnabled: byId('ant-trails-enabled'),
+  antVisibilityEnabled: byId('ant-visibility-enabled'),
   musicVolume: byId('music-volume'),
   musicVolumeValue: byId('music-volume-value'),
   seasonSelect: byId('season-select'),
@@ -150,6 +151,7 @@ let burrowTransition = false;
 const LANGUAGE_KEY = 'the-quiet-pond-language';
 const SEASON_KEY = 'the-quiet-pond-season';
 const PERFORMANCE_DIAGNOSTIC_KEY = 'the-quiet-pond-performance-diagnostic';
+const ANT_VISIBILITY_KEY = 'the-quiet-pond-ant-visibility';
 const ANT_TRAILS_KEY = 'the-quiet-pond-ant-trails';
 const SOUND_EFFECTS_KEY = 'the-quiet-pond-soft-chimes';
 const MUSIC_VOLUME_KEY = 'the-quiet-pond-music-volume';
@@ -157,6 +159,7 @@ const SAVE_SLOTS_KEY = 'the-quiet-pond-saves-v1';
 const ACTIVE_SAVE_SLOT_KEY = 'the-quiet-pond-active-save-slot-v1';
 let language = readStoredValue(LANGUAGE_KEY) === 'id' ? 'id' : 'en';
 let season = readSeasonPreference();
+let antVisibilityEnabled = readStoredValue(ANT_VISIBILITY_KEY) === '1';
 let antTrailsEnabled = readStoredValue(ANT_TRAILS_KEY) === '1';
 let soundEffectsEnabled = readStoredValue(SOUND_EFFECTS_KEY) !== '0';
 let musicVolume = readMusicVolumePreference();
@@ -165,6 +168,7 @@ elements.progress.setAttribute('aria-valuemax', String(initialSeedTotal));
 elements.step.textContent = formatSeedProgress(0, initialSeedTotal, language);
 elements.soundEnabled.checked = soundEffectsEnabled;
 elements.antTrailsEnabled.checked = antTrailsEnabled;
+elements.antVisibilityEnabled.checked = antVisibilityEnabled;
 elements.seasonSelect.value = season;
 elements.musicVolume.value = String(Math.round(musicVolume * 100));
 elements.musicVolumeValue.value = `${Math.round(musicVolume * 100)}%`;
@@ -1501,6 +1505,16 @@ elements.restartButton.addEventListener('click', () => {
   window.location.reload();
 });
 elements.newGameButton.addEventListener('click', () => startNewGame());
+elements.antVisibilityEnabled.addEventListener('change', () => {
+  antVisibilityEnabled = elements.antVisibilityEnabled.checked;
+  try {
+    window.localStorage.setItem(ANT_VISIBILITY_KEY, antVisibilityEnabled ? '1' : '0');
+  } catch (error) {
+    console.warn('[the-quiet-pond] Could not store the ant visibility preference.', error);
+  }
+  session?.setAntVisibilityEnabled(antVisibilityEnabled);
+});
+
 elements.antTrailsEnabled.addEventListener('change', () => {
   antTrailsEnabled = elements.antTrailsEnabled.checked;
   try {
@@ -1579,6 +1593,7 @@ async function startGame() {
       season,
       soundEnabled: soundEffectsEnabled,
       antTrailsEnabled,
+      antVisibilityEnabled,
       musicVolume,
       saveState: saveSlots[activeSaveSlotIndex]?.state ?? null,
     });
