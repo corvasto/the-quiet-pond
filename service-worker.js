@@ -115,7 +115,7 @@ const APP_SHELL = [
   './assets/models/an_animated_cat.glb',
   './assets/models/ant.glb',
   './assets/models/bird_fly.glb',
-  './assets/models/common_frog.glb',
+  './assets/models/frog.glb',
   './assets/models/cockroach.glb',
   './assets/models/fish.glb',
   './assets/models/generic_narcissus_flower.glb',

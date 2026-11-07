@@ -11,7 +11,7 @@ remains under its listed terms; model titles and creators come from GLB metadata
 | ANT | MAXDESIGN-3D | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | [Sketchfab](https://sketchfab.com/3d-models/ant-dab7080251674ef98fc83b7604be2ffc) |
 | bird fly | [mr.film](https://sketchfab.com/mr.film) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | [Sketchfab](https://sketchfab.com/3d-models/bird-fly-a2a614daf8cd4b469859f231d5fd6514) |
 | Giant Cockroach | Drillimpact | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | [Sketchfab](https://sketchfab.com/3d-models/giant-cockroach-4b19ed8851f74c278eef835250a82896) |
-| Common Frog | kenchoo | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) | [Sketchfab](https://sketchfab.com/3d-models/common-frog-d1c6eae168a04f2b96afd4b16d4cf560) |
+| CC0 カジカガエル 🐸 ♂ Kajika Frog, Buergeria buergeri | [ffish.asia / floraZia.com](https://sketchfab.com/ffishAsia-and-floraZia) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | [Sketchfab](https://sketchfab.com/3d-models/cc0-kajika-frog-buergeria-buergeri-c60c3229de1144f3bfa2bf1979b52568) |
 | CC0 ミナミメダカ 🐟 ♀ Rice Fish, Oryzias latipes | [ffish.asia / floraZia.com](https://sketchfab.com/ffishAsia-and-floraZia) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | [Sketchfab](https://sketchfab.com/3d-models/cc0-rice-fish-oryzias-latipes-2505f19d127044b0b304ace799b4cd3b) |
 | Generic narcissus flower | assetfactory | [Sketchfab Standard license](https://sketchfab.com/licenses) | [Sketchfab](https://sketchfab.com/3d-models/generic-narcissus-flower-cf16e483ce7b4b9281b62366d9b1e52c) |
 | Lollipop | pmr1003 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | [Sketchfab](https://sketchfab.com/3d-models/lollipop-2262aa6ff36840db8d98baa986231f6e) |
@@ -32,6 +32,6 @@ The bird is rescaled for gameplay. Its body motion is removed from the animation
 ## Attribution
 
 About links to model sources and licenses. Follow CC BY credit/change-notice
-terms. The frog is CC BY-NC-SA (noncommercial, ShareAlike). Sketchfab Standard
-allows commercial use but prohibits standalone file access. Since the project
-includes the original GLBs, verify distribution terms or replace those assets.
+terms. The frog is released under CC0 1.0. Sketchfab Standard allows commercial
+use but prohibits standalone file access. Since the project includes the
+original GLBs, verify distribution terms or replace those assets.
