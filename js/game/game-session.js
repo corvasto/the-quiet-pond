@@ -13,6 +13,7 @@ import { MATERIAL_DEFINITIONS } from '../content/building.js';
 import { AntGroundTrail } from './ant-ground-trail.js';
 import { BurrowBuilding } from './burrow-building.js';
 import { BirdFlight, isBirdRewardUnlocked } from './bird-flight.js';
+import { UndergroundCompanions } from './underground-companions.js';
 
 export class PondGameSession {
   constructor(container, {
@@ -104,6 +105,7 @@ export class PondGameSession {
       season: this.season,
     });
     await this.app.start();
+    this.undergroundCompanions = new UndergroundCompanions(this);
     this.app.setAntOcclusionEnabled(this.antVisibilityEnabled);
     this.onLoadProgress(96);
     this.app.setView('ant', true);
@@ -731,7 +733,7 @@ export class PondGameSession {
       hour,
       raining: this.weatherPhase === 'rain',
     });
-    if (this.isBelowGround()) this.objectives?.updateUndergroundShelter(safeDelta);
+    if (this.isBelowGround()) this.objectives?.updateUndergroundObjectives(safeDelta);
     this.radioAudio?.update({
       delta: safeDelta,
       hour,
@@ -825,6 +827,8 @@ export class PondGameSession {
   }
 
   dispose() {
+    this.undergroundCompanions?.dispose();
+    this.undergroundCompanions = null;
     this.worldCycleUnsubscribe?.();
     this.worldCycleUnsubscribe = null;
     this.antTrail?.dispose();

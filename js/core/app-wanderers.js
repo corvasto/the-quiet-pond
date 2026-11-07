@@ -37,6 +37,7 @@ const wandererMethods = {
     const half = this.settings.area === 'pond' ? getHabitatArea().detailSize * 0.5 - 0.65 : 12;
     const base = origin ?? this.tree?.group?.position ?? new THREE.Vector3();
     const clearance = SCENE_PROPS.cockroach.collisionRadius;
+    const probe = this.cockroachProbe ??= new THREE.Vector3();
     destinationSearch:
     for (let attempt = 0; attempt < 28; attempt += 1) {
       const sceneWide = Math.random() < SCENE_PROPS.cockroach.wanderSceneChance;
@@ -51,19 +52,31 @@ const wandererMethods = {
         ? THREE.MathUtils.lerp(-half, half, Math.random())
         : THREE.MathUtils.clamp(base.z + Math.sin(angle) * distance, -half, half);
       const pathSamples = validatePath
-        ? Math.min(12, Math.max(1, Math.ceil(Math.hypot(x - base.x, z - base.z) / 0.4)))
+        ? Math.min(192, Math.max(1, Math.ceil(Math.hypot(x - base.x, z - base.z) / 0.08)))
         : 1;
+      probe.copy(base);
       for (let sample = 1; sample <= pathSamples; sample += 1) {
         const progress = validatePath ? sample / pathSamples : 1;
         const sampleX = THREE.MathUtils.lerp(base.x, x, progress);
         const sampleZ = THREE.MathUtils.lerp(base.z, z, progress);
-        if (!this.canBackgroundAntOccupy(sampleX, sampleZ, ground, clearance)) {
+        if (!this.canCockroachStep(probe, sampleX, sampleZ, ground, clearance)) {
           continue destinationSearch;
         }
+        probe.set(sampleX, (ground.chamber?.supportHeight(sampleX, sampleZ, probe.y)
+          ?? ground.surfaceHeightAt?.(sampleX, sampleZ) ?? ground.heightAt(sampleX, sampleZ)) + SCENE_PROPS.cockroach.lift, sampleZ);
       }
-      return new THREE.Vector3(x, ground.surfaceHeightAt?.(x, z) ?? ground.heightAt(x, z), z);
+      return new THREE.Vector3(x, probe.y - SCENE_PROPS.cockroach.lift, z);
     }
     return null;
+  },
+
+  canCockroachStep(position, x, z, ground = this.ground, radius = SCENE_PROPS.cockroach.collisionRadius) {
+    const chamber = ground?.chamber;
+    if (chamber) {
+      if (!chamber.canMove(position, x, z, radius)) return false;
+      if (chamber.below(position) || chamber.isSurfaceEntrance(x, z)) return chamber.canOccupy(position, x, z, radius);
+    }
+    return this.canBackgroundAntOccupy(x, z, ground, radius, chamber?.approachEntrance(x, z, radius));
   },
 
   randomCockroachDuration(mode) {
@@ -83,9 +96,17 @@ const wandererMethods = {
       const distance = direction.length();
       if (distance > 0.025) {
         direction.multiplyScalar(1 / distance);
-        group.position.addScaledVector(direction, Math.min(distance, SCENE_PROPS.cockroach.walkSpeed * delta));
-        group.position.y = (this.ground.surfaceHeightAt?.(group.position.x, group.position.z)
-          ?? this.ground.heightAt(group.position.x, group.position.z)) + SCENE_PROPS.cockroach.lift;
+        const step = Math.min(distance, SCENE_PROPS.cockroach.walkSpeed * delta);
+        const x = group.position.x + direction.x * step, z = group.position.z + direction.z * step;
+        if (!this.canCockroachStep(group.position, x, z)) {
+          state.mode = 'idle'; state.remaining = this.randomCockroachDuration('idle');
+          this.cockroachActions?.walk.fadeOut(0.22);
+          this.cockroachActions?.idle.reset().fadeIn(0.22).play();
+          return;
+        }
+        const y = this.ground.chamber?.supportHeight(x, z, group.position.y)
+          ?? this.ground.surfaceHeightAt?.(x, z) ?? this.ground.heightAt(x, z);
+        group.position.set(x, y + SCENE_PROPS.cockroach.lift, z);
         group.rotation.y = Math.atan2(direction.x, direction.z)
           + THREE.MathUtils.degToRad(SCENE_PROPS.cockroach.yawOffset);
       } else {
@@ -123,7 +144,7 @@ const wandererMethods = {
     return minimum + Math.random() * (maximum - minimum);
   },
 
-  canBackgroundAntOccupy(x, z, ground = this.ground, collisionRadius = SCENE_PROPS.ant.collisionRadius) {
+  canBackgroundAntOccupy(x, z, ground = this.ground, collisionRadius = SCENE_PROPS.ant.collisionRadius, allowBurrow = false) {
     if (!ground || !Number.isFinite(x) || !Number.isFinite(z)) return false;
     const config = SCENE_PROPS.ant;
     const habitat = getHabitatArea(this.settings.area);
@@ -149,6 +170,7 @@ const wandererMethods = {
     })) return false;
     if (ground.containsRock?.(x, z, collisionRadius)) return false;
     for (const reservation of this.groundReservations) {
+      if (allowBurrow && reservation.id === 'gameBurrow') continue;
       if (Math.hypot(x - reservation.position.x, z - reservation.position.z)
         < reservation.radius + collisionRadius) return false;
     }

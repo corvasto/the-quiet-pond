@@ -167,8 +167,13 @@ const antNavigationMethods = {
     if (!this.ant || !this.ground) return false;
     const config = SCENE_PROPS.ant;
     const chamber = this.ground.chamber;
-    if (chamber && !chamber.canOccupy(this.ant.group.position, x, z, config.collisionRadius)) return false;
+    if (chamber && !chamber.canOccupy(this.ant.group.position, x, z, Math.max(config.collisionRadius, chamber.actorRadius ?? 0))) return false;
     if (chamber?.below(this.ant.group.position)) return true;
+    if (this.gameGroundBlockers) for (const blocker of this.gameGroundBlockers.values()) {
+      const offsetX = (x - blocker.x) / (blocker.radiusX + config.collisionRadius);
+      const offsetZ = (z - blocker.z) / (blocker.radiusZ + config.collisionRadius);
+      if (offsetX * offsetX + offsetZ * offsetZ < 1) return false;
+    }
     const centerDistance = Math.hypot(
       x - this.antMovementCenter.x,
       z - this.antMovementCenter.y,
@@ -244,8 +249,7 @@ const antNavigationMethods = {
   },
 
   enforceGameGroundBlockers() {
-    if (this.ground?.chamber?.below(this.ant?.group.position)
-      || this.ground?.chamber?.inPassage(this.ant?.group.position)) return false;
+    if (this.ground?.chamber?.below(this.ant?.group.position)) return false;
     if (
       this.antFlightEnabled
       || this.antMotionLocked
@@ -275,7 +279,7 @@ const antNavigationMethods = {
 
   moveAntTo(x, z, { validatePath = true } = {}) {
     if (validatePath && this.ground?.chamber
-      && !this.ground.chamber.canMove(this.ant.group.position, x, z, SCENE_PROPS.ant.collisionRadius)) return false;
+      && !this.ground.chamber.canMove(this.ant.group.position, x, z, Math.max(SCENE_PROPS.ant.collisionRadius, this.ground.chamber.actorRadius ?? 0))) return false;
     if (!this.canAntOccupy(x, z)) return false;
     const previousX = this.ant.group.position.x;
     const previousZ = this.ant.group.position.z;

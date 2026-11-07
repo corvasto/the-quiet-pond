@@ -560,6 +560,10 @@ export class PondApp {
     this.worldAdditions.forEach((object) => object.removeFromParent());
     this.worldAdditions.clear();
     this.gameGroundBlockers.clear();
+    this.gameCameraObstacles = [];
+    this.gameCameraProbeMaterial?.dispose();
+    this.gameCameraProbeMaterial = null;
+    this.gameCameraProxy = null;
     this.readerSurfaceProxy?.removeFromParent();
     this.readerSurfaceProxy?.userData.dispose?.();
     this.readerSurfaceProxy = null;
@@ -1120,7 +1124,7 @@ export class PondApp {
     this.updateAntOcclusionWindow();
     if (this.ground?.chamber?.isSheltered(this.ant?.group.position) && this.isAntViewActive()) {
       this.undergroundView ??= new UndergroundView(this);
-      this.undergroundView.render();
+      this.undergroundView.render(this.ground.chamber.interiorLightingBlend(this.ant.group.position, this.camera.position));
     } else this.renderer.render(this.scene, this.camera);
   }
 

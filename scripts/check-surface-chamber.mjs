@@ -12,12 +12,32 @@ import { createBurrowVisual, SeedToBurrowGame } from '../js/game/seed-to-burrow.
 import { installPondAntNavigationMethods } from '../js/core/app-ant-navigation.js';
 import { SCENE_PROPS } from '../js/config/index.js';
 import { ANT_MOVEMENT_CONFIG } from '../js/config/world.js';
+import { installPondWorldQueryMethods } from '../js/core/app-world-query.js';
+import { installPondWandererMethods } from '../js/core/app-wanderers.js';
 
 class CameraHarness {}
 installPondCameraMethods(CameraHarness);
 class NavigationHarness {}
 installPondAntNavigationMethods(NavigationHarness);
 installPondCameraMethods(NavigationHarness);
+installPondWorldQueryMethods(NavigationHarness);
+class WandererHarness {}
+installPondWandererMethods(WandererHarness);
+const orbitRoom = { cameraDistance: 1.5, containsCamera: (x, y, z) => Math.abs(x) < 0.5 && Math.abs(z) < 0.7 && y < 0.6 };
+const orbitTarget = new THREE.Vector3(), requestedOrbit = new THREE.Vector3(), safeOrbit = new THREE.Vector3();
+let previousYaw = null;
+for (let step = 0; step <= 360; step++) {
+  const yaw = step * Math.PI / 180;
+  requestedOrbit.set(Math.sin(yaw) * 1.5, 0.2, Math.cos(yaw) * 1.5);
+  resolveChamberCameraOffset(orbitRoom, orbitTarget, requestedOrbit, safeOrbit);
+  const actualYaw = Math.atan2(safeOrbit.x, safeOrbit.z);
+  assert.ok(Math.abs(Math.atan2(Math.sin(actualYaw - yaw), Math.cos(actualYaw - yaw))) < 1e-8,
+    'Wall collision preserves every requested orbit angle');
+  assert.ok(orbitRoom.containsCamera(safeOrbit.x, safeOrbit.y, safeOrbit.z), 'A full orbit stays inside the walls');
+  if (previousYaw != null) assert.ok(Math.abs(Math.atan2(Math.sin(actualYaw - previousYaw), Math.cos(actualYaw - previousYaw))) < 0.018,
+    'Adjacent orbit inputs cannot jump to another shoulder');
+  previousYaw = actualYaw;
+}
 for (const segments of [70, 120]) {
   const terrain = new THREE.Mesh(new THREE.PlaneGeometry(30, 30, segments, segments));
   terrain.geometry.rotateX(-Math.PI / 2);
@@ -27,6 +47,61 @@ for (const segments of [70, 120]) {
     entranceClearance: chamber.passageWidth / 2 + 0.12 });
   const level = createUnderground({ layout, rootExtension: config.rootExtension });
   const c = createSurfaceChamber({ config: { ...config, level }, terrain, heightAt: () => 0.2 });
+  const collisionApp = new NavigationHarness();
+  Object.assign(collisionApp, {
+    ant: { group: new THREE.Group() }, ground: { chamber: c, heightAt: c.surfaceHeightAt, containsRock: () => false },
+    antMovementCenter: new THREE.Vector2(), antMovementRadius: 24,
+    treeGroundColliders: [{ x: 20, z: 20, radius: 1 }], modelGroundColliders: [], gameGroundBlockers: new Map(),
+    addWorldObject: () => true, addGameOcclusionRoot() {}, onFrame: () => () => {},
+  });
+  collisionApp.ant.group.position.set(x + 2, 0.206, BURROW_CONFIG.position.z + 2);
+  const collisionGame = new SeedToBurrowGame(collisionApp);
+  Object.assign(collisionGame, { createSeedCandidates: () => [], spawnSeeds() {}, createPondOffering() {},
+    emitState() {}, setPrompt() {}, getSnapshot: () => ({}) });
+  collisionGame.start();
+  for (const blocker of collisionApp.gameGroundBlockers.values()) {
+    assert.equal(collisionApp.canAntOccupy(blocker.x, blocker.z), false, 'Surface walking rejects each real burrow stone');
+    assert.equal(collisionApp.moveAntTo(blocker.x, blocker.z), false, 'Walking cannot pass through a burrow stone');
+  }
+  const back = collisionApp.gameGroundBlockers.get('gameBurrowRear');
+  assert.ok(!collisionApp.isAntTravelPathClear(x, back.z + 0.5, x, back.z - 0.5), 'Swept movement cannot cross the back wall');
+  collisionApp.ant.group.position.set(back.x, 0.206, back.z);
+  assert.ok(c.inPassage(collisionApp.ant.group.position) && !c.below(collisionApp.ant.group.position));
+  assert.ok(collisionApp.enforceGameGroundBlockers(), 'A surface ant over the ramp footprint is corrected out of a rock');
+  assert.ok(collisionApp.canAntOccupy(collisionApp.ant.group.position.x, collisionApp.ant.group.position.z));
+  collisionApp.ant.group.position.set(back.x, c.supportHeight(back.x, back.z, -2) + 0.006, back.z);
+  assert.ok(collisionApp.canAntOccupy(back.x, back.z), 'The same footprint remains walkable below the rear wall');
+  assert.equal(collisionApp.enforceGameGroundBlockers(), false, 'Surface stones cannot push an underground ant');
+  const earthFloor = level.group.getObjectByName('Packed earth floor');
+  const rampShell = c.group.getObjectByName('Covered burrow ramp shell');
+  assert.equal(earthFloor.material.map, rampShell.material.map, 'Ramp and underground share one soil texture');
+  assert.ok(earthFloor.geometry.attributes.uv && rampShell.geometry.attributes.uv, 'Both floors have world-aligned soil UVs');
+  assert.ok(Math.max(...level.soilTexture.image.data.filter((_, i) => i % 4 === 0))
+    - Math.min(...level.soilTexture.image.data.filter((_, i) => i % 4 === 0)) < 30, 'Soil grain stays subtle');
+  for (const p of [{ x: -2.506, y: 0.035, z: -3.580 }, { x: -3.080, y: -1.104, z: 0.131 }]) {
+    assert.equal(c.canOccupy(p, p.x, p.z, c.actorRadius), false, 'Reported wall-edge positions respect actor clearance');
+  }
+  assert.equal(c.supportHeight(-2.506, -3.580, 0.25), 0.2, 'Surface walking cannot enter through the soil beside the opening');
+  const roach = new WandererHarness();
+  Object.assign(roach, { settings: { area: 'pond' },
+    ground: { chamber: c, heightAt: c.surfaceHeightAt, containsRock: () => false, containsPond: () => false },
+    treeGroundColliders: [{ x: 20, z: 20, radius: 1 }], modelGroundColliders: [], gameGroundBlockers: collisionApp.gameGroundBlockers,
+    groundReservations: [{ id: 'gameBurrow', position: BURROW_CONFIG.position, radius: BURROW_CONFIG.clearingRadius }],
+  });
+  for (const direction of [-1, 1]) {
+    const start = direction > 0 ? mouth - 0.7 : door + 0.25;
+    const end = direction > 0 ? door + 0.25 : mouth - 0.7;
+    const p = new THREE.Vector3(x, c.supportHeight(x, start, -2) + SCENE_PROPS.cockroach.lift, start);
+    for (let z = start + direction * 0.01; direction * (end - z) > 0; z += direction * 0.01) {
+      assert.ok(roach.canCockroachStep(p, x, z), `Cockroach follows the real entrance at ${z}`);
+      p.set(x, c.supportHeight(x, z, p.y) + SCENE_PROPS.cockroach.lift, z);
+    }
+  }
+  const startHeight = c.supportHeight(x, mouth, -2), endHeight = layout.heightAt(x, door);
+  for (const fraction of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+    const height = c.supportHeight(x, mouth + fraction * chamber.rampLength, -2);
+    assert.ok(Math.abs(height - THREE.MathUtils.lerp(startHeight, endHeight, fraction)) < 1e-8, 'Main ramp is one linear incline');
+  }
   const z = layout.landmarks.nest.z, floor = layout.heightAt(x, z);
   const half = chamber.doorwayWidth / 2;
   assert.ok(Math.abs(mouth - (BURROW_CONFIG.position.z - 0.24)) < 1e-8);
@@ -114,6 +189,20 @@ for (const segments of [70, 120]) {
     assert.ok(c.isSheltered({ x: point.x, y: layout.heightAt(point.x, point.z) + 0.04, z: point.z }));
   }
   assert.ok(!c.isSheltered({ x, y: c.supportHeight(x, mouth + 0.05, -2) + 0.04, z: mouth + 0.05 }));
+  const coveredRim = mouth + chamber.openingLength;
+  const lightingPoint = (pz) => new THREE.Vector3(x, c.supportHeight(x, pz, -2) + 0.12, pz);
+  const shallow = lightingPoint(coveredRim + 0.2), deep = lightingPoint(coveredRim + config.interiorLightingInset + 0.2);
+  assert.ok(c.isSheltered(shallow), 'The upper covered ramp still protects against rain');
+  assert.equal(c.interiorLightingBlend(shallow, shallow), 0, 'Lighting stays outdoors just under the rim');
+  assert.equal(c.interiorLightingBlend(deep, shallow), 0, 'Lighting waits for the trailing camera to clear the upper ramp');
+  const blendStart = coveredRim + config.interiorLightingInset;
+  let lastBlend = 0;
+  for (let distance = 0; distance <= config.interiorLightingBlendLength + 0.02; distance += 0.01) {
+    const point = lightingPoint(blendStart + distance), blend = c.interiorLightingBlend(point, point);
+    assert.ok(blend >= lastBlend && blend - lastBlend < 0.02, 'Lighting changes gradually with ramp depth');
+    lastBlend = blend;
+  }
+  assert.equal(lastBlend, 1, 'The chamber reaches full interior lighting');
   const wideRoomCamera = resolveChamberCameraOffset(c, new THREE.Vector3(x, floor + 0.2, z),
     new THREE.Vector3(0, 0.12, 1.5), new THREE.Vector3());
   assert.ok(wideRoomCamera.length() > 0.9, 'A clear chamber no longer forces the camera within 0.7 units');
@@ -143,6 +232,7 @@ for (const segments of [70, 120]) {
   app.camera.position.copy(app.controls.target).add(new THREE.Vector3(1.8, 0.2, 0));
   app.antCameraAnchor = new THREE.Vector3(); app.antCameraLastPosition = new THREE.Vector3();
   app.antCameraDelta = new THREE.Vector3();
+  app.antCameraPosition = new THREE.Vector3(); app.antCameraTarget = new THREE.Vector3();
   app.antCameraFollow = { enabled: true, followFacing: true };
   app.isAntViewActive = () => true;
   app.getAntWorldPosition = (target) => target.copy(app.ant.group.position);
@@ -158,10 +248,22 @@ for (const segments of [70, 120]) {
   assert.ok(resetOrbit.x < 0 && resetOrbit.z < 0, 'Reset faces the ant forward');
   for (let frame = 0; frame < 90; frame++) app.updateAntCamera(1 / 60);
   assert.ok(app.chamberCameraRequestedOffset.distanceTo(resetOrbit) < 1e-8, 'Reset is not replaced by the previous orbit');
+  app.antCameraManualActive = true;
+  const beforeManualYaw = app.antCameraMovementYaw ?? 0;
+  const beforeManualOrbit = Math.atan2(app.chamberLastRenderedOffset.x, app.chamberLastRenderedOffset.z);
+  app.camera.position.copy(app.controls.target).add(new THREE.Vector3(0.7, 0.12, 1.1));
+  app.updateAntCamera(1 / 60);
+  const manualTurn = Math.atan2(0.7, 1.1) - beforeManualOrbit;
+  assert.ok(Math.abs((app.antCameraMovementYaw - beforeManualYaw)
+    - Math.atan2(Math.sin(manualTurn), Math.cos(manualTurn))) < 1e-8,
+  'Manual orbit compensates held movement once, without turning the walking direction');
+  assert.ok(app.chamberCameraRequestedOffset.x > 0.6 && app.chamberCameraRequestedOffset.z > 1,
+    'Indoor manual orbit is accepted immediately rather than overwritten or filtered twice');
+  app.antCameraManualActive = false;
   app.ant.group.position.set(x, c.supportHeight(x, mouth + 0.55, -1.2) + 0.04, mouth + 0.55);
   app.controls.target.copy(app.ant.group.position); app.controls.target.y += 0.15;
   app.chamberCameraRequestedOffset = new THREE.Vector3(2, 0.3, 0);
-  app.updateAntCamera(1 / 60);
+  for (let frame = 0; frame < 30; frame++) app.updateAntCamera(1 / 60);
   const yaw = app.antCameraMovementYaw ?? 0;
   for (let frame = 0; frame < 120; frame++) app.updateAntCamera(1 / 60);
   assert.ok(Math.abs(app.antCameraMovementYaw - yaw) < 1e-8, 'Shoulder correction must not repeatedly rotate held movement');
@@ -169,11 +271,12 @@ for (const segments of [70, 120]) {
   for (const direction of [-1, 1]) {
     for (const key of ['forward', 'backward']) {
       const walker = new NavigationHarness();
-      const pz = direction > 0 ? mouth + 0.02 : door + 0.08;
+      const pz = direction > 0 ? mouth + 0.02 : door + 0.8;
       const actor = new THREE.Group(); actor.position.set(x - 0.036, c.supportHeight(x - 0.036, pz, -2) + SCENE_PROPS.ant.lift, pz);
       const world = new THREE.Group(); world.add(actor);
       Object.assign(walker, {
         activeView: 'ant', ant: { group: actor }, ground: { chamber: c, heightAt: c.surfaceHeightAt, containsRock: () => false },
+        gameGroundBlockers: collisionApp.gameGroundBlockers,
         antMovement: ANT_MOVEMENT_CONFIG, antMovementCenter: new THREE.Vector2(), antMovementRadius: 24,
         treeGroundColliders: [{ x: 0, z: 0, radius: 0.5 }], modelGroundColliders: [],
         antMovementInput: new Set(), antMovementAxes: new THREE.Vector2(), antResolvedAxes: { x: 0, y: 0, magnitude: 0 },
@@ -187,11 +290,19 @@ for (const segments of [70, 120]) {
       walker.antCameraPose = { position: walker.antCameraPosition, target: walker.antCameraTarget };
       walker.getAntWorldPosition = (target) => actor.getWorldPosition(target);
       walker.setAntAnimationPlaying = () => {};
+      const burrowRocks = createBurrowVisual();
+      const rearEnclosure = ['Burrow rear wall', 'Burrow rear left shoulder', 'Burrow rear right shoulder', 'Burrow rear canopy']
+        .map((name) => burrowRocks.getObjectByName(name));
+      const enclosureRay = new THREE.Raycaster();
+      burrowRocks.position.set(x, 0.21, BURROW_CONFIG.position.z); world.add(burrowRocks);
+      walker.antOcclusionCandidates = []; walker.antOcclusionMaterials = []; walker.antOcclusionActive = [];
+      walker.addGameOcclusionRoot(burrowRocks.userData.rockPieces);
       walker.setAntMovementKey(key, true);
-      let reached = false, returnSeen = false, returnFrames = 0, returnRadius = 0;
-      for (let frame = 0; frame < 1400; frame++) {
+      let reached = false, returnSeen = false, returnFrames = 0, returnRadius = 0, resetNearMouth = false;
+      for (let frame = 0; frame < 2000; frame++) {
         const before = actor.position.z;
         walker.updateAntMovement(1 / 60);
+        walker.enforceGameGroundBlockers();
         const previousCamera = walker.camera.position.clone();
         if (walker.cameraTween?.surfaceReturn) {
           walker.cameraTween.startedAt = performance.now() - (++returnFrames) * 1000 / 60;
@@ -199,6 +310,7 @@ for (const segments of [70, 120]) {
         walker.updateCameraTween();
         if (!walker.cameraTween) walker.updateAntCamera(1 / 60);
         if (walker.cameraTween?.surfaceReturn && !returnSeen) {
+          assert.ok(!c.cameraNearBurrow(actor.position), 'Outdoor Reset view starts beyond the burrow radius');
           returnSeen = true;
           returnRadius = walker.camera.position.distanceTo(walker.controls.target);
           assert.ok(walker.camera.position.distanceTo(previousCamera) < 1e-8, 'Outdoor handoff begins without a position snap');
@@ -208,22 +320,47 @@ for (const segments of [70, 120]) {
           assert.ok(walker.camera.position.distanceTo(previousCamera) < 0.25, 'Outdoor reset advances in small steps');
         }
         assert.ok((actor.position.z - before) * direction >= -1e-7, 'Camera handoff never reverses a held walking direction');
+        assert.ok(Math.abs(actor.position.x - (x - 0.036)) < 1e-6, 'Door camera handoffs never steer held movement sideways');
         if (walker.chamberPassageCamera) {
-          assert.equal(walker.chamberPassageCamera.direction, direction);
+          if (walker.chamberPassageCamera.surface) {
+            assert.ok(Math.abs(walker.camera.position.x - walker.controls.target.x) < 1e-6,
+              'The straight exit view never switches to a side shoulder');
+            assert.ok(walker.isGameCameraClear(walker.controls.target, walker.camera.position), 'Near-burrow camera clears the authored rocks');
+            assert.ok(!walker.cameraTween, 'Full outdoor zoom waits until the ant leaves the safety radius');
+            if (!resetNearMouth) {
+              walker.resetAntCameraView();
+              assert.ok(!walker.cameraTween, 'Reset near the mouth respects the compact camera');
+              assert.ok(walker.isGameCameraClear(walker.controls.target, walker.camera.position), 'Reset near the mouth clears the rocks');
+              resetNearMouth = true;
+            }
+          }
+          if (!walker.chamberPassageCamera.surface) assert.equal(walker.chamberPassageCamera.direction, direction * (key === 'forward' ? 1 : -1),
+            'Walking backward keeps the original passage viewing direction');
+          enclosureRay.ray.origin.copy(walker.controls.target);
+          enclosureRay.ray.direction.subVectors(walker.camera.position, walker.controls.target);
+          enclosureRay.far = enclosureRay.ray.direction.length(); enclosureRay.ray.direction.normalize();
+          assert.equal(enclosureRay.intersectObjects(rearEnclosure, false).length, 0,
+            'The rear canopy and enclosure leave the tunnel camera path clear');
           walker.camera.updateMatrixWorld(true);
           for (const lift of [0, 0.09]) {
             const projected = actor.position.clone().add(new THREE.Vector3(0, lift, 0)).project(walker.camera);
-            assert.ok(Math.abs(projected.x) < 0.9 && Math.abs(projected.y) < 0.9, 'The ant remains in frame through the entrance');
+            assert.ok(Math.abs(projected.x) < 0.9 && Math.abs(projected.y) < 0.9,
+              `The ant remains in frame through the entrance: ${JSON.stringify({ direction, key, frame, actor: actor.position, camera: walker.camera.position, projected })}`);
           }
         }
-        if (direction > 0 ? actor.position.z > door + 0.12 : actor.position.z < mouth - 0.12 && !walker.cameraTween) { reached = true; break; }
+        if (direction > 0 ? actor.position.z > door + 0.8 : actor.position.z < mouth - config.surfaceCameraRadius - 0.1 && !walker.cameraTween) { reached = true; break; }
       }
-      assert.ok(reached, `The complete entrance is traversable while holding ${key}, direction ${direction}`);
+      assert.ok(reached, `The complete entrance is traversable while holding ${key}, direction ${direction}: ${JSON.stringify({ actor: actor.position, camera: walker.camera.position, yaw: walker.antCameraMovementYaw })}`);
       if (direction < 0) {
         assert.ok(returnSeen, 'Leaving the entrance restores the outdoor camera');
         const resetPose = walker.getAntCameraPose(walker.antCameraFollowPoseOptions);
         assert.ok(walker.camera.position.distanceTo(resetPose.position) < 1e-6, 'Exit finishes at the outdoor Reset view position');
         assert.ok(walker.controls.target.distanceTo(resetPose.target) < 1e-6);
+        assert.ok(Math.abs(walker.camera.fov - walker.burrowCameraBaseFov) < 1e-6, 'Outdoor field of view is restored');
+        actor.position.set(x, c.surfaceHeightAt(x, mouth - 0.5) + SCENE_PROPS.ant.lift, mouth - 0.5);
+        walker.cameraTween = { surfaceReturn: true };
+        walker.updateCameraTween();
+        assert.equal(walker.cameraTween, null, 'Returning toward the burrow cancels the outdoor zoom');
       }
     }
   }
@@ -284,9 +421,18 @@ for (const segments of [70, 120]) {
   assert.equal(building.placement(), null, 'A carried leaf can drop on a clear landing while the ant stands near a wall');
   level.dispose();
 }
-const entranceRay = new THREE.Raycaster(new THREE.Vector3(0, 0.08, -1), new THREE.Vector3(0, 0, 1), 0, 2);
+const entranceRay = new THREE.Raycaster(new THREE.Vector3(0, 0.08, -1), new THREE.Vector3(0, 0, 1), 0, 1.4);
 const openBurrow = createBurrowVisual(); openBurrow.updateMatrixWorld(true);
 assert.equal(entranceRay.intersectObject(openBurrow.userData.rockPieces, true).length, 0, 'Rear rock leaves the entrance clear');
+entranceRay.far = 2;
+assert.ok(entranceRay.intersectObject(openBurrow.getObjectByName('Burrow rear wall'), false).length > 0,
+  'The rear wall closes the enclosure behind the clear entrance');
+const rearSightline = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1), 0, 2.5);
+for (const px of [-0.18, 0, 0.18]) for (const py of [0.08, 0.2, 0.32, 0.46]) {
+  rearSightline.ray.origin.set(px, py, 2);
+  assert.ok(rearSightline.intersectObject(openBurrow.userData.rockPieces, true).length > 0,
+    'The back wall and canopy conceal the entrance from behind');
+}
 let movementClears = 0;
 const gamePause = Object.create(SeedToBurrowGame.prototype);
 gamePause.app = { clearAntMovement: () => movementClears++ }; gamePause.setPrompt = () => {};

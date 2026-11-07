@@ -112,6 +112,60 @@ const WORLD_QUERY_METHODS = {
     return true;
   },
 
+  addGameOcclusionRoot(root) {
+    root.traverse((mesh) => {
+      if (!mesh.isMesh || mesh.isInstancedMesh || this.antOcclusionCandidates.includes(mesh)) return;
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      this.antOcclusionCandidates.push(mesh);
+      mesh.updateWorldMatrix(true, false);
+      this.gameCameraObstacles ??= [];
+      this.gameCameraObstacles.push({ root, mesh, box: mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld) });
+    });
+  },
+
+  removeGameOcclusionRoot(root) {
+    if (this.gameCameraObstacles) this.gameCameraObstacles = this.gameCameraObstacles.filter((entry) => entry.root !== root);
+    root.traverse((mesh) => {
+      const index = this.antOcclusionCandidates.indexOf(mesh);
+      if (index >= 0) this.antOcclusionCandidates.splice(index, 1);
+      const materialIndex = this.antOcclusionMaterials.findIndex((entry) => entry.mesh === mesh);
+      if (materialIndex >= 0) {
+        const entry = this.antOcclusionMaterials.splice(materialIndex, 1)[0];
+        mesh.material = entry.original;
+        for (const material of entry.clones) material.dispose();
+        const active = this.antOcclusionActive.indexOf(entry);
+        if (active >= 0) this.antOcclusionActive.splice(active, 1);
+      }
+    });
+  },
+
+  isGameCameraClear(target, position) {
+    this.gameCameraRay ??= new THREE.Ray();
+    this.gameCameraProbe ??= new THREE.Vector3();
+    const ray = this.gameCameraRay;
+    ray.origin.copy(target); ray.direction.subVectors(position, target);
+    const distance = ray.direction.length();
+    if (distance < 0.001) return false;
+    ray.direction.multiplyScalar(1 / distance);
+    const obstacles = this.gameCameraObstacles ?? [];
+    for (let i = 0; i < Math.min(obstacles.length, 8); i++) {
+      const entry = obstacles[i];
+      const hit = ray.intersectBox(entry.box, this.gameCameraProbe);
+      if (!hit || (!entry.box.containsPoint(target) && hit.distanceTo(target) >= distance - 0.03)) continue;
+      this.gameCameraRaycaster ??= new THREE.Raycaster();
+      this.gameCameraProbeMaterial ??= new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+      this.gameCameraProxy ??= new THREE.Mesh(entry.mesh.geometry, this.gameCameraProbeMaterial);
+      this.gameCameraHits ??= [];
+      this.gameCameraProxy.geometry = entry.mesh.geometry;
+      this.gameCameraProxy.matrixWorld.copy(entry.mesh.matrixWorld);
+      this.gameCameraRaycaster.ray.copy(ray); this.gameCameraRaycaster.far = distance - 0.03;
+      this.gameCameraHits.length = 0;
+      this.gameCameraRaycaster.intersectObject(this.gameCameraProxy, false, this.gameCameraHits);
+      if (this.gameCameraHits.length) return false;
+    }
+    return true;
+  },
+
   removeGameGroundBlocker(id) {
     return this.gameGroundBlockers.delete(String(id));
   },

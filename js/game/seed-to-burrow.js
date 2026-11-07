@@ -88,12 +88,14 @@ export function createBurrowVisual() {
   const rockPieces = new THREE.Group();
   rockPieces.name = 'Rounded burrow boulder cave';
   rockPieces.add(
-    createRock('Burrow cave roof', new THREE.Vector3(0, 0.36, 0.08), new THREE.Vector3(0.8, 0.24, 0.42), '#82785a', 0.4),
+    createRock('Burrow cave roof', new THREE.Vector3(0, 0.40, 0.08), new THREE.Vector3(0.8, 0.14, 0.30), '#82785a', 0.4),
     createRock('Burrow cave left wall', new THREE.Vector3(-0.54, 0.16, -0.015), new THREE.Vector3(0.28, 0.2, 0.3), '#72694f', 1.7),
     createRock('Burrow cave right wall', new THREE.Vector3(0.54, 0.15, 0.02), new THREE.Vector3(0.28, 0.19, 0.29), '#786e52', 3.2),
     ...[
-      createRock('Burrow rear left shoulder', new THREE.Vector3(-0.48, 0.17, 0.28), new THREE.Vector3(0.2, 0.19, 0.2), '#625d46', 5.1),
-      createRock('Burrow rear right shoulder', new THREE.Vector3(0.48, 0.17, 0.28), new THREE.Vector3(0.2, 0.19, 0.2), '#625d46', 5.6),
+      createRock('Burrow rear left shoulder', new THREE.Vector3(-0.48, 0.16, 0.51), new THREE.Vector3(0.23, 0.22, 0.52), '#625d46', 0.3),
+      createRock('Burrow rear right shoulder', new THREE.Vector3(0.48, 0.16, 0.51), new THREE.Vector3(0.23, 0.22, 0.52), '#625d46', 0.4),
+      createRock('Burrow rear wall', new THREE.Vector3(0, 0.16, 1.02), new THREE.Vector3(0.64, 0.24, 0.18), '#6b634a', 0.3),
+      createRock('Burrow rear canopy', new THREE.Vector3(0, 0.36, 0.64), new THREE.Vector3(0.73, 0.18, 0.63), '#82785a', 0.2),
     ],
   );
 
@@ -300,6 +302,7 @@ export class SeedToBurrowGame {
       this.root = null;
       throw new Error('The Quiet Pond interactions could not join the scene.');
     }
+    this.app.addGameOcclusionRoot?.(this.burrow.userData.rockPieces);
     const addBurrowBlocker = (id, offsetX, offsetZ, radiusX, radiusZ) => {
       this.app.addGameGroundBlocker(
         id,
@@ -313,7 +316,9 @@ export class SeedToBurrowGame {
     };
     addBurrowBlocker('gameBurrowLeft', -0.5, -0.01, 0.3, 0.34);
     addBurrowBlocker('gameBurrowRight', 0.5, 0.01, 0.3, 0.33);
-    addBurrowBlocker('gameBurrowRear', 0.02, 0.3, 0.6, 0.18);
+    addBurrowBlocker('gameBurrowRearLeft', -0.48, 0.6, 0.23, 0.42);
+    addBurrowBlocker('gameBurrowRearRight', 0.48, 0.6, 0.23, 0.42);
+    addBurrowBlocker('gameBurrowRear', 0, 1.02, 0.66, 0.2);
     this.unsubscribe = this.app.onFrame((frame) => this.update(frame));
     this.emitState();
     this.setPrompt('Find an active seed.');
@@ -868,6 +873,7 @@ export class SeedToBurrowGame {
       this.offering = null;
     }
     if (this.root) {
+      if (this.burrow) this.app.removeGameOcclusionRoot?.(this.burrow.userData.rockPieces);
       this.app.removeWorldObject(this.root);
       disposeObject3D(this.root);
     }
@@ -882,6 +888,8 @@ export class SeedToBurrowGame {
     this.app.removeGameGroundBlocker('gameBurrowLeft');
     this.app.removeGameGroundBlocker('gameBurrowRight');
     this.app.removeGameGroundBlocker('gameBurrowRear');
+    this.app.removeGameGroundBlocker('gameBurrowRearLeft');
+    this.app.removeGameGroundBlocker('gameBurrowRearRight');
     this.storedSeeds = [];
   }
 }

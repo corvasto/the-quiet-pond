@@ -167,3 +167,17 @@ assert.equal(readerMesh.material.opacity, 0.4, 'The reader night fade must conti
 app.setAntOcclusionEnabled(false);
 assert.equal(readerMesh.material, readerMaterial);
 console.log('Ant visibility checks passed: smooth scenery fade, intact ant material, and immediate setting reset.');
+const burrow = new THREE.Group();
+const roofMaterial = new THREE.MeshStandardMaterial();
+const roof = new THREE.Mesh(new THREE.BoxGeometry(), roofMaterial); burrow.add(roof);
+app.world.add(burrow);
+app.addGameOcclusionRoot(burrow); app.addGameOcclusionRoot(burrow);
+assert.equal(app.antOcclusionCandidates.filter((mesh) => mesh === roof).length, 1);
+const roofFade = app.getAntOcclusionMaterial(roof);
+roof.material = roofFade.faded; app.antOcclusionActive.push(roofFade);
+let roofDisposals = 0; roofFade.clones.forEach((material) => material.addEventListener('dispose', () => roofDisposals++));
+app.removeGameOcclusionRoot(burrow);
+assert.equal(roof.material, roofMaterial);
+assert.ok(!app.antOcclusionCandidates.includes(roof));
+assert.ok(!app.antOcclusionActive.includes(roofFade));
+assert.equal(roofDisposals, roofFade.clones.length);

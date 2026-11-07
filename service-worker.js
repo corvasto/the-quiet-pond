@@ -7,12 +7,14 @@ if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
   console.info(`[the-quiet-pond] Updating ${REQUESTED_VERSION} to ${RELEASE_VERSION}.`);
 }
 const APP_SHELL = [
+  './js/game/underground-companions.js',
   './js/core/underground-view.js',
   './js/core/surface-map.js',
   './js/generators/underground.js',
   './js/content/underground-layout.js',
   './js/config/underground.js',
   './js/generators/surface-chamber.js',
+  './js/generators/soil-texture.js',
   './index.html',
   './manifest.webmanifest',
   './icon.png',

@@ -318,9 +318,10 @@ export class PondGameObjectives {
     if (objective.evaluator === 'pondSurface') return onPondSurface;
     if (objective.target === 'companionAnt') {
       const radius = Number(config[objective.radiusKey]) || 0;
-      return (this.app.backgroundAnts ?? []).some(({ group }) => (
+      const near = ({ group }) => (
         group?.parent && antPosition.distanceTo(group.position) <= radius
-      ));
+      );
+      return (this.app.backgroundAnts ?? []).some(near) || (this.app.undergroundAnts ?? []).some(near);
     }
     const target = this.landmarkPositions[objective.target];
     if (!target) return false;
@@ -381,10 +382,13 @@ export class PondGameObjectives {
       <= POND_GAME.objectives.shelterRadius;
   }
 
-  updateUndergroundShelter(delta) {
+  updateUndergroundObjectives(delta) {
     const position = this.app.getAntWorldPosition(this.antPosition);
     if (!position) return;
     this.updateTask('shelter', this.raining, Boolean(this.app.ground?.chamber?.isSheltered(position)),
+      Math.max(0, Math.min(delta, 0.25)));
+    const companion = MANAGED_GAME_OBJECTIVES.find((objective) => objective.id === 'companionAnt');
+    this.updateTask('companionAnt', true, this.isObjectiveNearby(companion, position, false, POND_GAME.objectives),
       Math.max(0, Math.min(delta, 0.25)));
     this.emitChange();
   }

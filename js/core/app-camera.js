@@ -2,16 +2,20 @@ import * as THREE from 'three';
 import { CAMERA_VIEWS, SCENE_PROPS, getHabitatArea } from '../config/index.js';
 import { clampMotionDelta, trackGroundOrbit } from '../utils/player-motion.js';
 
-const CHAMBER_SHOULDERS = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2,
-  Math.PI * 3 / 4, -Math.PI * 3 / 4, Math.PI].map((yaw) => ({ cosine: Math.cos(yaw), sine: Math.sin(yaw) }));
-const CHAMBER_HEIGHTS = [0.12, 0.5];
-
 function clearChamberFraction(chamber, target, x, y, z) {
   const steps = Math.min(64, Math.max(1, Math.ceil(Math.hypot(x, y, z) / 0.025)));
   let fraction = 0;
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
-    if (!chamber.containsCamera(target.x + x * t, target.y + y * t, target.z + z * t)) break;
+    if (!chamber.containsCamera(target.x + x * t, target.y + y * t, target.z + z * t)) {
+      let low = fraction, high = t;
+      for (let j = 0; j < 6; j++) {
+        const middle = (low + high) / 2;
+        if (chamber.containsCamera(target.x + x * middle, target.y + y * middle, target.z + z * middle)) low = middle;
+        else high = middle;
+      }
+      return low;
+    }
     fraction = t;
   }
   return fraction;
@@ -22,25 +26,8 @@ export function resolveChamberCameraOffset(chamber, target, requested, output) {
   if (distance < 1e-6) return output.set(0, 0.1, 0);
   const scale = Math.min(1, (chamber.cameraDistance ?? 1.5) / distance);
   const x = requested.x * scale, y = requested.y * scale, z = requested.z * scale;
-  let fraction = clearChamberFraction(chamber, target, x, y, z);
-  output.set(x * fraction, y * fraction, z * fraction);
-  if (output.length() >= Math.min(0.85, distance * 0.9)) return output;
-  // Prefer a clear shoulder over collapsing the camera into the ant at a wall.
-  const horizontal = Math.hypot(x, z);
-  const radius = Math.min(1.2, distance);
-  const ux = horizontal > 1e-5 ? x / horizontal : 0;
-  const uz = horizontal > 1e-5 ? z / horizontal : 1;
-  let best = output.length();
-  for (const height of CHAMBER_HEIGHTS) for (const angle of CHAMBER_SHOULDERS) {
-    const dx = (ux * angle.cosine - uz * angle.sine) * radius;
-    const dz = (ux * angle.sine + uz * angle.cosine) * radius;
-    const dy = height === 0.12 ? THREE.MathUtils.clamp(y, 0.04, 0.12) : Math.min(height, distance * 0.65);
-    fraction = clearChamberFraction(chamber, target, dx, dy, dz);
-    const clearance = Math.hypot(dx, dy, dz) * fraction;
-    if (clearance > best + 0.01) { best = clearance; output.set(dx * fraction, dy * fraction, dz * fraction); }
-    if (best >= 0.85) return output;
-  }
-  return output;
+  const fraction = clearChamberFraction(chamber, target, x, y, z);
+  return output.set(x * fraction, y * fraction, z * fraction);
 }
 
 function easeInOut(value) {
@@ -50,6 +37,36 @@ function easeInOut(value) {
 }
 
 const cameraMethods = {
+  updateBurrowSurfaceCamera(actor, chamber, delta) {
+    const blend = 1 - Math.exp(-8 * clampMotionDelta(delta));
+    const beforeX = this.camera.position.x - this.controls.target.x;
+    const beforeZ = this.camera.position.z - this.controls.target.z;
+    this.antCameraDelta.set(actor.x, actor.y + 0.045, actor.z).sub(this.controls.target);
+    this.camera.position.add(this.antCameraDelta); this.controls.target.add(this.antCameraDelta);
+    const state = this.chamberPassageCamera;
+    state.surfaceYaw ??= state.direction ? (state.direction > 0 ? Math.PI : 0)
+      : Math.atan2(beforeX, beforeZ);
+    this.antCameraPosition.set(actor.x + Math.sin(state.surfaceYaw) * 0.7,
+      actor.y + 0.16, actor.z + Math.cos(state.surfaceYaw) * 0.7);
+    if (this.isGameCameraClear?.(this.controls.target, this.antCameraPosition) === false) {
+      this.antCameraDelta.subVectors(this.antCameraPosition, this.controls.target);
+      let low = 0, high = 1;
+      for (let i = 0; i < 8; i++) {
+        const middle = (low + high) / 2;
+        this.antCameraPosition.copy(this.controls.target).addScaledVector(this.antCameraDelta, middle);
+        if (this.isGameCameraClear(this.controls.target, this.antCameraPosition)) low = middle;
+        else high = middle;
+      }
+      this.antCameraPosition.copy(this.controls.target).addScaledVector(this.antCameraDelta, low);
+    }
+    this.camera.position.lerp(this.antCameraPosition, blend);
+    if (this.isGameCameraClear?.(this.controls.target, this.camera.position) === false) this.camera.position.copy(this.antCameraPosition);
+    this.camera.lookAt(this.controls.target);
+    trackGroundOrbit(this, beforeX, beforeZ,
+      this.camera.position.x - this.controls.target.x, this.camera.position.z - this.controls.target.z);
+    this.antCameraLastPosition.copy(actor); this.antCameraHasLastPosition = true;
+  },
+
   setFlyingActorView(position, target, tuning) {
     this.clearCameraOrbitMomentum();
     this.clearAntMovement();
@@ -141,6 +158,12 @@ const cameraMethods = {
 
   resetAntCameraView() {
     if (!this.isAntViewActive() || !this.ant) return false;
+    if (this.ground?.chamber?.cameraNearBurrow?.(this.ant.group.position) && !this.ground.chamber.below(this.ant.group.position)) {
+      this.cameraTween = null;
+      this.clearCameraOrbitMomentum();
+      this.updateAntCamera(0.05, true);
+      return true;
+    }
     if (this.ground?.chamber?.below(this.ant.group.position)) {
       this.cameraTween = null;
       this.clearCameraOrbitMomentum();
@@ -188,21 +211,63 @@ const cameraMethods = {
     const antPosition = this.getAntWorldPosition(this.antCameraAnchor);
     if (!antPosition) return;
     const chamber = this.ground?.chamber;
-    if ((chamber?.cameraInPassage?.(antPosition)
+    const nearBurrow = chamber?.cameraNearBurrow?.(antPosition) && !chamber.below(antPosition) && !this.antFlightEnabled;
+    const passage = chamber?.cameraInPassage?.(antPosition) && !this.antFlightEnabled;
+    if (nearBurrow || passage) this.burrowCameraBaseFov ??= this.camera.fov;
+    if (this.burrowCameraBaseFov != null) {
+      const fov = nearBurrow || passage ? chamber.entranceCameraFov : this.burrowCameraBaseFov;
+      this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, fov, 1 - Math.exp(-8 * clampMotionDelta(delta)));
+      if (Math.abs(this.camera.fov - fov) < 0.01) this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+    if (nearBurrow) {
+      if (!this.chamberPassageCamera) {
+        this.chamberPassageCamera = { rotate: this.controls.enableRotate, zoom: this.controls.enableZoom, surface: true };
+        this.clearCameraOrbitMomentum();
+      }
+      this.chamberPassageCamera.surface = true;
+      this.controls.enableRotate = false; this.controls.enableZoom = false;
+      this.chamberCameraRequestedOffset = null; this.chamberLastRenderedOffset = null;
+      this.updateBurrowSurfaceCamera(antPosition, chamber, delta);
+      return;
+    }
+    if ((passage
       || (this.chamberPassageCamera && chamber?.cameraAtMouth?.(antPosition))) && !this.antFlightEnabled) {
       const beforeX = this.camera.position.x - this.controls.target.x;
       const beforeZ = this.camera.position.z - this.controls.target.z;
-      if (!this.chamberPassageCamera) {
-        const travelZ = this.antVelocity?.z ?? 0;
-        const direction = Math.abs(travelZ) > 0.01 ? Math.sign(travelZ)
-          : Math.sign(this.controls.target.z - this.camera.position.z) || 1;
-        this.chamberPassageCamera = { rotate: this.controls.enableRotate, zoom: this.controls.enableZoom, direction };
+      if (!this.chamberPassageCamera || this.chamberPassageCamera.surface) {
+        const direction = Math.sign(this.controls.target.z - this.camera.position.z)
+          || Math.sign(this.antVelocity?.z ?? 0) || 1;
+        const previous = this.chamberPassageCamera;
+        this.chamberPassageCamera = { rotate: previous?.rotate ?? this.controls.enableRotate,
+          zoom: previous?.zoom ?? this.controls.enableZoom, direction, elapsed: 0,
+          fromPosition: this.camera.position.clone().sub(antPosition), fromTarget: this.controls.target.clone().sub(antPosition) };
         this.clearCameraOrbitMomentum();
       }
       this.controls.enableRotate = false; this.controls.enableZoom = false;
       this.chamberCameraRequestedOffset = null;
       this.chamberLastRenderedOffset = null;
       chamber.setPassageCamera(antPosition, this.camera, this.controls.target, this.chamberPassageCamera.direction);
+      const transition = this.chamberPassageCamera;
+      transition.elapsed += clampMotionDelta(delta);
+      if (transition.elapsed < 0.3) {
+        const blend = easeInOut(transition.elapsed / 0.3);
+        this.antCameraDelta.subVectors(this.camera.position, this.controls.target);
+        this.antCameraPosition.subVectors(transition.fromPosition, transition.fromTarget);
+        const fromYaw = Math.atan2(this.antCameraPosition.x, this.antCameraPosition.z);
+        const toYaw = Math.atan2(this.antCameraDelta.x, this.antCameraDelta.z);
+        const yaw = fromYaw + Math.atan2(Math.sin(toYaw - fromYaw), Math.cos(toYaw - fromYaw)) * blend;
+        const radius = THREE.MathUtils.lerp(Math.hypot(this.antCameraPosition.x, this.antCameraPosition.z),
+          Math.hypot(this.antCameraDelta.x, this.antCameraDelta.z), blend);
+        const height = THREE.MathUtils.lerp(this.antCameraPosition.y, this.antCameraDelta.y, blend);
+        this.antCameraDelta.set(Math.sin(yaw) * radius, height, Math.cos(yaw) * radius);
+        this.antCameraTarget.copy(antPosition).add(transition.fromTarget).lerp(this.controls.target, blend);
+        this.antCameraTarget.y = Math.max(this.antCameraTarget.y, antPosition.y + 0.08);
+        this.controls.target.copy(this.antCameraTarget);
+        resolveChamberCameraOffset(chamber, this.controls.target, this.antCameraDelta, this.antCameraDelta);
+        this.camera.position.copy(this.controls.target).add(this.antCameraDelta);
+        this.camera.lookAt(this.controls.target);
+      }
       trackGroundOrbit(this, beforeX, beforeZ,
         this.camera.position.x - this.controls.target.x, this.camera.position.z - this.controls.target.z);
       this.antCameraLastPosition.copy(antPosition); this.antCameraHasLastPosition = true;
@@ -219,7 +284,7 @@ const cameraMethods = {
           startedAt: performance.now(), duration: 750, surfaceReturn: true,
           fromPosition: this.camera.position.clone(), toPosition: pose.position.clone(),
           fromTarget: this.controls.target.clone(), toTarget: pose.target.clone(),
-          antAnchor: antPosition.clone(),
+          antAnchor: antPosition.clone(), fromFov: this.camera.fov, toFov: this.burrowCameraBaseFov ?? this.camera.fov,
         };
         this.chamberCameraRequestedOffset = null;
         this.chamberLastRenderedOffset = null;
@@ -239,6 +304,12 @@ const cameraMethods = {
       }
     }
     const insideChamber = chamber?.below(antPosition) && !this.antFlightEnabled;
+    if (insideChamber && this.antCameraManualActive && this.chamberCameraRequestedOffset && this.chamberLastRenderedOffset) {
+      const x = this.camera.position.x - this.controls.target.x, z = this.camera.position.z - this.controls.target.z;
+      trackGroundOrbit(this, this.chamberLastRenderedOffset.x, this.chamberLastRenderedOffset.z, x, z);
+      this.chamberCameraRequestedOffset.subVectors(this.camera.position, this.controls.target);
+      this.chamberLastRenderedOffset.copy(this.chamberCameraRequestedOffset);
+    }
     // Restore the requested orbit before controls update. Collision only adjusts
     // the rendered camera, so minimum distance cannot fight the correction.
     if (this.chamberCameraRequestedOffset) {
@@ -254,6 +325,9 @@ const cameraMethods = {
     this.antCameraHasLastPosition = true;
 
     const dt = clampMotionDelta(delta);
+    if (this.antCameraFollow.enabled) {
+      this.controls.dampingFactor = 1 - Math.exp(-this.antCameraFollow.orbitResponsiveness * dt);
+    }
     if (insideChamber) {
       this.antCameraDelta.subVectors(antPosition, this.controls.target);
       this.antCameraDelta.y += 0.15;
@@ -262,9 +336,6 @@ const cameraMethods = {
       this.updateAntCameraAssistance(dt, travelX, travelZ);
       this.updateAntOrbitControls(delta);
       return;
-    }
-    if (this.antCameraFollow.enabled) {
-      this.controls.dampingFactor = 1 - Math.exp(-this.antCameraFollow.orbitResponsiveness * dt);
     }
     if (this.antCameraFollow.enabled && this.antCameraFollow.followFacing && (moved || immediate)) {
       const pose = this.getAntCameraPose(this.antCameraFollowPoseOptions);
@@ -290,8 +361,8 @@ const cameraMethods = {
   },
 
   updateAntOrbitControls(delta) {
-    const beforeX = this.chamberLastRenderedOffset?.x ?? this.camera.position.x - this.controls.target.x;
-    const beforeZ = this.chamberLastRenderedOffset?.z ?? this.camera.position.z - this.controls.target.z;
+    const beforeX = this.camera.position.x - this.controls.target.x;
+    const beforeZ = this.camera.position.z - this.controls.target.z;
     this.controls.update(delta);
     const chamber = this.ground?.chamber;
     const actor = this.ant?.group.position;
@@ -302,10 +373,12 @@ const cameraMethods = {
       this.chamberCameraRequestedOffset.copy(this.antCameraDelta);
       resolveChamberCameraOffset(chamber, this.controls.target, this.antCameraDelta, this.antCameraDelta);
       if (this.chamberLastRenderedOffset && delta > 0) {
-        this.chamberLastRenderedOffset.lerp(this.antCameraDelta, 1 - Math.exp(-8 * clampMotionDelta(delta)));
-        this.antCameraDelta.copy(this.chamberLastRenderedOffset);
-        const fraction = clearChamberFraction(chamber, this.controls.target, this.antCameraDelta.x, this.antCameraDelta.y, this.antCameraDelta.z);
-        this.antCameraDelta.multiplyScalar(fraction);
+        const safeDistance = this.antCameraDelta.length();
+        const previousDistance = this.chamberLastRenderedOffset.length();
+        if (safeDistance > previousDistance && safeDistance > 1e-6) {
+          const distance = THREE.MathUtils.lerp(previousDistance, safeDistance, 1 - Math.exp(-8 * clampMotionDelta(delta)));
+          this.antCameraDelta.multiplyScalar(distance / safeDistance);
+        }
       }
       this.chamberLastRenderedOffset ??= new THREE.Vector3();
       this.chamberLastRenderedOffset.copy(this.antCameraDelta);
@@ -472,7 +545,8 @@ const cameraMethods = {
   updateCameraTween() {
     if (!this.cameraTween) return;
     const surfaceReturn = this.cameraTween.surfaceReturn;
-    if (surfaceReturn && this.ground?.chamber?.cameraInPassage?.(this.ant.group.position)) {
+    if (surfaceReturn && (this.ground?.chamber?.cameraInPassage?.(this.ant.group.position)
+      || this.ground?.chamber?.cameraNearBurrow?.(this.ant.group.position))) {
       this.cameraTween = null;
       return;
     }
@@ -510,6 +584,8 @@ const cameraMethods = {
       // Interpolate the orbit rather than cutting through its center while turning.
       this.camera.position.set(this.controls.target.x + Math.sin(yaw) * radius,
         this.controls.target.y + height, this.controls.target.z + Math.cos(yaw) * radius);
+      this.camera.fov = THREE.MathUtils.lerp(tween.fromFov, tween.toFov, eased);
+      this.camera.updateProjectionMatrix();
     } else this.camera.position.lerpVectors(this.cameraTween.fromPosition, this.cameraTween.toPosition, eased);
     if (this.isAntViewActive()) this.camera.lookAt(this.controls.target);
     if (surfaceReturn) trackGroundOrbit(this, beforeX, beforeZ,

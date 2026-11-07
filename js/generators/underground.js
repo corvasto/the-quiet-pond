@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createUndergroundLayout } from '../content/underground-layout.js';
+import { createSoilTexture, addSoilFloorUVs } from './soil-texture.js';
 
 function variation(index) {
   const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
@@ -19,7 +20,9 @@ export function createUnderground({ treePosition, barkMaterial, layout = createU
   const soil = material(new THREE.MeshStandardMaterial({
     color: '#9c7754', roughness: 1,
   }));
-  const floorMaterial = material(new THREE.MeshStandardMaterial({ color: '#b18b62', roughness: 1 }));
+  const soilTexture = createSoilTexture();
+  const floorMaterial = material(new THREE.MeshStandardMaterial({ color: '#b18b62', roughness: 1,
+    map: soilTexture, emissiveMap: soilTexture, bumpMap: soilTexture, bumpScale: 0.004 }));
   const ceilingMaterial = material(new THREE.MeshStandardMaterial({ color: '#896746', roughness: 1 }));
   const rootMaterial = material(barkMaterial ? barkMaterial.clone()
     : new THREE.MeshStandardMaterial({ color: '#75502f', roughness: 1 }));
@@ -93,7 +96,7 @@ export function createUnderground({ treePosition, barkMaterial, layout = createU
       triangle(roofVertices, r(x+d,z), r(x+d,z+d), r(x,z+d));
     }
   }
-  earthMesh('Packed earth floor', floorMaterial, floorVertices);
+  addSoilFloorUVs(earthMesh('Packed earth floor', floorMaterial, floorVertices).geometry);
   earthMesh('Solid earth ceiling', ceilingMaterial, roofVertices);
   // Boundary vertices are shared exactly with the floor and roof, including corners.
   for (const wall of walls) {
@@ -219,7 +222,7 @@ export function createUnderground({ treePosition, barkMaterial, layout = createU
     });
   }
   let disposed = false;
-  return { group, layout, spawn: layout.spawn, exit: layout.exit, landmarks,
+  return { group, layout, soilTexture, spawn: layout.spawn, exit: layout.exit, landmarks,
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -228,6 +231,7 @@ export function createUnderground({ treePosition, barkMaterial, layout = createU
       for (const value of geometries) value.dispose();
       for (const value of materials) value.dispose();
       barkBump.dispose();
+      soilTexture.dispose();
     },
   };
 }

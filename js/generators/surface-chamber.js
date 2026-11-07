@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { addSoilFloorUVs } from './soil-texture.js';
 
 // Clip each terrain triangle around a rectangular entrance, retaining its UVs/colors.
 export function cutTerrainOpening(source, bounds) {
@@ -82,11 +83,17 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
     const dz = Math.max(0, Math.abs(z - (mouthZ + coverZ) / 2) - (c.openingLength / 2 - r));
     return Math.hypot(dx, dz) <= r;
   };
+  const rampStart = level ? heightAt(c.x, mouthZ) : 0;
+  const rampEnd = level ? layout.heightAt(c.x, doorZ) : 0;
   const rampHeight = (x, z) => {
-    const d = z - mouthZ;
-    const blend = d <= 1.1 ? 0.58 * THREE.MathUtils.smoothstep(d, 0, 1.1)
-      : 0.58 + 0.42 * THREE.MathUtils.smoothstep(d, 1.1, c.rampLength);
-    return THREE.MathUtils.lerp(heightAt(x, mouthZ), layout.heightAt(x, doorZ), blend);
+    const t = THREE.MathUtils.clamp((z - mouthZ) / c.rampLength, 0, 1);
+    const plane = THREE.MathUtils.lerp(rampStart, rampEnd, t);
+    // Only the short landings follow the authored contours at each end.
+    if (z < mouthZ + 0.1) return plane + (heightAt(x, mouthZ) - rampStart)
+      * (1 - THREE.MathUtils.smoothstep(z, mouthZ, mouthZ + 0.1));
+    if (z > doorZ - 0.15) return plane + (layout.heightAt(x, doorZ) - rampEnd)
+      * THREE.MathUtils.smoothstep(z, doorZ - 0.15, doorZ);
+    return plane;
   };
   const rampRoofAt = (x, z) => THREE.MathUtils.lerp(heightAt(x, z) - c.roofThickness,
     layout.roofAt(x, doorZ), THREE.MathUtils.smoothstep(z, coverZ, doorZ));
@@ -120,8 +127,8 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
       quad(a, d, aa, dd); quad(b, bb, e, ee);
     };
     // Split exactly at the rim so floor, wall, ceiling and terrain edges meet.
-    const slices = [mouthZ, coverZ];
-    for (let i = 1; i <= 64; i++) slices.push(mouthZ + c.rampLength * i / 64);
+    const slices = [mouthZ, mouthZ + 0.1, coverZ, doorZ - 0.15];
+    for (let i = 1; i <= 8; i++) slices.push(mouthZ + c.rampLength * i / 8);
     slices.sort((a, b) => a - b);
     for (let i = 0; i + 1 < slices.length; i++) {
       const a = slices[i], b = slices[i + 1];
@@ -156,7 +163,9 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
     const raw = new THREE.BufferGeometry();
     raw.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     const geometry = mergeVertices(raw, 0.0001); raw.dispose(); geometry.computeVertexNormals();
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: '#9c7754', roughness: 1, side: THREE.DoubleSide }));
+    addSoilFloorUVs(geometry);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: '#9c7754', roughness: 1, side: THREE.DoubleSide,
+      map: level.soilTexture, emissiveMap: level.soilTexture, bumpMap: level.soilTexture, bumpScale: 0.004 }));
     mesh.name = 'Covered burrow ramp shell';
     mesh.material.emissive.copy(mesh.material.color).multiplyScalar(0.35);
     mesh.receiveShadow = true; group.add(mesh);
@@ -168,10 +177,13 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
   const maxZ = layout ? Math.max(...layout.cells.map((cell) => cell.z)) + layout.cellSize / 2 : 0;
   const below = (p) => Boolean(level && p && p.y < heightAt(p.x, p.z) - (ramp(p.x, p.z) ? 0.04 : 0.2)
     && p.x > minX - 0.1 && p.x < maxX + 0.1 && p.z >= Math.min(minZ, mouthZ) && p.z < maxZ + 0.1);
-  const supportHeight = (x, z, y) => ramp(x, z) && (opening(x, z) || y < rampHeight(x, z) + 0.15) ? rampHeight(x, z)
+  const supportHeight = (x, z, y) => ramp(x, z) && (opening(x, z) || y < heightAt(x, z) - 0.04) ? rampHeight(x, z)
     : (layout?.isWalkable(x, z) || entryCollar(x, z, 0.075)) && y < layout.roofAt(x, z)
       ? layout.heightAt(x, z) : surfaceHeightAt(x, z);
-  const inPassageXZ = (x, z, radius) => ramp(x, z) && Math.abs(x - c.x) <= passageWidth(z) - radius;
+  const inPassageXZ = (x, z, radius) => ramp(x, z) && Math.abs(x - c.x) <= passageWidth(z) - radius
+    && (z >= coverZ || (opening(x - radius, z) && opening(x + radius, z)
+      && (z - radius < mouthZ || opening(x, z - radius)) && opening(x, z + radius))
+      || heightAt(x, z) - c.roofThickness - rampHeight(x, z) >= 0.14);
   const inPassage = (p, radius = 0.04) => Boolean(p && inPassageXZ(p.x, p.z, radius));
   const entryCollar = (x, z, radius) => Boolean(level && Math.abs(x - c.x) <= layout.cellSize / 2 - radius
     && z >= doorZ && z <= doorZ + radius + 0.01);
@@ -187,7 +199,7 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
     ((layout.isWalkable(x, z, 0.065) || entryCollar(x, z, 0.065))
       && y > layout.heightAt(x, z) + 0.07 && y < layout.roofAt(x, z) - 0.07)
     || (inPassageXZ(x, z, 0.05) && y > rampHeight(x, z) + 0.05 && (z < coverZ || y < rampRoofAt(x, z) - 0.05))
-    || (z < coverZ && z > mouthZ - 1.5 && Math.abs(x - c.x) < 1.2 && y > heightAt(x, z) + 0.07)));
+    || (z < coverZ && z > mouthZ - 1.5 && Math.abs(x - c.x) < 1.2 && y > heightAt(x, z) + 0.025)));
   const adjustDecorations = (objects) => {
     for (const object of objects) object?.traverse((mesh) => {
       if (!mesh.isInstancedMesh) return;
@@ -207,13 +219,26 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
   }
   return { group, layout, level, surfaceHeightAt, supportHeight, canOccupy, canMove, below, containsCamera,
     cameraDistance: config.cameraDistance,
+    surfaceCameraRadius: config.surfaceCameraRadius,
+    entranceCameraFov: config.entranceCameraFov,
+    cameraNearBurrow: (p) => Boolean(level && p.z < mouthZ + 0.25
+      && Math.hypot(p.x - c.x, p.z - mouthZ) < config.surfaceCameraRadius),
+    actorRadius: layout?.antRadius,
+    isSurfaceEntrance: (x, z) => opening(x, z),
+    approachEntrance: (x, z, radius) => Boolean(level && z >= mouthZ - 0.9 && z <= mouthZ
+      && Math.abs(x - c.x) <= halfDoor - radius),
     isSheltered: (p) => Boolean(below(p) && ((inPassage(p) && p.z >= coverZ && p.y < rampRoofAt(p.x, p.z) - 0.08)
       || (layout.isWalkable(p.x, p.z) && p.y < layout.roofAt(p.x, p.z) - 0.08))),
-    cameraInPassage: (p) => Boolean(level && ramp(p.x, p.z) && p.y < heightAt(p.x, p.z) - 0.04),
+    interiorLightingBlend: (p, camera) => below(p) && below(camera)
+      ? THREE.MathUtils.smoothstep(Math.min(p.z, camera.z), coverZ + config.interiorLightingInset,
+        coverZ + config.interiorLightingInset + config.interiorLightingBlendLength) : 0,
+    cameraInPassage: (p) => Boolean(level && (ramp(p.x, p.z)
+      || (p.z >= doorZ && p.z < doorZ + 0.55 && Math.abs(p.x - c.x) < layout.cellSize / 2 - layout.antRadius))
+      && p.y < heightAt(p.x, p.z) - 0.04),
     cameraAtMouth: (p) => Boolean(level && Math.abs(p.x - c.x) < c.passageWidth / 2
       && p.z >= mouthZ - 0.05 && p.z <= mouthZ + 0.6),
     setPassageCamera: (p, camera, target, direction = 1) => {
-      const eyeZ = p.z - direction * 0.4;
+      const eyeZ = p.z - direction * config.entranceCameraDistance;
       const halfWidth = eyeZ >= mouthZ && eyeZ <= doorZ ? passageWidth(eyeZ) - 0.075 : layout.cellSize * 1.5 - 0.075;
       const eyeX = THREE.MathUtils.clamp(p.x, c.x - halfWidth, c.x + halfWidth);
       const eyeFloor = eyeZ < mouthZ ? heightAt(eyeX, eyeZ)
@@ -222,7 +247,7 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
         : (eyeZ > doorZ ? layout.roofAt(eyeX, eyeZ) : rampRoofAt(eyeX, eyeZ)) - 0.065;
       camera.position.set(eyeX, Math.min(Math.max(eyeFloor + 0.12, p.y + 0.16), ceiling), eyeZ);
       // Frame the ant itself, rather than a point farther down the slope.
-      target.set(p.x, p.y + 0.045, p.z);
+      target.set(p.x, p.y + 0.08, p.z);
       camera.lookAt(target);
     },
     adjustDecorations, inPassage, passage, openingLength: c?.openingLength, rampRoofAt, entrance: level ? { x: c.x, z: mouthZ } : null };

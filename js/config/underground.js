@@ -9,4 +9,7 @@ export const UNDERGROUND_CONFIG = Object.freeze({
   // Lower values make the surface fainter; higher values make it more prominent.
   surfaceMapOpacity: 0.2,
   antRadius: 0.075,
+  companionSpeed: 0.16,
+  companionWanderRadius: 0.75,
+  companionAnimationDistance: 4,
 });
