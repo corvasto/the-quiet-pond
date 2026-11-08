@@ -151,14 +151,14 @@ const WORLD_QUERY_METHODS = {
     for (let i = 0; i < Math.min(obstacles.length, 8); i++) {
       const entry = obstacles[i];
       const hit = ray.intersectBox(entry.box, this.gameCameraProbe);
-      if (!hit || (!entry.box.containsPoint(target) && hit.distanceTo(target) >= distance - 0.03)) continue;
+      if (!hit || (!entry.box.containsPoint(target) && hit.distanceTo(target) >= distance + 0.025)) continue;
       this.gameCameraRaycaster ??= new THREE.Raycaster();
       this.gameCameraProbeMaterial ??= new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
       this.gameCameraProxy ??= new THREE.Mesh(entry.mesh.geometry, this.gameCameraProbeMaterial);
       this.gameCameraHits ??= [];
       this.gameCameraProxy.geometry = entry.mesh.geometry;
       this.gameCameraProxy.matrixWorld.copy(entry.mesh.matrixWorld);
-      this.gameCameraRaycaster.ray.copy(ray); this.gameCameraRaycaster.far = distance - 0.03;
+      this.gameCameraRaycaster.ray.copy(ray); this.gameCameraRaycaster.far = distance + 0.025;
       this.gameCameraHits.length = 0;
       this.gameCameraRaycaster.intersectObject(this.gameCameraProxy, false, this.gameCameraHits);
       if (this.gameCameraHits.length) return false;

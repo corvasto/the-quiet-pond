@@ -1023,6 +1023,14 @@ kbd {
   text-transform: uppercase;
 }
 
+.app-version {
+  display: block;
+  margin-top: 16px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
 .game-dialog__support {
   margin-top: 18px;
   padding: 16px;

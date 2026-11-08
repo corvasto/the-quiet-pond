@@ -221,6 +221,9 @@ export function createSurfaceChamber({ config, terrain, heightAt }) {
     cameraDistance: config.cameraDistance,
     surfaceCameraRadius: config.surfaceCameraRadius,
     entranceCameraFov: config.entranceCameraFov,
+    passageCameraTurnDuration: config.passageCameraTurnDuration,
+    passageCameraTurnRadius: config.passageCameraTurnRadius,
+    passageAntTurnResponsiveness: config.passageAntTurnResponsiveness,
     cameraNearBurrow: (p) => Boolean(level && p.z < mouthZ + 0.25
       && Math.hypot(p.x - c.x, p.z - mouthZ) < config.surfaceCameraRadius),
     actorRadius: layout?.antRadius,

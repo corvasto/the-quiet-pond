@@ -263,10 +263,70 @@ for (const segments of [70, 120]) {
   app.ant.group.position.set(x, c.supportHeight(x, mouth + 0.55, -1.2) + 0.04, mouth + 0.55);
   app.controls.target.copy(app.ant.group.position); app.controls.target.y += 0.15;
   app.chamberCameraRequestedOffset = new THREE.Vector3(2, 0.3, 0);
-  for (let frame = 0; frame < 30; frame++) app.updateAntCamera(1 / 60);
+  for (let frame = 0; frame < 90; frame++) app.updateAntCamera(1 / 60);
   const yaw = app.antCameraMovementYaw ?? 0;
   for (let frame = 0; frame < 120; frame++) app.updateAntCamera(1 / 60);
   assert.ok(Math.abs(app.antCameraMovementYaw - yaw) < 1e-8, 'Shoulder correction must not repeatedly rotate held movement');
+  app.ant.group.position.set(x, 0.206, mouth - 0.6);
+  app.controls.target.copy(app.ant.group.position).y += 0.045;
+  app.camera.position.copy(app.controls.target).add(new THREE.Vector3(0, 0.115, 0.7));
+  app.controls.enableRotate = true; app.controls.enableZoom = true;
+  app.chamberPassageCamera = null;
+  app.updateAntCamera(1 / 60);
+  assert.equal(app.controls.enableRotate, true, 'Orbit remains available near the surface burrow');
+  assert.equal(app.controls.enableZoom, false, 'The compact burrow zoom remains managed');
+  const compactDistance = app.chamberPassageCamera.surfaceOffset.length();
+  app.antCameraManualActive = true;
+  app.camera.position.copy(app.controls.target).add(new THREE.Vector3(Math.sin(0.6) * 0.7, 0.115, Math.cos(0.6) * 0.7));
+  app.updateAntCamera(1 / 60);
+  app.antCameraManualActive = false;
+  for (let frame = 0; frame < 30; frame++) app.updateAntCamera(1 / 60);
+  const surfaceOrbit = app.camera.position.clone().sub(app.controls.target);
+  assert.ok(Math.abs(Math.atan2(surfaceOrbit.x, surfaceOrbit.z) - 0.6) < 1e-8, 'Surface orbit persists without snapping back');
+  assert.ok(Math.abs(surfaceOrbit.length() - compactDistance) < 1e-8, 'Orbit retains the compact distance');
+  app.ant.group.rotation.y = 0.9 + THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset);
+  app.camera.position.copy(app.controls.target).addScaledVector(surfaceOrbit, 0.42 / surfaceOrbit.length());
+  const beforeHeadingReset = app.camera.position.clone().sub(app.controls.target);
+  const resetDistance = beforeHeadingReset.length(), resetHeight = beforeHeadingReset.y, resetFov = app.camera.fov;
+  const resetTarget = app.controls.target.clone(), resetActor = app.ant.group.position.clone();
+  app.resetAntCameraView();
+  for (let frame = 0; frame < 30; frame++) {
+    app.updateAntCamera(1 / 60);
+    const offset = app.camera.position.clone().sub(app.controls.target);
+    assert.ok(Math.abs(offset.length() - resetDistance) < 1e-8, 'Near-burrow Reset never changes zoom');
+    assert.ok(Math.abs(offset.y - resetHeight) < 1e-8, 'Near-burrow Reset preserves pitch');
+  }
+  const headingReset = app.camera.position.clone().sub(app.controls.target);
+  assert.ok(Math.abs(Math.atan2(Math.sin(Math.atan2(headingReset.x, headingReset.z) - 0.9 - Math.PI),
+    Math.cos(Math.atan2(headingReset.x, headingReset.z) - 0.9 - Math.PI))) < 1e-8, 'Near-burrow Reset faces the ant heading');
+  assert.equal(app.camera.fov, resetFov);
+  assert.ok(app.controls.target.distanceTo(resetTarget) < 1e-8 && app.ant.group.position.distanceTo(resetActor) < 1e-8);
+  const actorBeforeRamp = app.ant.group.position.clone();
+  app.ant.group.position.set(x, c.supportHeight(x, mouth + 1.3, -2) + 0.006, mouth + 1.3);
+  const rampShift = app.ant.group.position.clone().sub(actorBeforeRamp);
+  app.camera.position.add(rampShift); app.controls.target.add(rampShift);
+  app.antVelocity = new THREE.Vector3(0, 0, 0.12);
+  for (const direction of [1, -1]) {
+    app.antVelocity.z = direction * 0.12;
+    let previous = app.camera.position.clone().sub(app.controls.target), minimumRadius = Infinity;
+    for (let frame = 0; frame < 65; frame++) {
+      app.updateAntCamera(1 / 60);
+      assert.equal(app.controls.enableRotate, false, 'Orbit stays locked during automatic ramp turns');
+      const offset = app.camera.position.clone().sub(app.controls.target);
+      const yawStep = Math.atan2(offset.x, offset.z) - Math.atan2(previous.x, previous.z);
+      assert.ok(Math.abs(Math.atan2(Math.sin(yawStep), Math.cos(yawStep))) < 0.36, 'Ramp yaw changes in small steps');
+      assert.ok(offset.distanceTo(previous) < 0.16, 'Ramp turns never jump across the ant');
+      minimumRadius = Math.min(minimumRadius, Math.hypot(offset.x, offset.z));
+      for (let step = 1; step <= 16; step++) {
+        const point = app.controls.target.clone().addScaledVector(offset, step / 16);
+        assert.ok(c.containsCamera(point.x, point.y, point.z), 'Automatic turns stay inside the solid tunnel');
+      }
+      previous = offset;
+    }
+    assert.ok(minimumRadius < 0.4, 'The ramp camera pulls in to turn');
+    assert.ok((app.controls.target.z - app.camera.position.z) * direction > 0, 'The completed ramp view faces the ant heading');
+    assert.ok(Math.abs(app.camera.position.x - x) < 1e-8);
+  }
   app.ant.group.position.set(x, floor + 0.04, z);
   for (const direction of [-1, 1]) {
     for (const key of ['forward', 'backward']) {
@@ -323,8 +383,7 @@ for (const segments of [70, 120]) {
         assert.ok(Math.abs(actor.position.x - (x - 0.036)) < 1e-6, 'Door camera handoffs never steer held movement sideways');
         if (walker.chamberPassageCamera) {
           if (walker.chamberPassageCamera.surface) {
-            assert.ok(Math.abs(walker.camera.position.x - walker.controls.target.x) < 1e-6,
-              'The straight exit view never switches to a side shoulder');
+            assert.equal(walker.controls.enableRotate, true, 'Surface orbit remains enabled during heading reset');
             assert.ok(walker.isGameCameraClear(walker.controls.target, walker.camera.position), 'Near-burrow camera clears the authored rocks');
             assert.ok(!walker.cameraTween, 'Full outdoor zoom waits until the ant leaves the safety radius');
             if (!resetNearMouth) {
@@ -334,8 +393,10 @@ for (const segments of [70, 120]) {
               resetNearMouth = true;
             }
           }
-          if (!walker.chamberPassageCamera.surface) assert.equal(walker.chamberPassageCamera.direction, direction * (key === 'forward' ? 1 : -1),
-            'Walking backward keeps the original passage viewing direction');
+          if (!walker.chamberPassageCamera.surface) {
+            assert.equal(walker.chamberPassageCamera.direction, direction, 'The ramp camera follows the ant along the passage');
+            assert.equal(walker.controls.enableRotate, false);
+          }
           enclosureRay.ray.origin.copy(walker.controls.target);
           enclosureRay.ray.direction.subVectors(walker.camera.position, walker.controls.target);
           enclosureRay.far = enclosureRay.ray.direction.length(); enclosureRay.ray.direction.normalize();

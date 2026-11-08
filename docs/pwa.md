@@ -2,9 +2,21 @@
 
 `index.html` is the installable entry. Service workers require HTTPS or localhost.
 
+Local development on `localhost`, `127.0.0.1`, or `[::1]` uses the server directly. Startup unregisters this game's worker for the current scope and removes only `the-quiet-pond-v` caches, reloading once if an old worker controls the page. Saved games and settings are retained. Published builds keep offline caching; verify offline behavior on a non-loopback host.
+
 ## Release metadata
 
-`js/config/app.js` owns `APP_VERSION`; `js/main.js` displays it and registers `service-worker.js?v=<APP_VERSION>`. Keep the worker's `RELEASE_VERSION`, `package.json`, and lockfile versions aligned.
+`js/config/app.js` owns `APP_VERSION`; `js/main.js` displays it in Settings, About, and the loading splash, and registers `service-worker.js?v=<APP_VERSION>`. UI labels use the existing localized version text and update automatically.
+
+`js/ui/loading-version.js` fills version labels through a small independent module before the main runtime starts. This keeps the splash version available during restart, new game, and save loading. The main script then applies localized labels before starting the session.
+
+For each version bump:
+
+1. Update `APP_METADATA.version` in `js/config/app.js`.
+2. Match `package.json`, both root version fields in `package-lock.json`, and `RELEASE_VERSION` in `service-worker.js`.
+3. Update the version badge in `README.md`.
+4. Run `npm run check` to catch version mismatches, including the README badge. Run `npm test` for the release's gameplay changes.
+5. Verify the displayed version in Settings, About, and the loading splash in a browser, then follow the release/offline checks below.
 
 ## Cache rules
 

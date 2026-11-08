@@ -67,7 +67,6 @@ const elements = {
   aboutShareStatus: byId('about-share-status'),
   aboutTitle: byId('about-title'),
   closeAboutButton: byId('close-about-button'),
-  gameVersion: byId('game-version'),
   antHint: byId('ant-hint'),
   undergroundHint: byId('underground-hint'),
   birdHint: byId('bird-hint'),
@@ -398,12 +397,33 @@ function t(text, parameters = {}) {
   return translate(text, language, parameters);
 }
 
-function registerGameServiceWorker() {
+async function registerGameServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   const workerUrl = `./service-worker.js?v=${encodeURIComponent(APP_VERSION)}`;
-  navigator.serviceWorker.register(workerUrl, { scope: './' }).catch((error) => {
-      console.warn('[the-quiet-pond] Service worker registration failed.', error);
-  });
+  try {
+    if (['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)) {
+      const scope = new URL('./', window.location.href).href;
+      const workerPath = new URL(workerUrl, window.location.href).pathname;
+      const controlledByGame = navigator.serviceWorker.controller
+        && new URL(navigator.serviceWorker.controller.scriptURL).pathname === workerPath;
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        const worker = registration.active ?? registration.waiting ?? registration.installing;
+        if (registration.scope === scope && worker && new URL(worker.scriptURL).pathname === workerPath) {
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await window.caches.keys();
+        await Promise.all(keys.filter((key) => key.startsWith('the-quiet-pond-v')).map((key) => window.caches.delete(key)));
+      }
+      if (controlledByGame) window.location.reload();
+      return;
+    }
+    await navigator.serviceWorker.register(workerUrl, { scope: './' });
+  } catch (error) {
+    console.warn('[the-quiet-pond] Service worker setup failed.', error);
+  }
 }
 
 function applyLanguage() {
@@ -419,9 +439,9 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n-title]').forEach((element) => {
     element.title = t(element.dataset.i18nTitle);
   });
-  if (elements.gameVersion) {
-    elements.gameVersion.textContent = translate('ui.version', language, { version: APP_VERSION });
-  }
+  document.querySelectorAll('[data-app-version]').forEach((element) => {
+    element.textContent = translate('ui.version', language, { version: APP_VERSION });
+  });
   renderSaveSlots();
   lastDisplayedGameMinute = null;
   updateGameTime(latestGameHour);
@@ -1579,5 +1599,5 @@ window.addEventListener('beforeunload', () => {
 
 registerGameServiceWorker();
 setPerformanceDiagnosticEnabled(performanceDiagnosticEnabled);
-startGame();
 applyLanguage();
+startGame();

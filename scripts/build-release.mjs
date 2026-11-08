@@ -113,7 +113,8 @@ await Promise.all([
 const [scriptBuild] = await Promise.all([
   esbuild.build({
     absWorkingDir: projectRoot,
-    entryPoints: ['js/main.js'],
+    entryPoints: ['js/main.js', 'js/ui/loading-version.js'],
+    outbase: path.join(projectRoot, 'js'),
     outdir: path.join(releaseDirectory, 'js'),
     splitting: true,
     chunkNames: 'chunks/[name]-[hash]',

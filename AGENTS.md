@@ -10,7 +10,7 @@
 - Avoid per-frame object allocation, model traversal, and unbounded raycasts. Build collision proxies and reusable data at startup.
 - Keep Three.js project-local. Preserve Water.dispose() and Water.getRenderTarget() when updating it.
 - Add every game runtime module and asset to the service-worker pre-cache.
-- js/config/app.js owns the version. Align package metadata and service-worker RELEASE_VERSION.
+- js/config/app.js owns the version. Align package metadata, service-worker RELEASE_VERSION, and the README version badge. Follow the release checklist in docs/pwa.md; UI version labels use APP_VERSION automatically.
 - Use `the-quiet-pond` as the kebab-case package and storage namespace. Restrict cache cleanup to `the-quiet-pond-v` names.
 - Update README and relevant docs for controls, configuration, ownership, content, localization, quality, or offline changes.
 - Run npm run check and npm test for relevant changes. Distinguish headless checks from browser/device proof.

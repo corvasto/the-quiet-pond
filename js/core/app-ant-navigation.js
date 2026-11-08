@@ -449,8 +449,10 @@ const antNavigationMethods = {
         Math.sin(targetYaw - this.ant.group.rotation.y),
         Math.cos(targetYaw - this.ant.group.rotation.y),
       );
-      this.ant.group.rotation.y += yawDifference
-        * (1 - Math.exp(-this.antMovement.turnResponsiveness * dt));
+      const turnResponsiveness = this.ground.chamber?.cameraInPassage?.(this.ant.group.position)
+        ? this.ground.chamber.passageAntTurnResponsiveness ?? this.antMovement.turnResponsiveness
+        : this.antMovement.turnResponsiveness;
+      this.ant.group.rotation.y += yawDifference * (1 - Math.exp(-turnResponsiveness * dt));
     }
 
     const speed = SCENE_PROPS.ant.moveSpeed

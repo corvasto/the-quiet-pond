@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" href="./icon.png">
   <title>The Quiet Pond</title>
   <link rel="stylesheet" href="./styles/game.css">
+  <script type="module" src="./js/ui/loading-version.js"></script>
 </head>
 <body>
   <main id="scene" aria-label="The Quiet Pond game" data-i18n-aria-label="ui.scene.aria"></main>
@@ -302,6 +303,7 @@
             <small id="quality-error" role="alert" hidden data-i18n="ui.quality.error">Could not save progress. Allow browser storage and try again.</small>
           </div>
         </section>
+        <small class="app-version" data-app-version></small>
       </div>
     </div>
   </div>
@@ -314,7 +316,7 @@
       <div id="about-card" class="game-dialog__card game-dialog__card--about">
       <span class="game-objective__eyebrow">The Quiet Pond</span>
       <h2 id="about-title" tabindex="-1" data-i18n="ui.about.title">About this game</h2>
-      <p id="game-version" class="game-dialog__version">Version</p>
+      <p id="game-version" class="game-dialog__version" data-app-version></p>
       <p data-i18n="ui.about.description">Explore a small, living pond, discover active seeds, and help guide them home. Take your time - the quiet world is full of gentle details and hidden routines.</p>
       <section id="about-support" class="game-dialog__support" aria-labelledby="about-support-title" tabindex="-1">
         <h3 id="about-support-title"><span aria-hidden="true">💛</span><span data-i18n="ui.about.support.title">Support the project</span></h3>
@@ -383,6 +385,7 @@
       <span class="loading__bar" aria-hidden="true"><span id="loading-bar-fill"></span></span>
     </div>
     <p class="loading__tip" data-i18n="ui.loading.qualityTip">If the game feels choppy, open Settings and choose a lower graphics quality.</p>
+    <small class="app-version" data-app-version>Version …</small>
   </div>
 
   <div id="error-message" class="error-message" role="alert" hidden>

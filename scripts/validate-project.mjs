@@ -132,6 +132,9 @@ const manifest = readJson('manifest.webmanifest');
 check(packageJson.version === APP_VERSION, `package.json version ${packageJson.version} does not match ${APP_VERSION}.`);
 check(packageLock.version === APP_VERSION, 'package-lock.json version does not match APP_VERSION.');
 check(packageLock.packages?.['']?.version === APP_VERSION, 'package-lock.json root version does not match APP_VERSION.');
+const readme = fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf8');
+check(readme.match(/shields\.io\/badge\/version-v([^-/]+)-/)?.[1] === APP_VERSION,
+  'README version badge does not match APP_VERSION. See docs/pwa.md for the release checklist.');
 check(packageLock.packages?.['']?.name === packageJson.name, 'package-lock.json root name does not match package.json.');
 check(manifest.name === APP_METADATA.name, 'Manifest name does not match APP_METADATA.');
 check(manifest.short_name === APP_METADATA.shortName, 'Manifest short name does not match APP_METADATA.');
