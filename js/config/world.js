@@ -61,6 +61,7 @@ export const ANT_CAMERA_FOLLOW_CONFIG = Object.freeze({
 });
 
 export const ANT_MOVEMENT_CONFIG = Object.freeze({
+  desktopDefaultRunning: true,
   // Rates are per second. Braking also makes direction reversals responsive.
   acceleration: 18,
   braking: 26,

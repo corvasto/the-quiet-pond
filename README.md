@@ -63,8 +63,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 
 | Input | Action |
 | --- | --- |
-| WASD or arrow keys | Move relative to the view |
-| Hold Shift | Run |
+| WASD or arrow keys | Run relative to the view; climbing keeps its normal speed |
 | Drag the scene | Look around |
 | Wheel or pinch | Adjust camera distance |
 | C | Reset the camera behind the ant |
@@ -78,6 +77,8 @@ Load the game once online and let it finish caching for offline play. Menus vary
 
 - Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
 - Push the joystick toward its edge to run; ease it back to walk.
+
+Desktop ant movement defaults to running. Set `ANT_MOVEMENT_CONFIG.desktopDefaultRunning` in `js/config/world.js` to `false` for walking with Shift to run. Desktop hints follow that setting; touch and climbing retain their existing behavior.
 - Tap the arrow button to climb or get down.
 - Tap **Zz** to sleep until morning or night wherever the ant is.
 - Walk into the burrow to explore below ground and walk up the entrance ramp to leave. The climb button is hidden underground.

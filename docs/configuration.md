@@ -54,6 +54,8 @@ The optional Settings diagnostic samples rendered FPS in 0.75-second windows and
 
 ## Movement and camera
 
+`ANT_MOVEMENT_CONFIG.desktopDefaultRunning` defaults to `true`: keyboard ground movement runs without Shift, including underground. Set it to `false` to walk normally and hold Shift to run. Desktop and underground hints follow the configuration in both languages. Climbing keeps its existing speed, and touch retains joystick walk/run thresholds. Keyboard run intent is refreshed after climbing or input resets; it does not alter bird or debug flight speed.
+
 `js/config/world.js` owns movement and Ant camera settings; `js/config/game.js` composes them into `POND_GAME`. Settings enter the scene as data. While input is held, automatic yaw is excluded from movement heading to prevent orbit loops. Releasing/changing direction by over 0.15 radians, camera reset, or manual camera input clears this compensation. Assist is off during motion-locked climbing and debug flight.
 
 Ground travel uses the camera's horizontal heading when movement starts or changes direction. Acceleration/braking use smoothing rates; turn speed affects body facing without bending the path. `ANT_MOVEMENT_CONFIG` sets `touchRunThreshold`, and `touchWalkThreshold` for the mobile run transition. The mobile joystick moves 360 degrees with a central analog deadzone; joystick distance controls speed, including on diagonals. Manual camera orbit is compensated while movement is held, so swiping changes the view without steering the ant's current ground path.

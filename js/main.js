@@ -442,6 +442,8 @@ function applyLanguage() {
   document.querySelectorAll('[data-app-version]').forEach((element) => {
     element.textContent = translate('ui.version', language, { version: APP_VERSION });
   });
+  byId('desktop-run-hint').hidden = POND_GAME.antMovement.desktopDefaultRunning;
+  byId('desktop-movement-label').textContent = t(POND_GAME.antMovement.desktopDefaultRunning ? 'hint.run' : 'ui.move');
   renderSaveSlots();
   lastDisplayedGameMinute = null;
   updateGameTime(latestGameHour);
@@ -536,7 +538,8 @@ function canMoveAnt() {
 }
 
 function syncRunning() {
-  const running = canMoveAnt() && (touchRunHeld || heldRunCodes.size > 0);
+  const running = canMoveAnt() && (touchRunHeld || heldRunCodes.size > 0
+    || (POND_GAME.antMovement.desktopDefaultRunning && heldMovementCodes.size > 0));
   session?.setAntRunning(running);
 }
 
@@ -546,6 +549,7 @@ function syncMovementDirection(direction) {
     if (antMovementKeys.get(code) === direction) held = true;
   }
   session?.setMovementKey(direction, held && canMoveAnt());
+  syncRunning();
 }
 
 function clearGameInput() {
@@ -1074,7 +1078,7 @@ function updateExploreControl() {
   elements.exploreReturnLabel.textContent = t(returnLabel);
   elements.antHint.hidden = exploreActive || birdActive || undergroundActive;
   elements.undergroundHint.hidden = !undergroundActive;
-  elements.undergroundHint.textContent = t('underground.hint');
+  elements.undergroundHint.textContent = t(POND_GAME.antMovement.desktopDefaultRunning ? 'underground.hint.autoRun' : 'underground.hint');
   if (elements.climbButton) elements.climbButton.hidden = undergroundActive;
   elements.birdHint.hidden = exploreActive || !birdActive;
   elements.birdSwitchButton.hidden = !(session?.canPlayBird() ?? false);
@@ -1561,6 +1565,7 @@ async function startGame() {
     debugControls.start(elements.scene.querySelector('canvas'));
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
+    session.onFrame(syncRunning);
     let lastBelowGround = session.isBelowGround();
     session.onFrame(() => {
       const below = session?.isBelowGround() ?? false;
