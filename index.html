@@ -90,16 +90,19 @@
       <span class="movement-joystick__label" data-i18n="ui.move">Move</span>
     </div>
     <div class="mobile-game-actions">
+      <button id="boost-button" class="mobile-game-action" type="button" aria-label="Boost" data-i18n-aria-label="boost.button" disabled><span class="boost-button__icon" aria-hidden="true">🐜💨</span></button>
       <button id="climb-button" class="mobile-game-action mobile-game-action--jump" type="button" aria-label="Jump, climb, or get down" data-i18n-aria-label="ui.jumpClimb.aria"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M6 9l6-6 6 6M6 15l6 6 6-6"/></svg></button>
     </div>
   </section>
 
   <div class="game-hint">
     <div id="underground-hint" class="game-hint__row" hidden data-i18n="underground.hint">WASD / arrows: move · Shift: run · Drag: look · C: reset · M: map · Walk up the entrance to leave</div>
+    <div id="underground-boost-hint" class="game-hint__row" hidden><kbd>Shift</kbd> <span data-i18n="boost.button">Boost</span> <output data-boost-status aria-live="off"></output></div>
     <div id="ant-hint" class="game-hint__rows">
       <div class="game-hint__row">
         <span><kbd>WASD</kbd> / <kbd>↑←↓→</kbd> <span id="desktop-movement-label" data-i18n="ui.move">Move</span></span>
         <span id="desktop-run-hint" hidden><kbd>Shift</kbd> <span data-i18n="hint.run">run</span></span>
+        <span id="desktop-boost-hint"><kbd>Shift</kbd> <span data-i18n="boost.button">Boost</span> <output id="boost-status" data-boost-status aria-live="off"></output></span>
         <span><kbd>Space</kbd> <span data-i18n="hint.climbDown">climb or get down</span></span>
       </div>
       <div class="game-hint__row game-hint__row--secondary">

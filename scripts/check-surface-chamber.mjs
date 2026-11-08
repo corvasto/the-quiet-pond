@@ -243,10 +243,26 @@ for (const segments of [70, 120]) {
   assert.ok(app.camera.position.distanceTo(corrected) < 1e-8, 'Idle camera stays stable despite controls minimum distance');
   assert.ok(app.chamberCameraRequestedOffset.distanceTo(requested) < 1e-8, 'Collision preserves requested orbit');
   app.ant.group.rotation.y = 0.7 + THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset);
+  const beforeUndergroundReset = app.camera.position.clone();
   app.resetAntCameraView();
+  assert.ok(app.camera.position.distanceTo(beforeUndergroundReset) < 1e-8, 'Underground Reset starts without teleporting the camera');
   const resetOrbit = app.chamberCameraRequestedOffset.clone();
   assert.ok(resetOrbit.x < 0 && resetOrbit.z < 0, 'Reset faces the ant forward');
-  for (let frame = 0; frame < 90; frame++) app.updateAntCamera(1 / 60);
+  let resetPrevious = app.camera.position.clone().sub(app.controls.target), closestReset = Infinity;
+  for (let frame = 0; frame < 90; frame++) {
+    app.updateAntCamera(1 / 60);
+    const offset = app.camera.position.clone().sub(app.controls.target);
+    const turn = Math.atan2(offset.x, offset.z) - Math.atan2(resetPrevious.x, resetPrevious.z);
+    assert.ok(Math.abs(Math.atan2(Math.sin(turn), Math.cos(turn))) < 0.36, 'Underground Reset rotates in small steps');
+    closestReset = Math.min(closestReset, offset.length());
+    for (let step = 1; step <= 16; step++) {
+      const point = app.controls.target.clone().addScaledVector(offset, step / 16);
+      assert.ok(c.containsCamera(point.x, point.y, point.z), 'Underground Reset never crosses a wall');
+    }
+    resetPrevious = offset;
+  }
+  assert.ok(closestReset < 0.4, 'Underground Reset pulls in before orbiting');
+  assert.equal(app.chamberCameraReset, null);
   assert.ok(app.chamberCameraRequestedOffset.distanceTo(resetOrbit) < 1e-8, 'Reset is not replaced by the previous orbit');
   app.antCameraManualActive = true;
   const beforeManualYaw = app.antCameraMovementYaw ?? 0;

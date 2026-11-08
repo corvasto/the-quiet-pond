@@ -527,6 +527,14 @@ export class PondApp {
     this.renderer.setAnimationLoop(() => this.animate());
   }
 
+  async prepareUndergroundView() {
+    this.undergroundView ??= new UndergroundView(this);
+    const running = this.running;
+    this.running = false;
+    try { await this.undergroundView.prepare(); }
+    finally { this.running = running; this.clock.reset(); }
+  }
+
   async loadDeferredModel(id) {
     if (this.modelProps[id]) return this.modelProps[id];
     if (this.deferredModelLoads.has(id)) return this.deferredModelLoads.get(id);

@@ -2090,3 +2090,35 @@ body.game-underground-active.game-explore-active .mobile-game-controls { display
 .underground-map__toolbar p { flex: 1 1 240px; text-align: left; }
 .underground-map__toolbar .toggle-setting { flex: 0 0 auto; margin: 0; color: #493a2a; }
 .underground-map__hide-labels .underground-map__label { display: none; }
+
+#boost-button {
+  top: auto;
+  right: auto;
+  bottom: 0;
+  left: 4px;
+  width: 88px;
+  height: 88px;
+  border: 5px solid transparent;
+  background: linear-gradient(#19313a, #19313a) padding-box,
+    conic-gradient(#69c9ff calc(var(--boost-progress, 1) * 1turn), #30434a 0) border-box;
+  color: #d3efff;
+  box-shadow: 0 0 12px rgba(79, 181, 255, 0.25);
+}
+#boost-button:disabled { opacity: 0.7; }
+#boost-button.boost-active { opacity: 1; box-shadow: 0 0 20px rgba(79, 181, 255, 0.6); }
+[data-boost-status] { margin-left: 4px; color: #acdfff; font-variant-numeric: tabular-nums; }
+.boost-button__icon { font-size: 25px; line-height: 1; white-space: nowrap; }
+#climb-button {
+  top: auto;
+  right: auto;
+  bottom: 72px;
+  left: 76px;
+  width: 88px;
+  height: 88px;
+  transform: none;
+}
+@media (max-height: 500px) {
+  #boost-button { width: 80px; height: 80px; }
+  #climb-button { width: 80px; height: 80px; left: 76px; bottom: 72px; }
+  .boost-button__icon { font-size: 23px; }
+}

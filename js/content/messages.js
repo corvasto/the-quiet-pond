@@ -291,6 +291,11 @@ export const MESSAGE_DEFINITIONS = Object.freeze({
   'hint.moveRoam': defineMessage({ en: 'move and roam', id: 'bergerak dan menjelajah' }),
   'hint.hold': defineMessage({ en: 'hold', id: 'tahan' }),
   'hint.run': defineMessage({ en: 'run', id: 'lari' }),
+  'boost.button': defineMessage({ en: 'Boost', id: 'Pacu' }),
+  'boost.ready': defineMessage({ en: 'Ready', id: 'Siap' }),
+  'boost.available': defineMessage({ en: '{seconds}s available', id: 'Tersedia {seconds}d' }),
+  'boost.active': defineMessage({ en: '{seconds}s boost', id: 'Pacu {seconds}d' }),
+  'boost.cooldown': defineMessage({ en: '{seconds}s cooldown', id: 'Jeda {seconds}d' }),
   'underground.hint.autoRun': defineMessage({
     en: 'WASD / arrows: run · Drag: look · C: reset · M: map · Run up the entrance to leave',
     id: 'WASD / panah: lari · Seret: lihat · C: atur kamera · M: peta · Naiki jalan masuk untuk keluar',

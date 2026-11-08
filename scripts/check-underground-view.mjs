@@ -42,4 +42,17 @@ for (const interior of [0, 0.25, 0.5, 0.75, 1]) for (const failure of [false, tr
   assert.ok(!view.fill.visible && !view.key.visible);
   view.dispose(); assert.equal(scene.children.length, 6);
 }
-console.log('Underground view checks passed: rain, splashes, glare and surface lighting hidden; stable exposure; surface restoration and disposal.');
+const warmScene = new THREE.Scene(), warmSun = new THREE.DirectionalLight();
+warmScene.add(warmSun); warmScene.fog = new THREE.FogExp2('#abcdef', 0.01);
+const originalWarmFog = warmScene.fog, variants = [];
+const warmRenderer = { toneMappingExposure: 3, getClearAlpha: () => 1,
+  getClearColor: (target) => target.set('#abcdef'), setClearColor() {},
+  compileAsync() { variants.push([warmSun.visible, warmSun.intensity, this.toneMappingExposure]); return Promise.resolve(); } };
+const warmView = new UndergroundView({scene: warmScene, renderer: warmRenderer, camera: new THREE.PerspectiveCamera()});
+const pending = warmView.prepare();
+assert.equal(warmSun.intensity, 1, 'Startup compilation restores scene state before yielding');
+await pending;
+assert.deepEqual(variants, [[true, 1, 3], [true, 0.5, 2], [false, 0, 1]]);
+assert.equal(warmScene.fog, originalWarmFog); assert.equal(warmRenderer.toneMappingExposure, 3);
+warmView.dispose();
+console.log('Underground view checks passed: scoped lighting/weather, restoration, and startup shader preparation.');

@@ -24,7 +24,13 @@ export class UndergroundView {
     this.clearColor = new THREE.Color();
   }
 
-  render(interior = 1) {
+  async prepare() {
+    const { renderer, scene, camera } = this.app;
+    if (!renderer.compileAsync) return;
+    for (const blend of [0, 0.5, 1]) await this.render(blend, () => renderer.compileAsync(scene, camera));
+  }
+
+  render(interior = 1, draw = null) {
     const { scene, renderer, camera } = this.app;
     const blend = THREE.MathUtils.clamp(Number(interior), 0, 1);
     const background = scene.background, fog = scene.fog, exposure = renderer.toneMappingExposure;
@@ -46,7 +52,7 @@ export class UndergroundView {
       scene.fog = this.fog;
       renderer.toneMappingExposure = THREE.MathUtils.lerp(exposure, 1, blend);
     }
-    try { renderer.render(scene, camera); }
+    try { return draw ? draw() : renderer.render(scene, camera); }
     finally {
       for (const entry of this.hidden) {
         entry.object.visible = entry.visible;

@@ -1,6 +1,6 @@
 // Refresh the offline shell for the walk-in underground.
 const CACHE_PREFIX = 'the-quiet-pond-v';
-const RELEASE_VERSION = '1.2.6';
+const RELEASE_VERSION = '1.2.7';
 const REQUESTED_VERSION = new URL(self.location.href).searchParams.get('v');
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE_VERSION}`;
 if (REQUESTED_VERSION && REQUESTED_VERSION !== RELEASE_VERSION) {
@@ -16,6 +16,9 @@ const APP_SHELL = [
   './js/generators/surface-chamber.js',
   './js/generators/soil-texture.js',
   './js/ui/loading-version.js',
+  './js/config/ant-boost.js',
+  './js/game/ant-boost.js',
+  './js/ui/press-action.js',
   './index.html',
   './manifest.webmanifest',
   './icon.png',

@@ -13,6 +13,8 @@ Content uses plain JavaScript registries compiled once at startup, avoiding rend
 
 JavaScript registries support module-relative asset URLs, comments, frozen values, and small helpers without extra file requests.
 
+The frog GLB uses a lit PBR material with its original embedded color texture. Keep `KHR_materials_unlit` and emissive glow disabled on the frog so it follows day/night lighting. Collectible visibility is tuned separately. `scripts/check-model-lighting.mjs` guards the frog material and embedded buffer ranges.
+
 ## Add a 3D asset
 
 Put the GLB in `assets/models/`, then add a `defineAsset()` entry to `ASSET_CATALOG` in `js/content/assets.js`.

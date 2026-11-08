@@ -197,8 +197,13 @@ const actorAnimationMethods = {
     this.antRunEnabled = Boolean(enabled) && !this.antFlightEnabled && !this.antMotionLocked;
     if (this.antAction) {
       this.antAction.setEffectiveTimeScale((Number(SCENE_PROPS.ant.animation?.speed) || 1)
-        * (this.antRunEnabled ? SCENE_PROPS.ant.runAnimationMultiplier : 1));
+        * (this.antRunEnabled ? SCENE_PROPS.ant.runAnimationMultiplier : 1)
+        * Math.sqrt(this.antBoostMultiplier ?? 1));
     }
+  },
+  setAntBoostMultiplier(value) {
+    this.antBoostMultiplier = Math.max(1, Number(value) || 1);
+    this.setAntRunning(this.antRunEnabled);
   },
 };
 

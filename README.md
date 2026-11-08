@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/corvasto/the-quiet-pond"><img src="https://img.shields.io/badge/Made_with-❤️-white?style=flat" alt="mwl" /></a>
-  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.2.6-2b6cb0?style=flat-square" alt="version" /></a>
+  <a href="https://github.com/corvasto/the-quiet-pond/commits/main"><img src="https://img.shields.io/badge/version-v1.2.7-2b6cb0?style=flat-square" alt="version" /></a>
   <a href="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml"><img src="https://github.com/corvasto/the-quiet-pond/actions/workflows/deploy-pages.yml/badge.svg" alt="deploy-pages" /></a>
 </p>
 
@@ -64,6 +64,7 @@ Load the game once online and let it finish caching for offline play. Menus vary
 | Input | Action |
 | --- | --- |
 | WASD or arrow keys | Run relative to the view; climbing keeps its normal speed |
+| Hold Shift while moving | Use the 5-second boost allowance; a 20-second cooldown begins once depleted |
 | Drag the scene | Look around |
 | Wheel or pinch | Adjust camera distance |
 | C | Reset the camera behind the ant |
@@ -77,8 +78,11 @@ Load the game once online and let it finish caching for offline play. Menus vary
 
 - Drag the camera-relative joystick in any direction. Distance from the center controls speed, including on diagonals.
 - Push the joystick toward its edge to run; ease it back to walk.
+- Hold the lower 🐜💨 button while moving the joystick to boost. Release or stop moving to preserve the remaining allowance. The equal-sized Climb button sits diagonally above-right and preserves held joystick input. The thick blue ring shows remaining charge and cooldown progress. A faint blue aura surrounds the ant during the boost.
 
 Desktop ant movement defaults to running. Set `ANT_MOVEMENT_CONFIG.desktopDefaultRunning` in `js/config/world.js` to `false` for walking with Shift to run. Desktop hints follow that setting; touch and climbing retain their existing behavior.
+
+Boost tuning lives in `js/config/ant-boost.js`: 5 seconds of usable allowance, 20-second cooldown after depletion, 1.8 times running speed, and an optional aura. Charge drains only while held and actually moving, so standing still, pushing into a wall, releasing the control, climbing, and flying preserve it. Pause and Explore/Map freeze both timers. Boost state is temporary and starts full when a game is loaded. With walking configured, Shift also retains its normal run behavior while held.
 - Tap the arrow button to climb or get down.
 - Tap **Zz** to sleep until morning or night wherever the ant is.
 - Walk into the burrow to explore below ground and walk up the entrance ramp to leave. The climb button is hidden underground.

@@ -151,6 +151,41 @@ const cameraMethods = {
     this.antCameraLastPosition.copy(actor); this.antCameraHasLastPosition = true;
   },
 
+  updateChamberReset(actor, chamber, delta) {
+    const reset = this.chamberCameraReset;
+    const beforeX = this.camera.position.x - this.controls.target.x;
+    const beforeZ = this.camera.position.z - this.controls.target.z;
+    reset.elapsed += clampMotionDelta(delta);
+    const progress = Math.min(1, reset.elapsed / (chamber.passageCameraTurnDuration ?? 0.85));
+    const closeRadius = Math.min(reset.radius, chamber.passageCameraTurnRadius ?? 0.24);
+    let yaw, radius, height;
+    if (progress < 0.22) {
+      const blend = easeInOut(progress / 0.22);
+      yaw = reset.yaw; radius = THREE.MathUtils.lerp(reset.radius, closeRadius, blend);
+      height = THREE.MathUtils.lerp(reset.height, 0.12, blend);
+    } else if (progress < 0.77) {
+      yaw = reset.yaw + reset.turn * easeInOut((progress - 0.22) / 0.55);
+      radius = closeRadius; height = 0.12;
+    } else {
+      const blend = easeInOut((progress - 0.77) / 0.23);
+      yaw = reset.yaw + reset.turn; radius = THREE.MathUtils.lerp(closeRadius, chamber.cameraDistance ?? 1.5, blend);
+      height = THREE.MathUtils.lerp(0.12, 0.22, blend);
+    }
+    this.controls.target.set(actor.x, actor.y + 0.15, actor.z);
+    this.antCameraTarget.copy(actor).add(reset.target).lerp(this.controls.target, easeInOut(Math.min(1, progress / 0.22)));
+    this.controls.target.copy(this.antCameraTarget);
+    this.antCameraDelta.set(Math.sin(yaw) * radius, height, Math.cos(yaw) * radius);
+    resolveChamberCameraOffset(chamber, this.controls.target, this.antCameraDelta, this.antCameraDelta);
+    constrainCameraToGameRocks(this, this.controls.target, this.antCameraDelta);
+    this.camera.position.copy(this.controls.target).add(this.antCameraDelta);
+    this.camera.lookAt(this.controls.target);
+    this.chamberLastRenderedOffset ??= new THREE.Vector3();
+    this.chamberLastRenderedOffset.copy(this.antCameraDelta);
+    trackGroundOrbit(this, beforeX, beforeZ, this.antCameraDelta.x, this.antCameraDelta.z);
+    this.antCameraLastPosition.copy(actor); this.antCameraHasLastPosition = true;
+    if (progress === 1) this.chamberCameraReset = null;
+  },
+
   setFlyingActorView(position, target, tuning) {
     this.clearCameraOrbitMomentum();
     this.clearAntMovement();
@@ -260,18 +295,22 @@ const cameraMethods = {
     if (this.ground?.chamber?.below(this.ant.group.position)) {
       this.cameraTween = null;
       this.clearCameraOrbitMomentum();
-      this.antCameraMovementYaw = 0; this.antCameraInputAngle = null;
       const actor = this.ant.group.position;
-      this.controls.target.set(actor.x, actor.y + 0.15, actor.z);
-      this.chamberCameraRequestedOffset ??= new THREE.Vector3();
       const heading = this.ant.group.rotation.y - THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset);
+      if (this.ground.chamber.cameraInPassage(actor)) {
+        this.chamberPassageCamera ??= { rotate: this.controls.enableRotate, zoom: this.controls.enableZoom,
+          direction: Math.sign(Math.cos(heading)) || 1 };
+        this.chamberPassageCamera.poseInitialized = false;
+        return true;
+      }
+      const offset = this.camera.position.clone().sub(this.controls.target);
+      const yaw = Math.atan2(offset.x, offset.z), toYaw = heading + Math.PI;
+      this.chamberCameraReset = { yaw, turn: Math.atan2(Math.sin(toYaw - yaw), Math.cos(toYaw - yaw)),
+        radius: Math.hypot(offset.x, offset.z), height: offset.y, elapsed: 0,
+        target: this.controls.target.clone().sub(actor) };
+      this.chamberCameraRequestedOffset ??= new THREE.Vector3();
       const distance = this.ground.chamber.cameraDistance ?? 1.5;
       this.chamberCameraRequestedOffset.set(-Math.sin(heading) * distance, 0.22, -Math.cos(heading) * distance);
-      this.camera.position.copy(this.controls.target).add(this.chamberCameraRequestedOffset);
-      this.chamberLastRenderedOffset = null;
-      if (this.ground.chamber.cameraInPassage(actor)) this.ground.chamber.setPassageCamera(actor, this.camera, this.controls.target,
-        this.chamberPassageCamera?.direction ?? (Math.sign(Math.cos(heading)) || 1));
-      else this.updateAntOrbitControls(0);
       return true;
     }
     this.clearCameraOrbitMomentum();
@@ -314,6 +353,7 @@ const cameraMethods = {
       this.camera.updateProjectionMatrix();
     }
     if (nearBurrow) {
+      this.chamberCameraReset = null;
       if (!this.chamberPassageCamera) {
         this.chamberPassageCamera = { rotate: this.controls.enableRotate, zoom: this.controls.enableZoom, surface: true };
         this.clearCameraOrbitMomentum();
@@ -326,6 +366,7 @@ const cameraMethods = {
     }
     if ((passage
       || (this.chamberPassageCamera && chamber?.cameraAtMouth?.(antPosition))) && !this.antFlightEnabled) {
+      this.chamberCameraReset = null;
       if (!this.chamberPassageCamera || this.chamberPassageCamera.surface) {
         const heading = this.ant.group.rotation.y - THREE.MathUtils.degToRad(SCENE_PROPS.ant.yawOffset);
         const direction = Math.abs(this.antVelocity?.z ?? 0) > 0.01 ? Math.sign(this.antVelocity.z)
@@ -372,6 +413,14 @@ const cameraMethods = {
       }
     }
     const insideChamber = chamber?.below(antPosition) && !this.antFlightEnabled;
+    if (this.chamberCameraReset) {
+      if (insideChamber && !this.antCameraManualActive) {
+        this.updateChamberReset(antPosition, chamber, delta);
+        return;
+      }
+      this.chamberCameraReset = null;
+      if (insideChamber) this.chamberCameraRequestedOffset?.subVectors(this.camera.position, this.controls.target);
+    }
     if (insideChamber && this.antCameraManualActive && this.chamberCameraRequestedOffset && this.chamberLastRenderedOffset) {
       const x = this.camera.position.x - this.controls.target.x, z = this.camera.position.z - this.controls.target.z;
       trackGroundOrbit(this, this.chamberLastRenderedOffset.x, this.chamberLastRenderedOffset.z, x, z);

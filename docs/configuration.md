@@ -16,6 +16,8 @@ The in-world mouth uses `openingLength` for its short terrain cut inside the bur
 
 `passageCameraTurnDuration` sets the ramp pull-in, rotation, and pull-out sequence (0.85 seconds). `passageCameraTurnRadius` sets the closer radius during rotation (0.24 units), with tunnel and rock clearance throughout. `passageAntTurnResponsiveness` softens body turns only on the ramp (8); walking speed and acceleration retain their normal settings. Already aligned entries settle distance and height over 300 ms.
 
+Chamber Reset view shares the pull-in radius and turn duration, easing behind the ant before returning to the configured chamber distance. It preserves held movement and keeps clearance checks active. Manual orbit interrupts the reset. Surface and underground desktop boost outputs share the same charge/cooldown update.
+
 `js/generators/soil-texture.js` supplies shared procedural grain for the ramp and underground floor. It uses smoothly interpolated irregular noise in a 128-pixel repeating texture, with mipmaps, world-aligned UVs, and subtle bump detail. A tile spans about 2.4 world units. It adds no geometry or external asset request.
 
 `SURFACE_TERRAIN.interiorLightingInset` delays indoor lighting until both the ant and camera are below ground and one unit beyond the covered ramp rim. `interiorLightingBlendLength` fades lights, exposure, and fog over the next 1.1 units in either direction. Shelter detection still hides rain under the roof and counts toward the rain objective before that lighting boundary. The outdoor sky remains visible through the entrance in either lighting state.
@@ -53,6 +55,12 @@ Mid and Full include a small animated rice fish that swims within the pond conto
 The optional Settings diagnostic samples rendered FPS in 0.75-second windows and stores its preference as `the-quiet-pond-performance-diagnostic`. Its callback is subscribed only while enabled. Warnings start below 30 FPS in Full and 14 FPS in Mid/Low, which target 20 but commonly report about 18 after browser scheduling. A 2 FPS recovery margin prevents flicker; long hidden-tab gaps reset sampling to avoid false lows.
 
 ## Movement and camera
+
+`js/config/ant-boost.js` configures hold-to-boost: `enabled`, `duration` (5 seconds of usable charge), `cooldown` (20 seconds after depletion), and `speedMultiplier` (1.8 times running speed). Charge drains only while Shift or the mobile Boost button is held, movement input is present, and the ant actually moves. Releasing, standing still, and blocked movement preserve charge. Depletion starts cooldown; completion restores the full allowance. The desktop hint shows remaining charge, and the thick blue mobile ring shows charge or cooldown progress. Touch boost uses running speed while retaining joystick direction and magnitude.
+
+`glowEnabled`, `glowRadius`, and `glowOpacity` control a faint blue aura with a broad rim. It uses one reusable mesh and shader material, no point lights, particles, or per-frame model traversal. Disabled boosts create no effect geometry or frame subscription. The gameplay controller owns timers and cleanup; the core receives only a speed multiplier through `setAntBoostMultiplier`. Climbing, bird mode, and debug flight suspend boost without spending charge. Pause and Explore/Map freeze both timers. Existing save data is unchanged; loading starts with full charge.
+
+Mobile actions use equal 88-pixel Boost and Climb buttons, with Climb at 45 degrees above-right. Short screens use 80 pixels for both. The 🐜💨 icon retains a localized accessible label and status. `js/ui/press-action.js` supports secondary touch presses and held actions with independent pointer capture, release, cancel, focus-loss, and keyboard handling. Climb preserves joystick capture and restores held axes across a successful climb or dismount; failed attempts leave walking intact.
 
 `ANT_MOVEMENT_CONFIG.desktopDefaultRunning` defaults to `true`: keyboard ground movement runs without Shift, including underground. Set it to `false` to walk normally and hold Shift to run. Desktop and underground hints follow the configuration in both languages. Climbing keeps its existing speed, and touch retains joystick walk/run thresholds. Keyboard run intent is refreshed after climbing or input resets; it does not alter bird or debug flight speed.
 

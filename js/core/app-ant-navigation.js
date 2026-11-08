@@ -456,7 +456,8 @@ const antNavigationMethods = {
     }
 
     const speed = SCENE_PROPS.ant.moveSpeed
-      * (this.antRunEnabled ? SCENE_PROPS.ant.runMultiplier : 1);
+      * (this.antRunEnabled ? SCENE_PROPS.ant.runMultiplier : 1)
+      * (this.antBoostMultiplier ?? 1);
     stepPlanarMotion(
       this.antVelocity,
       this.antDisplacement,

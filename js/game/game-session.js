@@ -14,6 +14,7 @@ import { AntGroundTrail } from './ant-ground-trail.js';
 import { BurrowBuilding } from './burrow-building.js';
 import { BirdFlight, isBirdRewardUnlocked } from './bird-flight.js';
 import { UndergroundCompanions } from './underground-companions.js';
+import { AntBoost } from './ant-boost.js';
 
 export class PondGameSession {
   constructor(container, {
@@ -158,6 +159,8 @@ export class PondGameSession {
     this.colony.sync();
     await this.restoreUndergroundCheckpoint(this.saveState?.underground);
     this.setAntTrailsEnabled(this.antTrailsEnabled);
+    this.boost = new AntBoost(this);
+    await this.app.prepareUndergroundView();
     this.onLoadProgress(99);
     return this;
   }
@@ -827,6 +830,7 @@ export class PondGameSession {
   }
 
   dispose() {
+    this.boost?.dispose();
     this.undergroundCompanions?.dispose();
     this.undergroundCompanions = null;
     this.worldCycleUnsubscribe?.();

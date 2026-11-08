@@ -14,6 +14,8 @@ import {
 import { formatSeedProgress, translate } from './ui/localization.js';
 import { FpsSampler } from './utils/fps-diagnostic.js';
 import { shouldTouchRun } from './utils/player-motion.js';
+import { ANT_BOOST_CONFIG } from './config/ant-boost.js';
+import { bindPressAction, bindHoldAction } from './ui/press-action.js';
 
 import { createGameplayLayout } from './ui/gameplay-layout.js';
 const byId = (id) => document.getElementById(id);
@@ -137,6 +139,7 @@ const heldMovementCodes = new Set();
 const heldRunCodes = new Set();
 const heldFlightCodes = new Set();
 let touchRunHeld = false;
+let touchBoostHeld = false;
 let resetMobileControls = null;
 
 const gameplayLayout = createGameplayLayout({ caption: elements.radioCaption, dock: document.querySelector('.context-actions'), hint: elements.touchHint });
@@ -442,7 +445,9 @@ function applyLanguage() {
   document.querySelectorAll('[data-app-version]').forEach((element) => {
     element.textContent = translate('ui.version', language, { version: APP_VERSION });
   });
-  byId('desktop-run-hint').hidden = POND_GAME.antMovement.desktopDefaultRunning;
+  byId('desktop-run-hint').hidden = POND_GAME.antMovement.desktopDefaultRunning || ANT_BOOST_CONFIG.enabled;
+  byId('desktop-boost-hint').hidden = !ANT_BOOST_CONFIG.enabled;
+  byId('boost-button').hidden = !ANT_BOOST_CONFIG.enabled;
   byId('desktop-movement-label').textContent = t(POND_GAME.antMovement.desktopDefaultRunning ? 'hint.run' : 'ui.move');
   renderSaveSlots();
   lastDisplayedGameMinute = null;
@@ -538,9 +543,28 @@ function canMoveAnt() {
 }
 
 function syncRunning() {
-  const running = canMoveAnt() && (touchRunHeld || heldRunCodes.size > 0
+  session?.boost?.setHeld(canMoveAnt() && (touchBoostHeld || heldRunCodes.size > 0));
+  const running = canMoveAnt() && (session?.boost?.active || touchRunHeld || heldRunCodes.size > 0
     || (POND_GAME.antMovement.desktopDefaultRunning && heldMovementCodes.size > 0));
   session?.setAntRunning(running);
+}
+
+let boostUiElapsed = 0;
+function updateBoostControls({ delta = 0.1 } = {}) {
+  boostUiElapsed += delta;
+  if (boostUiElapsed < 0.1) return;
+  boostUiElapsed = 0;
+  const boost = session?.boost;
+  if (!boost) return;
+  const status = t(boost.active ? 'boost.active' : boost.cooldown > 0 ? 'boost.cooldown' : 'boost.available',
+    { seconds: Math.ceil(boost.cooldown > 0 ? boost.cooldown : boost.remaining) });
+  const button = byId('boost-button');
+  button.disabled = !boost.held && (!boost.allowed || boost.cooldown > 0);
+  button.style.setProperty('--boost-progress', String(Math.max(0, Math.min(1, boost.progress))));
+  button.classList.toggle('boost-active', boost.active);
+  button.setAttribute('aria-label', `${t('boost.button')}: ${status}`);
+  button.title = status;
+  document.querySelectorAll('[data-boost-status]').forEach((output) => { output.textContent = status; });
 }
 
 function syncMovementDirection(direction) {
@@ -557,6 +581,7 @@ function clearGameInput() {
   heldRunCodes.clear();
   heldFlightCodes.clear();
   touchRunHeld = false;
+  touchBoostHeld = false;
   resetMobileControls?.();
   session?.clearMovementInput();
   syncRunning();
@@ -1078,6 +1103,7 @@ function updateExploreControl() {
   elements.exploreReturnLabel.textContent = t(returnLabel);
   elements.antHint.hidden = exploreActive || birdActive || undergroundActive;
   elements.undergroundHint.hidden = !undergroundActive;
+  byId('underground-boost-hint').hidden = !undergroundActive || exploreActive || birdActive || !ANT_BOOST_CONFIG.enabled;
   elements.undergroundHint.textContent = t(POND_GAME.antMovement.desktopDefaultRunning ? 'underground.hint.autoRun' : 'underground.hint');
   if (elements.climbButton) elements.climbButton.hidden = undergroundActive;
   elements.birdHint.hidden = exploreActive || !birdActive;
@@ -1174,11 +1200,13 @@ function setupMobileGameControls() {
   let centerX = 0;
   let centerY = 0;
   let radius = 1;
+  let horizontalAxis = 0, forwardAxis = 0;
 
   const reset = (event = null) => {
     if (event && event.pointerId !== activePointerId) return;
     const previousPointerId = activePointerId;
     activePointerId = null;
+    horizontalAxis = forwardAxis = 0;
     session?.setMovementAxes(0, 0);
     touchRunHeld = false;
     syncRunning();
@@ -1197,6 +1225,7 @@ function setupMobileGameControls() {
     knob.style.transform = `translate(calc(-50% + ${deltaX * scale}px), calc(-50% + ${deltaY * scale}px))`;
     const horizontal = deltaX * scale / radius;
     const forward = -deltaY * scale / radius;
+    horizontalAxis = horizontal; forwardAxis = forward;
     session?.setMovementAxes(horizontal, forward);
     const canRun = !session?.isClimbing() && !session?.isBirdActive() && !session?.isFlightEnabled();
     const nextRunning = shouldTouchRun(Math.min(1, distance / radius), touchRunHeld, canRun,
@@ -1233,8 +1262,13 @@ function setupMobileGameControls() {
   const onClimb = () => {
     if (canMoveAnt() && session) {
       session.unlockSound();
+      const wasClimbing = session.isClimbing();
       session.toggleClimb();
-      reset();
+      if (session.isClimbing() !== wasClimbing) {
+        if (activePointerId !== null) session.setMovementAxes(horizontalAxis, forwardAxis);
+        for (const direction of ['forward', 'backward', 'left', 'right']) syncMovementDirection(direction);
+        syncRunning();
+      }
     }
   };
 
@@ -1243,7 +1277,7 @@ function setupMobileGameControls() {
   joystick.addEventListener('pointerup', reset);
   joystick.addEventListener('pointercancel', reset);
   joystick.addEventListener('lostpointercapture', reset);
-  elements.climbButton?.addEventListener('click', onClimb);
+  const cleanupClimbPress = bindPressAction(elements.climbButton, onClimb);
   resetMobileControls = reset;
 
   mobileMovementCleanup = () => {
@@ -1253,7 +1287,7 @@ function setupMobileGameControls() {
     joystick.removeEventListener('pointerup', reset);
     joystick.removeEventListener('pointercancel', reset);
     joystick.removeEventListener('lostpointercapture', reset);
-    elements.climbButton?.removeEventListener('click', onClimb);
+    cleanupClimbPress();
     resetMobileControls = null;
     mobileMovementCleanup = null;
   };
@@ -1314,7 +1348,9 @@ window.addEventListener('keydown', (event) => {
     return;
   }
   if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-    if (canMoveAnt() && !event.repeat) heldRunCodes.add(event.code);
+    if (canMoveAnt() && !event.repeat) {
+      heldRunCodes.add(event.code);
+    }
     syncRunning();
     return;
   }
@@ -1465,6 +1501,9 @@ elements.restartButton.addEventListener('click', () => {
   window.location.reload();
 });
 elements.newGameButton.addEventListener('click', () => startNewGame());
+const cleanupBoostPress = bindHoldAction(byId('boost-button'), (held) => {
+  touchBoostHeld = held; syncRunning(); updateBoostControls();
+});
 elements.antVisibilityEnabled.addEventListener('change', () => {
   antVisibilityEnabled = elements.antVisibilityEnabled.checked;
   try {
@@ -1566,6 +1605,8 @@ async function startGame() {
     setupMobileGameControls();
     session.onFrame(updateSleepButton);
     session.onFrame(syncRunning);
+    session.onFrame(updateBoostControls);
+    updateBoostControls();
     let lastBelowGround = session.isBelowGround();
     session.onFrame(() => {
       const below = session?.isBelowGround() ?? false;
@@ -1591,6 +1632,7 @@ async function startGame() {
 window.addEventListener('pagehide', () => saveActiveSlot());
 window.addEventListener('beforeunload', () => {
   saveActiveSlot();
+  cleanupBoostPress();
   gameplayLayout.dispose();
   window.clearTimeout(buildingNoticeTimer);
   mapViewport.dispose();
